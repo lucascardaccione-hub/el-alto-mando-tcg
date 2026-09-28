@@ -27,13 +27,13 @@ export async function POST(request: Request) {
         // 1. Cross-reference with store inventory first
         let storeCard = null;
         try {
-          storeCard = db.prepare(`
+          storeCard = await db.get(`
             SELECT id, name, expansion, number, version, language, price, stock, image_url
             FROM cards
             WHERE name LIKE ? AND stock > 0
             ORDER BY price ASC
             LIMIT 1
-          `).get(`%${cardName}%`) as any;
+          `, [`%${cardName}%`]) as any;
         } catch (_) {}
 
         // 2. LIMITLESS TCG EXACT MATCHING (Standard for PTCGL - Highest fidelity)

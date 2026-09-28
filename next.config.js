@@ -2,11 +2,6 @@ const path = require('path');
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    serverComponentsExternalPackages: ['better-sqlite3'],
-    workerThreads: false,
-    cpus: 1,
-  },
   images: {
     unoptimized: true,
     remotePatterns: [

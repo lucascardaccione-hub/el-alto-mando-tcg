@@ -13,8 +13,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Usuario/email y contraseña requeridos' }, { status: 400 });
     }
 
-    const stmt = db.prepare('SELECT * FROM users WHERE (username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE)');
-    const user = stmt.get(loginId, loginId) as any;
+    const user = await db.get('SELECT * FROM users WHERE (username = ? COLLATE NOCASE OR email = ? COLLATE NOCASE)', [loginId, loginId]) as any;
 
     if (!user) {
       return NextResponse.json({ error: 'Credenciales inválidas' }, { status: 401 });

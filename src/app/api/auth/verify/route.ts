@@ -19,9 +19,9 @@ export async function POST(request: Request) {
     let user: any = null;
 
     if (cleanToken) {
-      user = db.prepare('SELECT * FROM users WHERE verification_token = ?').get(cleanToken);
+      user = await db.get('SELECT * FROM users WHERE verification_token = ?', [cleanToken]);
     } else if (cleanEmail && cleanCode) {
-      user = db.prepare('SELECT * FROM users WHERE email = ? COLLATE NOCASE AND verification_code = ?').get(cleanEmail, cleanCode);
+      user = await db.get('SELECT * FROM users WHERE email = ? COLLATE NOCASE AND verification_code = ?', [cleanEmail, cleanCode]);
     }
 
     if (!user) {
@@ -43,11 +43,11 @@ export async function POST(request: Request) {
     }
 
     // Mark as verified and clear temporary token/code
-    db.prepare(`
+    await db.run(`
       UPDATE users
       SET is_verified = 1, verification_token = NULL, verification_code = NULL, verification_expires = NULL
       WHERE id = ?
-    `).run(user.id);
+    `, [user.id]);
 
     // Auto-login the user
     const sessionToken = createToken({

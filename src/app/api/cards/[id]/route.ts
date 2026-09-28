@@ -20,7 +20,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const existing = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId);
+    const existing = await db.get('SELECT * FROM cards WHERE id = ?', [cardId]);
     if (!existing) {
       return NextResponse.json({ error: 'Carta no encontrada' }, { status: 404 });
     }
@@ -41,7 +41,7 @@ export async function PUT(
 
     const now = new Date().toISOString();
 
-    const stmt = db.prepare(`
+    await db.run(`
       UPDATE cards SET
         name = COALESCE(?, name),
         expansion = COALESCE(?, expansion),
@@ -56,9 +56,7 @@ export async function PUT(
         notes = COALESCE(?, notes),
         updated_at = ?
       WHERE id = ?
-    `);
-
-    stmt.run(
+    `, [
       name !== undefined ? name.trim() : null,
       expansion !== undefined ? expansion.trim() : null,
       number !== undefined ? number.trim() : null,
@@ -72,9 +70,9 @@ export async function PUT(
       notes !== undefined ? notes.trim() : null,
       now,
       cardId
-    );
+    ]);
 
-    const updated = db.prepare('SELECT * FROM cards WHERE id = ?').get(cardId);
+    const updated = await db.get('SELECT * FROM cards WHERE id = ?', [cardId]);
     return NextResponse.json({ success: true, card: updated });
   } catch (error: any) {
     console.error('Update card error:', error);
@@ -97,8 +95,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'ID inválido' }, { status: 400 });
     }
 
-    const stmt = db.prepare('DELETE FROM cards WHERE id = ?');
-    const result = stmt.run(cardId);
+    const result = await db.run('DELETE FROM cards WHERE id = ?', [cardId]);
 
     if (result.changes === 0) {
       return NextResponse.json({ error: 'Carta no encontrada' }, { status: 404 });

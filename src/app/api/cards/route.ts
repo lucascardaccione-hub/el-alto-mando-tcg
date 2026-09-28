@@ -77,8 +77,7 @@ export async function GET(request: Request) {
     }
 
     const query = `SELECT * FROM cards ${whereClause} ${orderBy}`;
-    const stmt = db.prepare(query);
-    const cards = stmt.all(...params);
+    const cards = await db.all(query, params);
 
     return NextResponse.json({
       cards,
@@ -121,13 +120,11 @@ export async function POST(request: Request) {
     }
 
     const now = new Date().toISOString();
-    const stmt = db.prepare(`
+    const result = await db.run(`
       INSERT INTO cards (
         name, expansion, number, version, language, artist, price, stock, image_url, tcg_id, rarity, notes, created_at, updated_at
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const result = stmt.run(
+    `, [
       name.trim(),
       expansion.trim(),
       number.trim(),
@@ -142,9 +139,9 @@ export async function POST(request: Request) {
       notes ? notes.trim() : '',
       now,
       now
-    );
+    ]);
 
-    const newCard = db.prepare('SELECT * FROM cards WHERE id = ?').get(result.lastInsertRowid);
+    const newCard = await db.get('SELECT * FROM cards WHERE id = ?', [result.lastInsertRowid]);
 
     return NextResponse.json({
       success: true,

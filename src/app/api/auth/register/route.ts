@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     }
 
     // Check if username already exists
-    const existingUser = db.prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE').get(cleanUsername);
+    const existingUser = await db.get('SELECT id FROM users WHERE username = ? COLLATE NOCASE', [cleanUsername]);
     if (existingUser) {
       return NextResponse.json(
         { error: 'Este nombre de usuario ya está registrado. Por favor elige otro.' },
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
     }
 
     // Check if email already exists
-    const existingEmail = db.prepare('SELECT id FROM users WHERE email = ? COLLATE NOCASE').get(cleanEmail);
+    const existingEmail = await db.get('SELECT id FROM users WHERE email = ? COLLATE NOCASE', [cleanEmail]);
     if (existingEmail) {
       return NextResponse.json(
         { error: 'Este correo electrónico ya está registrado. Puedes iniciar sesión.' },
@@ -62,18 +62,11 @@ export async function POST(request: Request) {
     const passwordHash = hashPassword(cleanPassword);
     const now = new Date().toISOString();
 
-    const insertStmt = db.prepare(`
+    const result = await db.run(`
       INSERT INTO users (
         username, email, password_hash, role, is_active, is_verified, created_at
       ) VALUES (?, ?, ?, 'user', 1, 1, ?)
-    `);
-
-    const result = insertStmt.run(
-      cleanUsername,
-      cleanEmail,
-      passwordHash,
-      now
-    );
+    `, [cleanUsername, cleanEmail, passwordHash, now]);
 
     const userId = Number(result.lastInsertRowid);
 

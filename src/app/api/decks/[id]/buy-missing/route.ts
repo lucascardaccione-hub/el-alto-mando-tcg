@@ -9,7 +9,7 @@ export async function GET(
 ) {
   try {
     const deckId = parseInt(params.id, 10);
-    const cards = db.prepare('SELECT * FROM deck_cards WHERE deck_id = ?').all(deckId) as any[];
+    const cards = await db.all('SELECT * FROM deck_cards WHERE deck_id = ?', [deckId]) as any[];
 
     const itemsToAdd: any[] = [];
     let totalEstimated = 0;
@@ -19,12 +19,12 @@ export async function GET(
       if (missingCount <= 0) continue;
 
       // Find best match in store cards with stock
-      const storeCard = db.prepare(`
+      const storeCard = await db.get(`
         SELECT * FROM cards
         WHERE name LIKE ? AND stock > 0
         ORDER BY price ASC
         LIMIT 1
-      `).get(`%${c.card_name}%`) as any;
+      `, [`%${c.card_name}%`]) as any;
 
       if (storeCard) {
         const qtyToAdd = Math.min(missingCount, storeCard.stock);

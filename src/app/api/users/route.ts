@@ -10,7 +10,7 @@ export async function GET() {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
-  const users = db.prepare('SELECT id, username, role, is_active, created_at FROM users ORDER BY id ASC').all();
+  const users = await db.all('SELECT id, username, role, is_active, created_at FROM users ORDER BY id ASC');
   return NextResponse.json({ users });
 }
 
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     }
 
     const cleanUsername = username.trim();
-    const existing = db.prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE').get(cleanUsername);
+    const existing = await db.get('SELECT id FROM users WHERE username = ? COLLATE NOCASE', [cleanUsername]);
     if (existing) {
       return NextResponse.json({ error: 'El nombre de usuario ya está registrado' }, { status: 400 });
     }
@@ -40,12 +40,10 @@ export async function POST(request: Request) {
     const hashed = hashPassword(password);
     const now = new Date().toISOString();
 
-    const stmt = db.prepare(`
+    const result = await db.run(`
       INSERT INTO users (username, password_hash, role, is_active, created_at)
       VALUES (?, ?, ?, 1, ?)
-    `);
-
-    const result = stmt.run(cleanUsername, hashed, role, now);
+    `, [cleanUsername, hashed, role, now]);
 
     return NextResponse.json({
       success: true,
@@ -83,11 +81,11 @@ export async function PATCH(request: Request) {
 
     if (password) {
       const hashed = hashPassword(password);
-      db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(hashed, id);
+      await db.run('UPDATE users SET password_hash = ? WHERE id = ?', [hashed, id]);
     }
 
     if (is_active !== undefined) {
-      db.prepare('UPDATE users SET is_active = ? WHERE id = ?').run(is_active ? 1 : 0, id);
+      await db.run('UPDATE users SET is_active = ? WHERE id = ?', [is_active ? 1 : 0, id]);
     }
 
     return NextResponse.json({ success: true, message: 'Usuario actualizado' });
@@ -114,7 +112,7 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: 'No puedes eliminar tu propia cuenta' }, { status: 400 });
     }
 
-    db.prepare('DELETE FROM users WHERE id = ?').run(id);
+    await db.run('DELETE FROM users WHERE id = ?', [id]);
     return NextResponse.json({ success: true, message: 'Usuario eliminado' });
   } catch (error: any) {
     return NextResponse.json({ error: 'Error al eliminar usuario' }, { status: 500 });

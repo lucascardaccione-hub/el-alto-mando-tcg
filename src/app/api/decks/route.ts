@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     let decks: any[] = [];
 
     if (filter === 'public') {
-      decks = db.prepare(`
+      decks = await db.all(`
         SELECT d.*, u.username as author_name,
                (SELECT COUNT(*) FROM deck_cards WHERE deck_id = d.id) as card_types_count,
                (SELECT SUM(count) FROM deck_cards WHERE deck_id = d.id) as total_cards
@@ -22,12 +22,12 @@ export async function GET(request: Request) {
         WHERE d.is_public = 1
         ORDER BY d.updated_at DESC
         LIMIT 50
-      `).all();
+      `);
     } else {
       if (!user) {
         return NextResponse.json({ decks: [] });
       }
-      decks = db.prepare(`
+      decks = await db.all(`
         SELECT d.*, u.username as author_name,
                (SELECT COUNT(*) FROM deck_cards WHERE deck_id = d.id) as card_types_count,
                (SELECT SUM(count) FROM deck_cards WHERE deck_id = d.id) as total_cards
@@ -35,7 +35,7 @@ export async function GET(request: Request) {
         JOIN users u ON d.user_id = u.id
         WHERE d.user_id = ?
         ORDER BY d.updated_at DESC
-      `).all(user.id);
+      `, [user.id]);
     }
 
     return NextResponse.json({ decks });
@@ -61,12 +61,10 @@ export async function POST(request: Request) {
 
     const now = new Date().toISOString();
 
-    const insertDeck = db.prepare(`
+    const deckResult = await db.run(`
       INSERT INTO decks (user_id, name, format, description, is_public, cover_card_image, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    const deckResult = insertDeck.run(
+    `, [
       user.id,
       cleanName,
       format || 'Standard',
@@ -75,34 +73,29 @@ export async function POST(request: Request) {
       cover_card_image || '',
       now,
       now
-    );
+    ]);
 
     const deckId = deckResult.lastInsertRowid;
 
     if (Array.isArray(cards) && cards.length > 0) {
-      const insertCard = db.prepare(`
-        INSERT INTO deck_cards (deck_id, card_name, expansion, number, category, trainer_type, count, owned_count, image_url, tcg_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `);
+      const cardBatch = cards.map((c: any) => ({
+        sql: `INSERT INTO deck_cards (deck_id, card_name, expansion, number, category, trainer_type, count, owned_count, image_url, tcg_id)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          deckId,
+          c.card_name || c.name,
+          c.expansion || c.set || 'PROMO',
+          c.number || '1',
+          c.category || 'pokemon',
+          c.trainer_type || '',
+          Math.max(1, parseInt(c.count, 10) || 1),
+          Math.max(0, parseInt(c.owned_count, 10) || 0),
+          c.image_url || c.image || '/placeholder-card.svg',
+          c.tcg_id || ''
+        ],
+      }));
 
-      const insertMany = db.transaction((cardsList: any[]) => {
-        for (const c of cardsList) {
-          insertCard.run(
-            deckId,
-            c.card_name || c.name,
-            c.expansion || c.set || 'PROMO',
-            c.number || '1',
-            c.category || 'pokemon',
-            c.trainer_type || '',
-            Math.max(1, parseInt(c.count, 10) || 1),
-            Math.max(0, parseInt(c.owned_count, 10) || 0),
-            c.image_url || c.image || '/placeholder-card.svg',
-            c.tcg_id || ''
-          );
-        }
-      });
-
-      insertMany(cards);
+      await db.batch(cardBatch);
     }
 
     return NextResponse.json({
