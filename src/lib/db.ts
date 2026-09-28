@@ -171,5 +171,26 @@ function getDatabase(): Database.Database {
   return db;
 }
 
-export const db = getDatabase();
+let _dbInstance: Database.Database | null = null;
+
+export function getDb(): Database.Database {
+  if (!_dbInstance) {
+    _dbInstance = getDatabase();
+  }
+  return _dbInstance;
+}
+
+export const db: Database.Database = new Proxy({} as Database.Database, {
+  get(target, prop, receiver) {
+    const realDb = getDb();
+    const value = Reflect.get(realDb, prop, receiver);
+    return typeof value === 'function' ? value.bind(realDb) : value;
+  },
+  set(target, prop, value, receiver) {
+    const realDb = getDb();
+    return Reflect.set(realDb, prop, value, receiver);
+  },
+});
+
 export default db;
+

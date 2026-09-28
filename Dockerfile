@@ -7,7 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends python3 make g+
 FROM base AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci
+RUN npm ci && npm rebuild better-sqlite3 --build-from-source
 
 # Builder stage
 FROM base AS builder
