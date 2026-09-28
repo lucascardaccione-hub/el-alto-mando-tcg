@@ -11,10 +11,17 @@ export async function GET(request: Request) {
       return new NextResponse('Missing URL parameter', { status: 400 });
     }
 
-    const decoded = decodeURIComponent(url);
-    const res = await fetch(decoded, {
+    let targetUrl = url;
+    try {
+      if (targetUrl.includes('%')) {
+        targetUrl = decodeURIComponent(targetUrl);
+      }
+    } catch (_) {}
+
+    const res = await fetch(targetUrl, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
       },
     });
 

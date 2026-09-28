@@ -24,6 +24,76 @@ interface DeckImageModalProps {
   cards: DeckCardItem[];
 }
 
+// Subcomponent: High-fidelity proxied card thumbnail for clean canvas capture
+function ModalCardThumbnail({ card }: { card: DeckCardItem }) {
+  const setUpper = (card.expansion || '').toUpperCase().trim();
+  const cleanNum = (card.number || '').replace(/^0+/, '');
+  const paddedNum = cleanNum.padStart(3, '0');
+
+  let lSet = setUpper;
+  if (setUpper === 'PR-SW' || setUpper === 'SWSHP') lSet = 'SP';
+  else if (setUpper === 'PR-SV' || setUpper === 'SVP') lSet = 'SVP';
+  else if (setUpper === 'PR-SM' || setUpper === 'SMP') lSet = 'SMP';
+  else if (setUpper === 'PR-XY' || setUpper === 'XYP') lSet = 'XYP';
+  else if (setUpper === 'PR-BW' || setUpper === 'BWP') lSet = 'BWP';
+
+  const candidateUrls = useMemo(() => {
+    const list: string[] = [];
+
+    // 1. Direct card.image_url if present and not a placeholder
+    if (card.image_url && !card.image_url.includes('placeholder')) {
+      list.push(card.image_url);
+    }
+
+    // 2. Limitless CDN variations
+    if (lSet === 'SP') {
+      list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SP/SP_${cleanNum}_R_EN_SM.png`);
+      list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SP/SP_${paddedNum}_R_EN_SM.png`);
+    } else if (lSet && cleanNum) {
+      list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/${lSet}/${lSet}_${paddedNum}_R_EN_SM.png`);
+      list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/${lSet}/${lSet}_${cleanNum}_R_EN_SM.png`);
+      list.push(`https://limitless3.nyc3.cdn.digitaloceanspaces.com/tpci/${lSet}/${lSet}_${paddedNum}_R_EN_SM.png`);
+    }
+
+    if (setUpper === 'MEE' || setUpper === 'SVE') {
+      list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEE/MEE_${paddedNum}_R_EN_SM.png`);
+      list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_${paddedNum}_R_EN_SM.png`);
+    }
+
+    // 3. Store card matched image
+    if (card.store_card?.image_url) {
+      list.push(card.store_card.image_url);
+    }
+
+    list.push('/placeholder-card.svg');
+    return Array.from(new Set(list));
+  }, [card.expansion, card.number, card.image_url, card.store_card, lSet, cleanNum, paddedNum, setUpper]);
+
+  const [srcIndex, setSrcIndex] = useState(0);
+
+  const rawUrl = candidateUrls[srcIndex] || '/placeholder-card.svg';
+  const displaySrc = rawUrl.startsWith('http')
+    ? `/api/proxy-image?url=${encodeURIComponent(rawUrl)}`
+    : rawUrl;
+
+  const handleError = () => {
+    if (srcIndex + 1 < candidateUrls.length) {
+      setSrcIndex((prev) => prev + 1);
+    }
+  };
+
+  return (
+    <img
+      src={displaySrc}
+      alt={card.card_name}
+      crossOrigin="anonymous"
+      loading="eager"
+      className="w-full h-full object-contain"
+      onError={handleError}
+    />
+  );
+}
+
 export default function DeckImageModal({
   isOpen,
   onClose,
@@ -96,7 +166,7 @@ export default function DeckImageModal({
     try {
       // Use pixelRatio: 2 for sharp 2x retina export
       const dataUrl = await toPng(boardRef.current, {
-        cacheBust: true,
+        cacheBust: false,
         pixelRatio: 2,
         backgroundColor: '#070b14',
       });
@@ -119,7 +189,7 @@ export default function DeckImageModal({
     setGenerating(true);
     try {
       const blob = await toBlob(boardRef.current, {
-        cacheBust: true,
+        cacheBust: false,
         pixelRatio: 2,
         backgroundColor: '#070b14',
       });
@@ -280,71 +350,32 @@ export default function DeckImageModal({
 
               {/* 8-COLUMN GRID (Limitless Exact Pattern) */}
               <div className="relative z-10 grid grid-cols-8 gap-3">
-                {sortedCards.map((card, idx) => {
-                  const setUpper = (card.expansion || '').toUpperCase().trim();
-                  const cleanNum = (card.number || '').replace(/^0+/, '');
-                  const paddedNum = cleanNum.padStart(3, '0');
+                {sortedCards.map((card, idx) => (
+                  <div
+                    key={`image-deck-${card.card_name}-${card.number}-${idx}`}
+                    className="relative flex flex-col items-center group pb-2"
+                  >
+                    {/* Card Thumbnail */}
+                    <div className="relative aspect-[2.5/3.5] w-full rounded-md overflow-hidden bg-slate-950 border border-slate-700/60 shadow-md">
+                      <ModalCardThumbnail card={card} />
+                    </div>
 
-                  let lSet = setUpper;
-                  if (setUpper === 'PR-SW' || setUpper === 'SWSHP') lSet = 'SP';
-                  else if (setUpper === 'PR-SV' || setUpper === 'SVP') lSet = 'SVP';
-                  else if (setUpper === 'PR-SM' || setUpper === 'SMP') lSet = 'SMP';
-                  else if (setUpper === 'PR-XY' || setUpper === 'XYP') lSet = 'XYP';
-
-                  let directUrl = `https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/${lSet}/${lSet}_${paddedNum}_R_EN_SM.png`;
-                  if (lSet === 'SP') {
-                    directUrl = `https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SP/SP_${cleanNum}_R_EN_SM.png`;
-                  } else if (setUpper === 'MEE') {
-                    directUrl = `https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEE/MEE_${paddedNum}_R_EN_SM.png`;
-                  }
-
-                  const imgSrc =
-                    card.image_url && !card.image_url.includes('placeholder')
-                      ? card.image_url
-                      : directUrl;
-
-                  return (
-                    <div
-                      key={`image-deck-${card.card_name}-${card.number}-${idx}`}
-                      className="relative flex flex-col items-center group pb-2"
-                    >
-                      {/* Card Thumbnail */}
-                      <div className="relative aspect-[2.5/3.5] w-full rounded-md overflow-hidden bg-slate-950 border border-slate-700/60 shadow-md">
-                        <img
-                          src={imgSrc}
-                          alt={card.card_name}
-                          crossOrigin="anonymous"
-                          loading="eager"
-                          className="w-full h-full object-contain"
-                          onError={(e) => {
-                            // If direct fails, try Limitless fallback or placeholder
-                            const target = e.target as HTMLImageElement;
-                            if (target.src !== directUrl) {
-                              target.src = directUrl;
-                            } else {
-                              target.src = '/placeholder-card.svg';
-                            }
-                          }}
-                        />
-                      </div>
-
-                      {/* LIMITLESS-STYLE HEXAGONAL COUNT BADGE */}
-                      <div className="absolute -bottom-1 z-20 flex items-center justify-center pointer-events-none">
-                        <div
-                          className="bg-gradient-to-b from-red-600 via-rose-700 to-red-800 text-white font-black text-xs px-2 py-0.5 shadow-xl shadow-black border border-red-400/80 flex items-center justify-center min-w-[24px]"
-                          style={{
-                            clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
-                            paddingLeft: '7px',
-                            paddingRight: '7px',
-                            height: '20px',
-                          }}
-                        >
-                          <span className="leading-none">{card.count}</span>
-                        </div>
+                    {/* LIMITLESS-STYLE HEXAGONAL COUNT BADGE */}
+                    <div className="absolute -bottom-1 z-20 flex items-center justify-center pointer-events-none">
+                      <div
+                        className="bg-gradient-to-b from-red-600 via-rose-700 to-red-800 text-white font-black text-xs px-2 py-0.5 shadow-xl shadow-black border border-red-400/80 flex items-center justify-center min-w-[24px]"
+                        style={{
+                          clipPath: 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)',
+                          paddingLeft: '7px',
+                          paddingRight: '7px',
+                          height: '20px',
+                        }}
+                      >
+                        <span className="leading-none">{card.count}</span>
                       </div>
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
 
               {/* Board Footer */}
