@@ -1,7 +1,7 @@
-# Multi-stage Dockerfile optimized for Next.js with better-sqlite3
-FROM node:20-alpine AS base
+# Multi-stage Dockerfile optimized for Next.js with better-sqlite3 (Debian glibc)
+FROM node:20-slim AS base
 WORKDIR /app
-RUN apk add --no-cache libc6-compat python3 make g++ sqlite
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ sqlite3 && rm -rf /var/lib/apt/lists/*
 
 # Dependencies stage
 FROM base AS deps
@@ -19,7 +19,7 @@ ENV NODE_ENV production
 RUN npm run build
 
 # Runner stage
-FROM base AS runner
+FROM node:20-slim AS runner
 WORKDIR /app
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
@@ -38,3 +38,4 @@ COPY --from=builder /app/data ./data
 EXPOSE 3000
 
 CMD ["npm", "run", "start"]
+
