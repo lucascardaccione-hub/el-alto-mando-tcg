@@ -16,8 +16,11 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: 'El Alto Mando TCG — Catálogo y Stock Oficial de Cartas Pokémon',
-  description: 'Catálogo oficial de cartas Pokémon TCG de El Alto Mando. Encuentra singles, holos, secret rares y gestiona tu stock en tiempo real.',
+  title: {
+    default: 'Tienda — El Alto Mando TCG',
+    template: '%s — El Alto Mando TCG',
+  },
+  description: 'Tienda oficial de cartas Pokémon TCG y Deck Builder competitivo de El Alto Mando. Encuentra singles, holos, secret rares y gestiona tu stock en tiempo real.',
   icons: {
     icon: '/logo.png',
   },

@@ -69,48 +69,49 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-medium tracking-wide flex items-center gap-1.5 mt-0.5">
-              <span>Catálogo Oficial</span>
+              <span>Tienda Oficial</span>
               <span className="inline-block w-1 h-1 rounded-full bg-blue-500"></span>
               <span>Stock en Vivo</span>
             </p>
           </div>
         </Link>
 
-        {/* Center Nav / Links */}
-        <div className="hidden lg:flex items-center gap-3 text-xs">
+        {/* Center Nav / Links: Tienda, Deck Builder, Decks de la Comunidad */}
+        <div className="hidden lg:flex items-center gap-2 text-xs">
           <Link
-            href="/decks"
-            className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-950/40 border border-blue-500/30 text-blue-300 hover:text-white hover:bg-blue-900/50 hover:border-blue-400/50 transition-all font-medium"
+            href="/"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium"
           >
-            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-            <span>Deck Builder Live</span>
-            <span className="bg-blue-500/20 text-blue-300 text-[10px] font-bold px-1.5 py-0.2 rounded-full border border-blue-400/30">
-              60 Cards
-            </span>
+            <ShoppingBag className="w-3.5 h-3.5 text-blue-400" />
+            <span>Tienda</span>
           </Link>
 
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/60 border border-white/[0.08] text-slate-300">
-            <Layers className="w-3.5 h-3.5 text-blue-400" />
-            <span>
-              <strong className="text-white font-semibold">{totalCards}</strong> cartas
-            </span>
-          </div>
-          <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-900/60 border border-white/[0.08] text-slate-300">
-            <Box className="w-3.5 h-3.5 text-blue-400" />
-            <span>
-              <strong className="text-white font-semibold">{totalStock}</strong> en stock
-            </span>
-          </div>
+          <Link
+            href="/deck-builder"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-950/50 border border-blue-500/40 text-blue-300 hover:text-white hover:bg-blue-900/60 hover:border-blue-400/60 transition-all font-semibold"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+            <span>Deck Builder</span>
+          </Link>
+
+          <Link
+            href="/decks"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium"
+          >
+            <Layers className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Decks de la Comunidad</span>
+          </Link>
         </div>
 
         {/* Action Buttons: Deck Builder (mobile/tablet), User/Admin & Cart */}
         <div className="flex items-center gap-2.5">
           <Link
-            href="/decks"
+            href="/deck-builder"
             className="lg:hidden flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-blue-300 bg-blue-950/50 border border-blue-500/30 hover:bg-blue-900/50 transition-all"
+            title="Ir al Deck Builder"
           >
             <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-            <span>Mazos</span>
+            <span>Builder</span>
           </Link>
 
           {user ? (

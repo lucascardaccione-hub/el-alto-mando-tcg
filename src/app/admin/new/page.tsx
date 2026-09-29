@@ -109,6 +109,8 @@ export default function NewCardPage() {
   const [version, setVersion] = useState('Holo');
   const [language, setLanguage] = useState<'Inglés' | 'Español'>('Inglés');
   const [artist, setArtist] = useState('');
+  const [category, setCategory] = useState('Pokemon');
+  const [trainerType, setTrainerType] = useState('');
   const [price, setPrice] = useState<number | string>('');
   const [stock, setStock] = useState<number>(1);
   const [imageUrl, setImageUrl] = useState('');
@@ -165,18 +167,24 @@ export default function NewCardPage() {
         setImageUrl(detail.image || tcgCard.image || '');
         setRarity(detail.rarity || '');
         setLanguage(searchLang === 'es' ? 'Español' : 'Inglés');
+        setCategory(detail.category || 'Pokemon');
+        setTrainerType(detail.trainerType || '');
       } else {
         // Fallback with basic info
         setName(tcgCard.name);
         setNumber(tcgCard.localId || '');
         setImageUrl(tcgCard.image || '');
         setLanguage(searchLang === 'es' ? 'Español' : 'Inglés');
+        setCategory('Pokemon');
+        setTrainerType('');
       }
     } catch (e) {
       console.error(e);
       setName(tcgCard.name);
       setNumber(tcgCard.localId || '');
       setImageUrl(tcgCard.image || '');
+      setCategory('Pokemon');
+      setTrainerType('');
     } finally {
       setFetchingDetail(false);
     }
@@ -216,6 +224,8 @@ export default function NewCardPage() {
           image_url: imageUrl || '/placeholder-card.png',
           rarity,
           notes,
+          category,
+          trainer_type: trainerType,
         }),
       });
 
@@ -238,6 +248,8 @@ export default function NewCardPage() {
       setStock(1);
       setImageUrl('');
       setRarity('');
+      setCategory('Pokemon');
+      setTrainerType('');
       setSelectedTcgdexCard(null);
 
       // Scroll to top

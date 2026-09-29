@@ -30,7 +30,8 @@ export default function HomePage() {
   // Filter States
   const [search, setSearch] = useState('');
   const [selectedExpansion, setSelectedExpansion] = useState('');
-  const [selectedArtist, setSelectedArtist] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedTrainerType, setSelectedTrainerType] = useState('');
   const [selectedVersion, setSelectedVersion] = useState('');
   const [selectedLanguage, setSelectedLanguage] = useState('');
   const [sort, setSort] = useState('newest');
@@ -39,7 +40,11 @@ export default function HomePage() {
   // Modal State
   const [activeCardModal, setActiveCardModal] = useState<CardData | null>(null);
 
-  // Fetch filter metadata (expansions, artists, versions)
+  useEffect(() => {
+    document.title = 'Tienda — El Alto Mando TCG';
+  }, []);
+
+  // Fetch filter metadata (expansions, versions)
   const fetchMetadata = async () => {
     try {
       const res = await fetch('/api/expansions');
@@ -59,7 +64,8 @@ export default function HomePage() {
       const params = new URLSearchParams();
       if (search.trim()) params.append('q', search.trim());
       if (selectedExpansion) params.append('expansion', selectedExpansion);
-      if (selectedArtist) params.append('artist', selectedArtist);
+      if (selectedCategory) params.append('category', selectedCategory);
+      if (selectedTrainerType) params.append('trainerType', selectedTrainerType);
       if (selectedVersion) params.append('version', selectedVersion);
       if (selectedLanguage) params.append('language', selectedLanguage);
       if (inStockOnly) params.append('inStockOnly', 'true');
@@ -86,12 +92,13 @@ export default function HomePage() {
       fetchCards();
     }, 250);
     return () => clearTimeout(timer);
-  }, [search, selectedExpansion, selectedArtist, selectedVersion, selectedLanguage, sort, inStockOnly]);
+  }, [search, selectedExpansion, selectedCategory, selectedTrainerType, selectedVersion, selectedLanguage, sort, inStockOnly]);
 
   const handleResetFilters = () => {
     setSearch('');
     setSelectedExpansion('');
-    setSelectedArtist('');
+    setSelectedCategory('');
+    setSelectedTrainerType('');
     setSelectedVersion('');
     setSelectedLanguage('');
     setSort('newest');
@@ -99,7 +106,7 @@ export default function HomePage() {
   };
 
   const hasActiveFilters = Boolean(
-    search || selectedExpansion || selectedArtist || selectedVersion || selectedLanguage || inStockOnly || sort !== 'newest'
+    search || selectedExpansion || selectedCategory || selectedTrainerType || selectedVersion || selectedLanguage || inStockOnly || sort !== 'newest'
   );
 
   return (
@@ -123,15 +130,15 @@ export default function HomePage() {
             <div className="space-y-5 text-center lg:text-left flex-1 max-w-2xl">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-600/15 text-blue-400 border border-blue-500/30 shadow-sm backdrop-blur-md">
                 <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
-                <span>Inventario Oficial & Deck Builder Competitivo</span>
+                <span>Tienda Oficial & Catálogo de Cartas</span>
               </div>
 
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
-                EL ALTO MANDO <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-blue-500 bg-clip-text text-transparent">TCG</span>
+                Tienda — <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-blue-500 bg-clip-text text-transparent">El Alto Mando TCG</span>
               </h1>
 
               <p className="text-sm sm:text-base text-slate-300 font-normal leading-relaxed">
-                Catálogo especializado de cartas Pokémon singles, versiones Holo, Reverse y Secret Rares con stock en tiempo real. Crea tus mazos y conéctate con la comunidad competitiva.
+                Catálogo y Stock Oficial de Cartas Pokémon singles, versiones Holo, Reverse y Secret Rares con disponibilidad en tiempo real. Crea tus mazos y conéctate con la comunidad competitiva.
               </p>
 
               {/* Action Buttons */}
@@ -208,8 +215,10 @@ export default function HomePage() {
           setSearch={setSearch}
           selectedExpansion={selectedExpansion}
           setSelectedExpansion={setSelectedExpansion}
-          selectedArtist={selectedArtist}
-          setSelectedArtist={setSelectedArtist}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          selectedTrainerType={selectedTrainerType}
+          setSelectedTrainerType={setSelectedTrainerType}
           selectedVersion={selectedVersion}
           setSelectedVersion={setSelectedVersion}
           selectedLanguage={selectedLanguage}
@@ -219,7 +228,6 @@ export default function HomePage() {
           inStockOnly={inStockOnly}
           setInStockOnly={setInStockOnly}
           expansions={metadata.expansions}
-          artists={metadata.artists}
           versions={metadata.versions}
           languages={metadata.languages}
           onReset={handleResetFilters}

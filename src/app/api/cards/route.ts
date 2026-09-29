@@ -12,6 +12,8 @@ export async function GET(request: Request) {
     const artist = searchParams.get('artist') || '';
     const version = searchParams.get('version') || '';
     const language = searchParams.get('language') || '';
+    const category = searchParams.get('category') || '';
+    const trainerType = searchParams.get('trainerType') || searchParams.get('trainer_type') || '';
     const minPrice = searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : null;
     const maxPrice = searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : null;
     const inStockOnly = searchParams.get('inStockOnly') === 'true';
@@ -32,6 +34,25 @@ export async function GET(request: Request) {
     if (expansion.trim()) {
       conditions.push('expansion = ? COLLATE NOCASE');
       params.push(expansion.trim());
+    }
+
+    if (category.trim()) {
+      const catLower = category.trim().toLowerCase();
+      if (catLower === 'pokemon' || catLower === 'pokémon') {
+        conditions.push("(LOWER(category) = 'pokemon' OR LOWER(category) = 'pokémon' OR category IS NULL OR category = '')");
+      } else if (catLower === 'trainer') {
+        conditions.push("LOWER(category) = 'trainer'");
+        if (trainerType.trim()) {
+          conditions.push('(LOWER(trainer_type) LIKE ? OR LOWER(notes) LIKE ?)');
+          const tTerm = `%${trainerType.trim().toLowerCase()}%`;
+          params.push(tTerm, tTerm);
+        }
+      } else if (catLower === 'energy') {
+        conditions.push("LOWER(category) = 'energy'");
+      } else {
+        conditions.push('LOWER(category) = ?');
+        params.push(catLower);
+      }
     }
 
     if (artist.trim()) {
@@ -110,6 +131,8 @@ export async function POST(request: Request) {
       tcg_id = '',
       rarity = '',
       notes = '',
+      category = 'Pokemon',
+      trainer_type = '',
     } = body;
 
     if (!name || !expansion || !number) {
@@ -122,8 +145,8 @@ export async function POST(request: Request) {
     const now = new Date().toISOString();
     const result = await db.run(`
       INSERT INTO cards (
-        name, expansion, number, version, language, artist, price, stock, image_url, tcg_id, rarity, notes, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        name, expansion, number, version, language, artist, price, stock, image_url, tcg_id, rarity, notes, category, trainer_type, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       name.trim(),
       expansion.trim(),
@@ -137,6 +160,8 @@ export async function POST(request: Request) {
       tcg_id ? tcg_id.trim() : '',
       rarity ? rarity.trim() : '',
       notes ? notes.trim() : '',
+      category ? category.trim() : 'Pokemon',
+      trainer_type ? trainer_type.trim() : '',
       now,
       now
     ]);

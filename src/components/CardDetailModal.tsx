@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { X, Sparkles, User, ShieldCheck, Box, ShoppingBag, Check } from 'lucide-react';
 import { CardData } from './CardItem';
 import { useCart } from '@/context/CartContext';
+import Card3DViewer from './Card3DViewer';
 import { LanguageBadge, FlagES, FlagUS } from './FlagIcon';
 
 interface CardDetailModalProps {
@@ -68,18 +69,13 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
           </button>
 
           <div className="grid grid-cols-1 md:grid-cols-2">
-            {/* Card Visual Left */}
-            <div className="relative bg-slate-950/80 p-8 flex items-center justify-center border-b md:border-b-0 md:border-r border-slate-800">
-              <div className="relative w-full max-w-[280px] aspect-[2.5/3.5] drop-shadow-2xl">
-                <Image
-                  src={imgSrc}
-                  alt={card.name}
-                  fill
-                  className="object-contain rounded-xl"
-                  priority
-                  onError={() => setImgSrc('/placeholder-card.svg')}
-                />
-              </div>
+            {/* Card Visual Left with Interactive 3D Rotation */}
+            <div className="relative bg-gradient-to-b from-slate-950 via-[#070c17] to-slate-950 p-6 sm:p-8 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-slate-800">
+              <Card3DViewer
+                frontImage={imgSrc}
+                cardName={card.name}
+                isHolo={card.version?.toLowerCase().includes('holo') || card.version?.toLowerCase().includes('secret')}
+              />
             </div>
 
             {/* Card Information Right */}

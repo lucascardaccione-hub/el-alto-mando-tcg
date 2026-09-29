@@ -92,6 +92,67 @@ function DeckBuilderContent() {
   const [importingText, setImportingText] = useState(false);
   const [importError, setImportError] = useState('');
 
+  // Floating Hover Card Preview State (without needing to click)
+  const [hoveredCard, setHoveredCard] = useState<{
+    imageUrl: string;
+    name: string;
+    expansion?: string;
+    number?: string;
+    x: number;
+    y: number;
+  } | null>(null);
+
+  useEffect(() => {
+    document.title = 'Deck Builder — El Alto Mando TCG';
+  }, []);
+
+  const handleCardHover = (
+    card: { imageUrl: string; name: string; expansion?: string; number?: string },
+    e: React.MouseEvent
+  ) => {
+    if (!card.imageUrl || card.imageUrl.includes('placeholder')) return;
+    const previewWidth = 260;
+    const previewHeight = 364;
+
+    let x = e.clientX + 24;
+    if (e.clientX + previewWidth + 30 > window.innerWidth) {
+      x = e.clientX - previewWidth - 24;
+    }
+
+    let y = Math.min(
+      Math.max(16, e.clientY - previewHeight / 2),
+      window.innerHeight - previewHeight - 16
+    );
+
+    setHoveredCard({
+      ...card,
+      x,
+      y,
+    });
+  };
+
+  const handleCardMove = (e: React.MouseEvent) => {
+    if (!hoveredCard) return;
+    const previewWidth = 260;
+    const previewHeight = 364;
+
+    let x = e.clientX + 24;
+    if (e.clientX + previewWidth + 30 > window.innerWidth) {
+      x = e.clientX - previewWidth - 24;
+    }
+
+    let y = Math.min(
+      Math.max(16, e.clientY - previewHeight / 2),
+      window.innerHeight - previewHeight - 16
+    );
+
+    setHoveredCard((prev) => (prev ? { ...prev, x, y } : null));
+  };
+
+  const handleCardLeave = () => {
+    setHoveredCard(null);
+  };
+
   // 1. Load store inventory cards to cross-reference stock
   useEffect(() => {
     async function loadStore() {
@@ -568,13 +629,19 @@ function DeckBuilderContent() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Breadcrumb & Navigation */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <Link
-            href="/decks"
-            className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Volver a Mis Mazos</span>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/decks"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Mis Mazos</span>
+            </Link>
+            <span className="text-slate-600">/</span>
+            <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">
+              Deck Builder — El Alto Mando TCG
+            </span>
+          </div>
 
           {/* Action Toolbar */}
           <div className="flex items-center gap-2 flex-wrap">
@@ -599,7 +666,7 @@ function DeckBuilderContent() {
                     ? 'bg-blue-600 text-white shadow-sm'
                     : 'text-slate-400 hover:text-white'
                 }`}
-                title="Vista de galería visual estilo PTCGL y Limitless"
+                title="Vista de galería visual de cartas"
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Tablero Visual</span>
@@ -630,7 +697,7 @@ function DeckBuilderContent() {
               onClick={() => setImageModalOpen(true)}
               disabled={cards.length === 0}
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-extrabold bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 hover:from-blue-600 hover:to-indigo-600 text-white shadow-md shadow-blue-950/40 border border-blue-500/40 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
-              title="Ver la lista de mazo completa en una sola imagen (Estilo Limitless)"
+              title="Ver la lista de mazo completa en una sola imagen (Visualizador TCG Pro)"
             >
               <ImageIcon className="w-3.5 h-3.5 text-blue-200" />
               <span>Ver Lista en Imagen</span>
@@ -875,7 +942,7 @@ function DeckBuilderContent() {
                 </div>
                 <h3 className="font-bold text-white text-base">Tu mazo está vacío</h3>
                 <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                  Usa el buscador de la derecha para añadir Pokémon, entrenadores y energías, o importa una lista de Limitless TCG.
+                  Usa el buscador de la derecha para añadir Pokémon, entrenadores y energías, o importa una lista en formato oficial.
                 </p>
               </div>
             ) : (
@@ -895,6 +962,9 @@ function DeckBuilderContent() {
                     onToggleOwned={handleToggleCardOwned}
                     onSetCategoryOwned={handleSetCategoryOwned}
                     onAddToCart={(c, qty) => addToCart(c, qty)}
+                    onHoverCard={handleCardHover}
+                    onMoveCard={handleCardMove}
+                    onLeaveCard={handleCardLeave}
                   />
                 )}
 
@@ -913,6 +983,9 @@ function DeckBuilderContent() {
                     onToggleOwned={handleToggleCardOwned}
                     onSetCategoryOwned={handleSetCategoryOwned}
                     onAddToCart={(c, qty) => addToCart(c, qty)}
+                    onHoverCard={handleCardHover}
+                    onMoveCard={handleCardMove}
+                    onLeaveCard={handleCardLeave}
                   />
                 )}
 
@@ -931,6 +1004,9 @@ function DeckBuilderContent() {
                     onToggleOwned={handleToggleCardOwned}
                     onSetCategoryOwned={handleSetCategoryOwned}
                     onAddToCart={(c, qty) => addToCart(c, qty)}
+                    onHoverCard={handleCardHover}
+                    onMoveCard={handleCardMove}
+                    onLeaveCard={handleCardLeave}
                   />
                 )}
               </>
@@ -982,14 +1058,17 @@ function DeckBuilderContent() {
                   searchResults.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-blue-500/40 transition-all"
+                      onMouseEnter={(e) => handleCardHover({ imageUrl: item.image || '/placeholder-card.svg', name: item.name, expansion: item.setName, number: item.localId }, e)}
+                      onMouseMove={handleCardMove}
+                      onMouseLeave={handleCardLeave}
+                      className="flex items-center gap-3 p-2.5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-blue-500/40 transition-all cursor-pointer"
                     >
                       <div className="relative w-11 h-15 rounded overflow-hidden bg-slate-950 flex-shrink-0 border border-slate-800 p-0.5">
                         <img
                           src={item.image || '/placeholder-card.svg'}
                           alt={item.name}
                           loading="lazy"
-                          className="w-full h-full object-contain"
+                          className="w-full h-full object-contain pointer-events-none"
                           onError={(e) => { (e.target as HTMLImageElement).src = '/placeholder-card.svg'; }}
                         />
                       </div>
@@ -1025,7 +1104,7 @@ function DeckBuilderContent() {
                     <h3 className="font-bold text-sm text-white flex items-center gap-1.5">
                       <span>Lista en Imagen</span>
                     </h3>
-                    <span className="text-[10px] text-slate-400">Estilo Limitless TCG</span>
+                    <span className="text-[10px] text-slate-400">Visualizador TCG Pro</span>
                   </div>
                 </div>
 
@@ -1056,9 +1135,12 @@ function DeckBuilderContent() {
                     {sortedPreviewCards.slice(0, 36).map((card, idx) => (
                       <div
                         key={`mini-preview-${card.card_name}-${card.number}-${idx}`}
-                        className="relative flex flex-col items-center pb-1.5"
+                        className="relative flex flex-col items-center pb-1.5 cursor-pointer"
+                        onMouseEnter={(e) => handleCardHover({ imageUrl: card.image_url, name: card.card_name, expansion: card.expansion, number: card.number }, e)}
+                        onMouseMove={handleCardMove}
+                        onMouseLeave={handleCardLeave}
                       >
-                        <div className="relative aspect-[2.5/3.5] w-full rounded-sm overflow-hidden bg-slate-950 border border-slate-800">
+                        <div className="relative aspect-[2.5/3.5] w-full rounded-sm overflow-hidden bg-slate-950 border border-slate-800 pointer-events-none">
                           <CardThumbnail
                             item={card}
                             className="w-full h-full object-contain"
@@ -1291,7 +1373,7 @@ function DeckBuilderContent() {
         </div>
       )}
 
-      {/* Visual Decklist Image Modal (Limitless Style) */}
+      {/* Visual Decklist Image Modal (TCG Pro Style) */}
       <DeckImageModal
         isOpen={imageModalOpen}
         onClose={() => setImageModalOpen(false)}
@@ -1299,17 +1381,56 @@ function DeckBuilderContent() {
         format={format}
         cards={cards}
       />
+
+      {/* Floating Card Hover Zoom Preview Tooltip */}
+      {hoveredCard && (
+        <div
+          className="fixed pointer-events-none z-[99999] transition-opacity duration-150 animate-in fade-in zoom-in-95"
+          style={{
+            left: `${hoveredCard.x}px`,
+            top: `${hoveredCard.y}px`,
+            width: '260px',
+          }}
+        >
+          <div className="relative rounded-2xl overflow-hidden border-2 border-blue-500/80 shadow-2xl shadow-black/95 bg-[#0a0f1e] p-2 flex flex-col items-center backdrop-blur-md">
+            <div className="relative w-full aspect-[2.5/3.5] rounded-xl overflow-hidden bg-slate-950">
+              <img
+                src={hoveredCard.imageUrl}
+                alt={hoveredCard.name}
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/placeholder-card.svg';
+                }}
+              />
+            </div>
+            <div className="w-full pt-2 pb-0.5 px-1 text-center">
+              <p className="text-xs font-black text-white truncate">{hoveredCard.name}</p>
+              {(hoveredCard.expansion || hoveredCard.number) && (
+                <p className="text-[10px] font-semibold text-blue-400">
+                  {hoveredCard.expansion} {hoveredCard.number ? `· #${hoveredCard.number}` : ''}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-// Subcomponent: High-reliability Card Image with Limitless CDN cascade & fallback
+// Subcomponent: High-reliability Card Image with CDN cascade & fallback
 function CardThumbnail({
   item,
   className,
+  onMouseEnter,
+  onMouseMove,
+  onMouseLeave,
 }: {
   item: DeckCardItem;
   className?: string;
+  onMouseEnter?: (src: string, e: React.MouseEvent) => void;
+  onMouseMove?: (e: React.MouseEvent) => void;
+  onMouseLeave?: () => void;
 }) {
   const setUpper = (item.expansion || '').toUpperCase().trim();
   const cleanNum = (item.number || '').replace(/^0+/, '');
@@ -1379,6 +1500,9 @@ function CardThumbnail({
       loading="lazy"
       onError={handleError}
       className={className}
+      onMouseEnter={(e) => onMouseEnter?.(currentSrc, e)}
+      onMouseMove={onMouseMove}
+      onMouseLeave={onMouseLeave}
     />
   );
 }
@@ -1397,6 +1521,9 @@ function DeckCategorySection({
   onToggleOwned,
   onSetCategoryOwned,
   onAddToCart,
+  onHoverCard,
+  onMoveCard,
+  onLeaveCard,
 }: {
   title: string;
   count: number;
@@ -1410,6 +1537,9 @@ function DeckCategorySection({
   onToggleOwned: (index: number) => void;
   onSetCategoryOwned: (category: 'pokemon' | 'trainer' | 'energy', owned: boolean) => void;
   onAddToCart: (card: any, qty: number) => void;
+  onHoverCard?: (card: { imageUrl: string; name: string; expansion?: string; number?: string }, e: React.MouseEvent) => void;
+  onMoveCard?: (e: React.MouseEvent) => void;
+  onLeaveCard?: () => void;
 }) {
   const categoryCards = cards
     .map((c, originalIndex) => ({ ...c, originalIndex }))
@@ -1506,6 +1636,9 @@ function DeckCategorySection({
                         ? 'filter grayscale-[35%] opacity-85 group-hover/img:opacity-100'
                         : 'filter grayscale-0 opacity-100 ring-2 ring-emerald-500/70 shadow-md shadow-emerald-500/20 group-hover/img:scale-105'
                     }`}
+                    onMouseEnter={(src, e) => onHoverCard?.({ imageUrl: src, name: item.card_name, expansion: item.expansion, number: item.number }, e)}
+                    onMouseMove={onMoveCard}
+                    onMouseLeave={onLeaveCard}
                   />
 
                   {/* Status Badge overlay on the card thumbnail */}
@@ -1526,7 +1659,7 @@ function DeckCategorySection({
                   </div>
 
                   {/* Quick toggle indicator on image hover */}
-                  <div className="absolute inset-0 bg-blue-950/50 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity rounded-xl">
+                  <div className="absolute inset-0 bg-blue-950/50 opacity-0 group-hover/img:opacity-100 flex items-center justify-center transition-opacity rounded-xl pointer-events-none">
                     <span className="text-[10px] font-bold text-white bg-black/80 px-1.5 py-0.5 rounded-full border border-white/20">
                       {isComplete ? 'Desmarcar' : 'Tengo'}
                     </span>
@@ -1711,6 +1844,9 @@ function DeckCategorySection({
                         ? 'filter grayscale-[35%] opacity-85 group-hover:opacity-100'
                         : 'filter grayscale-0 opacity-100 group-hover:scale-105'
                     }`}
+                    onMouseEnter={(src, e) => onHoverCard?.({ imageUrl: src, name: item.card_name, expansion: item.expansion, number: item.number }, e)}
+                    onMouseMove={onMoveCard}
+                    onMouseLeave={onLeaveCard}
                   />
 
                   {/* Top-left: Card count badge */}
@@ -1744,7 +1880,7 @@ function DeckCategorySection({
                   </div>
 
                   {/* Hover toggle overlay */}
-                  <div className="absolute inset-0 bg-blue-950/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 transition-opacity">
+                  <div className="absolute inset-0 bg-blue-950/50 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1 transition-opacity pointer-events-none">
                     <span className="text-xs font-extrabold text-white bg-black/80 px-2.5 py-1 rounded-xl border border-white/20 shadow-lg">
                       {isComplete ? '✕ Desmarcar' : '✓ Marcar que la tengo'}
                     </span>

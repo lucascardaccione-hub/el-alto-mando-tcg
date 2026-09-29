@@ -245,8 +245,8 @@ export default function DeckImageModal({
               <div>
                 <h3 className="font-extrabold text-base sm:text-lg text-white flex items-center gap-2">
                   <span>Lista de Mazo en Imagen</span>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-800/50">
-                    Estilo Limitless
+                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-800/50 font-bold">
+                    Visualizador TCG Pro
                   </span>
                 </h3>
                 <p className="text-xs text-slate-400">

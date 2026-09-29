@@ -158,6 +158,10 @@ export default function DecksPage() {
     }
   };
 
+  useEffect(() => {
+    document.title = 'Decks de la Comunidad — El Alto Mando TCG';
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-[#070b14] text-slate-100">
       <Navbar />
@@ -169,15 +173,15 @@ export default function DecksPage() {
 
           <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="space-y-3 text-center md:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-blue-600/10 text-blue-400 border border-blue-500/20">
-                <Layers className="w-3.5 h-3.5 text-blue-400" />
-                <span>Herramienta Competitiva Pokémon TCG</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-600/10 text-emerald-400 border border-emerald-500/20">
+                <Layers className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Comunidad Competitiva Pokémon TCG</span>
               </div>
               <h1 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-                Deck Builder & Gestor de Mazos
+                Decks de la Comunidad — El Alto Mando TCG
               </h1>
               <p className="text-xs sm:text-sm text-slate-300 max-w-xl">
-                Crea tus mazos de 60 cartas estilo <strong className="text-white">Limitless TCG</strong> y <strong className="text-white">Pokémon TCG Live</strong>. Marca las cartas que tienes, cuáles te faltan y comprueba al instante el stock a la venta en nuestra tienda.
+                Explora los mejores mazos de 60 cartas en formato oficial de torneos y <strong className="text-white">Pokémon TCG Live</strong>. Revisa cartas en posesión, faltantes y disponibilidad en nuestra Tienda.
               </p>
             </div>
 

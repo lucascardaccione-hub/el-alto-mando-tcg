@@ -61,6 +61,7 @@ export async function GET(
       language: lang === 'es' ? 'Español' : 'Inglés',
       variants: data.variants || {},
       category: data.category || 'Pokemon',
+      trainerType: data.trainerType || '',
       types: data.types || [],
     });
   } catch (error: any) {
