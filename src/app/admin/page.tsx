@@ -19,14 +19,22 @@ import { CardData } from '@/components/CardItem';
 export default function AdminDashboardPage() {
   const [cards, setCards] = useState<CardData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<{ username: string; role: string } | null>(null);
 
   useEffect(() => {
     async function loadData() {
       try {
-        const res = await fetch('/api/cards');
-        if (res.ok) {
-          const data = await res.json();
+        const [cardsRes, userRes] = await Promise.all([
+          fetch('/api/cards'),
+          fetch('/api/auth/me'),
+        ]);
+        if (cardsRes.ok) {
+          const data = await cardsRes.json();
           setCards(data.cards || []);
+        }
+        if (userRes.ok) {
+          const userData = await userRes.json();
+          setCurrentUser(userData.user || null);
         }
       } catch (e) {
         console.error('Error fetching cards:', e);
@@ -129,7 +137,7 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* Quick Access Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className={`grid grid-cols-1 ${currentUser?.username?.toLowerCase() === 'luca' ? 'md:grid-cols-3' : 'md:grid-cols-2'} gap-4`}>
         <Link
           href="/admin/new"
           className="group p-5 rounded-2xl bg-gradient-to-br from-blue-950/30 to-[#0d1629] border border-blue-900/40 hover:border-blue-500/60 transition-all space-y-3"
@@ -170,25 +178,27 @@ export default function AdminDashboardPage() {
           </div>
         </Link>
 
-        <Link
-          href="/admin/users"
-          className="group p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-[#0d1629] border border-slate-800 hover:border-purple-500/50 transition-all space-y-3"
-        >
-          <div className="flex items-center justify-between">
-            <div className="p-3 rounded-xl bg-purple-500/20 text-purple-400">
-              <Users className="w-6 h-6" />
+        {currentUser?.username?.toLowerCase() === 'luca' && (
+          <Link
+            href="/admin/users"
+            className="group p-5 rounded-2xl bg-gradient-to-br from-slate-900 to-[#0d1629] border border-slate-800 hover:border-purple-500/50 transition-all space-y-3"
+          >
+            <div className="flex items-center justify-between">
+              <div className="p-3 rounded-xl bg-purple-500/20 text-purple-400">
+                <Users className="w-6 h-6" />
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" />
             </div>
-            <ArrowRight className="w-4 h-4 text-slate-500 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" />
-          </div>
-          <div>
-            <h3 className="font-bold text-white group-hover:text-purple-400 transition-colors">
-              Usuarios Habilitados
-            </h3>
-            <p className="text-xs text-slate-400 mt-1">
-              Controla quiénes de tu equipo tienen permiso para acceder y subir cartas al sistema.
-            </p>
-          </div>
-        </Link>
+            <div>
+              <h3 className="font-bold text-white group-hover:text-purple-400 transition-colors">
+                Usuarios Habilitados
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Controla quiénes de tu equipo tienen permiso para acceder y subir cartas al sistema.
+              </p>
+            </div>
+          </Link>
+        )}
       </div>
 
       {/* Recent Inventory Preview */}

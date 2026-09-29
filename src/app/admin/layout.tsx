@@ -71,11 +71,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     );
   }
 
+  const isLuca = currentUser?.username?.toLowerCase() === 'luca';
+
   const navLinks = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/admin/new', label: 'Cargar Cartas', icon: PlusCircle },
     { href: '/admin/inventory', label: 'Inventario y Stock', icon: Package },
-    { href: '/admin/users', label: 'Usuarios Habilitados', icon: Users },
+    ...(isLuca ? [{ href: '/admin/users', label: 'Usuarios Habilitados', icon: Users }] : []),
   ];
 
   return (

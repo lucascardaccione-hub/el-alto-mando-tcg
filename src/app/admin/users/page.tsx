@@ -25,6 +25,7 @@ interface AdminUser {
 
 export default function UsersManagementPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
+  const [canManageUsers, setCanManageUsers] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
 
   // New user form
@@ -43,9 +44,13 @@ export default function UsersManagementPage() {
       if (res.ok) {
         const data = await res.json();
         setUsers(data.users || []);
+        setCanManageUsers(data.canManageUsers ?? false);
+      } else if (res.status === 403 || res.status === 401) {
+        setCanManageUsers(false);
       }
     } catch (e) {
       console.error(e);
+      setCanManageUsers(false);
     } finally {
       setLoading(false);
     }
@@ -143,6 +148,43 @@ export default function UsersManagementPage() {
       showNotification('error', 'Error al eliminar usuario');
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[350px] space-y-3">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+        <p className="text-xs text-slate-400">Verificando permisos y cargando usuarios...</p>
+      </div>
+    );
+  }
+
+  if (canManageUsers === false) {
+    return (
+      <div className="max-w-xl mx-auto py-12 px-4 text-center space-y-6 animate-in fade-in duration-300">
+        <div className="w-16 h-16 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-lg shadow-amber-500/10">
+          <ShieldAlert className="w-8 h-8" />
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-black text-white">Acceso Exclusivo de Administrador Maestro</h1>
+          <p className="text-sm text-slate-300 leading-relaxed">
+            Solamente el usuario <strong className="text-amber-400 font-bold">Luca</strong> tiene autorización para habilitar o revocar cuentas en el panel de administración.
+          </p>
+          <p className="text-xs text-slate-500">
+            Tu cuenta tiene permisos de administración para cargar cartas, gestionar stock e inventario.
+          </p>
+        </div>
+        <div className="pt-2">
+          <Link
+            href="/admin"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/30 transition-all hover:scale-105"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Volver al Panel de Control</span>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in duration-300">
@@ -275,13 +317,13 @@ export default function UsersManagementPage() {
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-white">{u.username}</span>
                       <span
-                        className={`text-[10px] font-semibold px-2 py-0.2 rounded border ${
-                          u.role === 'owner'
-                            ? 'bg-amber-950/80 text-amber-300 border-amber-700'
+                        className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
+                          u.username.toLowerCase() === 'luca'
+                            ? 'bg-amber-950/80 text-amber-300 border-amber-600/70 font-bold'
                             : 'bg-slate-800 text-slate-300 border-slate-700'
                         }`}
                       >
-                        {u.role === 'owner' ? '👑 Dueño / Master' : 'Colaborador'}
+                        {u.username.toLowerCase() === 'luca' ? '👑 Master / Administrador Principal' : 'Colaborador de Inventario'}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-500 mt-0.5">
@@ -291,27 +333,33 @@ export default function UsersManagementPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* Status Toggle */}
-                  <button
-                    onClick={() => handleToggleStatus(u)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                      u.is_active === 1
-                        ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60 hover:bg-rose-950/40 hover:text-rose-300 hover:border-rose-700/60'
-                        : 'bg-rose-950/80 text-rose-300 border-rose-800/60 hover:bg-emerald-950/40 hover:text-emerald-300 hover:border-emerald-700/60'
-                    }`}
-                  >
-                    {u.is_active === 1 ? 'Activo (Habilitado)' : 'Inactivo (Bloqueado)'}
-                  </button>
+                  {u.username.toLowerCase() === 'luca' ? (
+                    <span className="text-[11px] text-emerald-400 font-semibold px-2.5 py-1 bg-emerald-950/40 border border-emerald-800/40 rounded-lg">
+                      Cuenta Principal Activa
+                    </span>
+                  ) : (
+                    <>
+                      {/* Status Toggle */}
+                      <button
+                        onClick={() => handleToggleStatus(u)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                          u.is_active === 1
+                            ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60 hover:bg-rose-950/40 hover:text-rose-300 hover:border-rose-700/60'
+                            : 'bg-rose-950/80 text-rose-300 border-rose-800/60 hover:bg-emerald-950/40 hover:text-emerald-300 hover:border-emerald-700/60'
+                        }`}
+                      >
+                        {u.is_active === 1 ? 'Activo (Habilitado)' : 'Inactivo (Bloqueado)'}
+                      </button>
 
-                  {/* Delete Button (can't delete owner) */}
-                  {u.role !== 'owner' && (
-                    <button
-                      onClick={() => handleDeleteUser(u)}
-                      className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition-colors"
-                      title="Revocar acceso"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => handleDeleteUser(u)}
+                        className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                        title="Revocar acceso"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </>
                   )}
                 </div>
               </div>

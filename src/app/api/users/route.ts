@@ -6,22 +6,30 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const currentUser = getCurrentUser();
-  if (!currentUser) {
+  if (!currentUser || currentUser.role !== 'admin') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
   }
 
-  const users = await db.all('SELECT id, username, role, is_active, created_at FROM users ORDER BY id ASC');
-  return NextResponse.json({ users });
+  const isLuca = currentUser.username.toLowerCase() === 'luca';
+
+  const users = await db.all('SELECT id, username, email, role, is_active, created_at FROM users ORDER BY id ASC');
+  return NextResponse.json({
+    users,
+    canManageUsers: isLuca,
+  });
 }
 
 export async function POST(request: Request) {
   try {
     const currentUser = getCurrentUser();
-    if (!currentUser) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    if (!currentUser || currentUser.username.toLowerCase() !== 'luca') {
+      return NextResponse.json(
+        { error: 'Acceso denegado. Solamente el usuario Luca puede habilitar usuarios para el panel de administración.' },
+        { status: 403 }
+      );
     }
 
-    const { username, password, role = 'admin' } = await request.json();
+    const { username, password, email, role = 'admin' } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json({ error: 'Nombre de usuario y contraseña son requeridos' }, { status: 400 });
@@ -32,6 +40,8 @@ export async function POST(request: Request) {
     }
 
     const cleanUsername = username.trim();
+    const cleanEmail = email ? email.trim().toLowerCase() : null;
+
     const existing = await db.get('SELECT id FROM users WHERE username = ? COLLATE NOCASE', [cleanUsername]);
     if (existing) {
       return NextResponse.json({ error: 'El nombre de usuario ya está registrado' }, { status: 400 });
@@ -41,15 +51,16 @@ export async function POST(request: Request) {
     const now = new Date().toISOString();
 
     const result = await db.run(`
-      INSERT INTO users (username, password_hash, role, is_active, created_at)
-      VALUES (?, ?, ?, 1, ?)
-    `, [cleanUsername, hashed, role, now]);
+      INSERT INTO users (username, email, password_hash, role, is_active, is_verified, created_at)
+      VALUES (?, ?, ?, ?, 1, 1, ?)
+    `, [cleanUsername, cleanEmail, role, hashed, now]);
 
     return NextResponse.json({
       success: true,
       user: {
         id: result.lastInsertRowid,
         username: cleanUsername,
+        email: cleanEmail,
         role,
         is_active: 1,
         created_at: now,
@@ -64,11 +75,14 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const currentUser = getCurrentUser();
-    if (!currentUser) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    if (!currentUser || currentUser.username.toLowerCase() !== 'luca') {
+      return NextResponse.json(
+        { error: 'Acceso denegado. Solamente el usuario Luca puede habilitar o deshabilitar usuarios en el panel.' },
+        { status: 403 }
+      );
     }
 
-    const { id, is_active, password } = await request.json();
+    const { id, is_active, password, role } = await request.json();
 
     if (!id) {
       return NextResponse.json({ error: 'ID de usuario requerido' }, { status: 400 });
@@ -84,11 +98,15 @@ export async function PATCH(request: Request) {
       await db.run('UPDATE users SET password_hash = ? WHERE id = ?', [hashed, id]);
     }
 
+    if (role !== undefined) {
+      await db.run('UPDATE users SET role = ? WHERE id = ?', [role, id]);
+    }
+
     if (is_active !== undefined) {
       await db.run('UPDATE users SET is_active = ? WHERE id = ?', [is_active ? 1 : 0, id]);
     }
 
-    return NextResponse.json({ success: true, message: 'Usuario actualizado' });
+    return NextResponse.json({ success: true, message: 'Usuario actualizado correctamente' });
   } catch (error: any) {
     return NextResponse.json({ error: 'Error al actualizar usuario' }, { status: 500 });
   }
@@ -97,8 +115,11 @@ export async function PATCH(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const currentUser = getCurrentUser();
-    if (!currentUser) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    if (!currentUser || currentUser.username.toLowerCase() !== 'luca') {
+      return NextResponse.json(
+        { error: 'Acceso denegado. Solamente el usuario Luca puede revocar o eliminar accesos de administración.' },
+        { status: 403 }
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -118,3 +139,4 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Error al eliminar usuario' }, { status: 500 });
   }
 }
+
