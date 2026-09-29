@@ -9,6 +9,7 @@ import {
   PlusCircle,
   Package,
   Users,
+  ShoppingBag,
   ExternalLink,
   LogOut,
   ShieldCheck,
@@ -75,6 +76,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
 
   const navLinks = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/admin/orders', label: 'Pedidos', icon: ShoppingBag },
     { href: '/admin/new', label: 'Cargar Cartas', icon: PlusCircle },
     { href: '/admin/inventory', label: 'Inventario y Stock', icon: Package },
     ...(isLuca ? [{ href: '/admin/users', label: 'Usuarios Habilitados', icon: Users }] : []),

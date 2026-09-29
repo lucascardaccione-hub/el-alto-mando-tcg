@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { ShoppingBag, ShieldCheck, Box, Layers, Sparkles, User, UserPlus, LogOut } from 'lucide-react';
+import { ShoppingBag, ShieldCheck, Box, Layers, Sparkles, User, UserPlus, LogOut, Clock } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
 interface NavbarProps {
@@ -132,6 +132,18 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
           >
             <Layers className="w-3.5 h-3.5 text-emerald-400" />
             <span>Decks de la Comunidad</span>
+          </Link>
+
+          <Link
+            href="/pedidos"
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all font-medium ${
+              pathname.startsWith('/pedidos')
+                ? 'bg-blue-600/20 text-blue-300 border border-blue-500/40 font-semibold'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+            }`}
+          >
+            <Clock className="w-3.5 h-3.5 text-amber-400" />
+            <span>Seguimiento</span>
           </Link>
         </div>
 

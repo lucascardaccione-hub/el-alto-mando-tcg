@@ -24,6 +24,7 @@ export interface CardData {
   seller_id?: number;
   seller_name?: string;
   seller_phone?: string;
+  is_foil?: number;
 }
 
 interface CardItemProps {
@@ -124,7 +125,7 @@ export default function CardItem({ card, onOpenModal }: CardItemProps) {
       {/* Card Info Section */}
       <div className="p-4 flex flex-col flex-1 justify-between gap-3">
         <div>
-          {/* Version badge */}
+          {/* Version badge & Foil indicator */}
           <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
             <span
               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border ${getVersionBadgeClass(
@@ -134,6 +135,11 @@ export default function CardItem({ card, onOpenModal }: CardItemProps) {
               <Sparkles className="w-2.5 h-2.5" />
               <span>{card.version}</span>
             </span>
+            {(card.is_foil === 1 || card.version?.toLowerCase().includes('foil')) && (
+              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500/20 via-pink-500/20 to-purple-500/20 text-amber-300 border border-amber-500/40 shadow-sm animate-pulse">
+                ✨ FOIL
+              </span>
+            )}
             <span className="text-[11px] text-slate-400 font-medium truncate max-w-[130px]">
               {card.expansion}
             </span>

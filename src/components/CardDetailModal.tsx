@@ -74,7 +74,7 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
               <Card3DViewer
                 frontImage={imgSrc}
                 cardName={card.name}
-                isHolo={card.version?.toLowerCase().includes('holo') || card.version?.toLowerCase().includes('secret')}
+                isHolo={card.is_foil === 1 || card.version?.toLowerCase().includes('foil') || card.version?.toLowerCase().includes('holo') || card.version?.toLowerCase().includes('secret')}
               />
             </div>
 
@@ -93,6 +93,11 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                     <Sparkles className="w-3 h-3" />
                     <span>{card.version}</span>
                   </span>
+                  {(card.is_foil === 1 || card.version?.toLowerCase().includes('foil')) && (
+                    <span className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/20 via-pink-500/20 to-purple-500/20 text-amber-300 font-black border border-amber-500/40 flex items-center gap-1 shadow-sm">
+                      ✨ FOIL
+                    </span>
+                  )}
                   <LanguageBadge language={card.language} size="md" />
                 </div>
 

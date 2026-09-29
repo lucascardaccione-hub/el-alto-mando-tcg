@@ -60,6 +60,7 @@ export async function PUT(
         seller_id = COALESCE(?, seller_id),
         seller_name = COALESCE(?, seller_name),
         seller_phone = COALESCE(?, seller_phone),
+        is_foil = COALESCE(?, is_foil),
         updated_at = ?
       WHERE id = ?
     `, [
@@ -77,6 +78,7 @@ export async function PUT(
       seller_id !== undefined ? Number(seller_id) : null,
       seller_name !== undefined ? seller_name.trim() : null,
       seller_phone !== undefined ? seller_phone.trim() : null,
+      is_foil !== undefined ? (is_foil ? 1 : 0) : null,
       now,
       cardId
     ]);

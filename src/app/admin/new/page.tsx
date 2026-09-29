@@ -20,18 +20,15 @@ import {
 } from 'lucide-react';
 import { FlagUS, FlagES, LanguageBadge } from '@/components/FlagIcon';
 
-const COMMON_VERSIONS = [
-  'Común',
-  'Infrecuente',
-  'Rara',
-  'Reverse Holo',
-  'Holo',
+const OFFICIAL_RARITIES = [
+  'Common (NO FOIL)',
+  'Reverse (FOIL)',
+  'Holo (FOIL)',
+  'EX',
   'Full Art',
-  'Illustration Rare',
-  'Special Illustration Rare',
-  'Hyper Rare / Gold',
-  'Promo',
-];
+  'IR/SIR',
+  'Otro (Custom)',
+] as const;
 
 // Search Result Item with robust image fallback
 function SearchCardItem({
@@ -108,7 +105,9 @@ export default function NewCardPage() {
   const [name, setName] = useState('');
   const [expansion, setExpansion] = useState('');
   const [number, setNumber] = useState('');
-  const [version, setVersion] = useState('Holo');
+  const [selectedRarity, setSelectedRarity] = useState<string>('Common (NO FOIL)');
+  const [customRarityText, setCustomRarityText] = useState('');
+  const [isFoil, setIsFoil] = useState(false);
   const [language, setLanguage] = useState<'Inglés' | 'Español'>('Inglés');
   const [artist, setArtist] = useState('');
   const [category, setCategory] = useState('Pokemon');
@@ -116,8 +115,19 @@ export default function NewCardPage() {
   const [price, setPrice] = useState<number | string>('');
   const [stock, setStock] = useState<number>(1);
   const [imageUrl, setImageUrl] = useState('');
-  const [rarity, setRarity] = useState('');
   const [notes, setNotes] = useState('Near Mint');
+
+  const handleRarityChange = (newRarity: string) => {
+    setSelectedRarity(newRarity);
+    if (newRarity === 'Common (NO FOIL)') {
+      setIsFoil(false);
+    } else if (newRarity === 'Otro (Custom)') {
+      // User can toggle isFoil manually
+    } else {
+      // Reverse, Holo, EX, Full Art, IR/SIR are FOIL automatically
+      setIsFoil(true);
+    }
+  };
 
   // Seller State
   const [currentUser, setCurrentUser] = useState<any>(null);
@@ -214,7 +224,23 @@ export default function NewCardPage() {
         setNumber(detail.number || tcgCard.localId || '');
         setArtist(detail.artist || 'Oficial');
         setImageUrl(detail.image || tcgCard.image || '');
-        setRarity(detail.rarity || '');
+        const rawRarity = (detail.rarity || '').toLowerCase();
+        const rawName = (detail.name || tcgCard.name || '').toLowerCase();
+        if (rawRarity.includes('illustration') || rawRarity.includes('special illustration')) {
+          handleRarityChange('IR/SIR');
+        } else if (rawRarity.includes('full art') || rawRarity.includes('ultra rare') || rawRarity.includes('secret') || rawRarity.includes('hyper')) {
+          handleRarityChange('Full Art');
+        } else if (rawName.endsWith(' ex') || rawRarity.includes('ex')) {
+          handleRarityChange('EX');
+        } else if (rawRarity.includes('holo')) {
+          handleRarityChange('Holo (FOIL)');
+        } else if (rawRarity.includes('reverse')) {
+          handleRarityChange('Reverse (FOIL)');
+        } else if (rawRarity.includes('common') || rawRarity.includes('uncommon')) {
+          handleRarityChange('Common (NO FOIL)');
+        } else {
+          handleRarityChange('Common (NO FOIL)');
+        }
         setLanguage(searchLang === 'es' ? 'Español' : 'Inglés');
         setCategory(detail.category || 'Pokemon');
         setTrainerType(detail.trainerType || '');
@@ -257,6 +283,10 @@ export default function NewCardPage() {
 
     setLoading(true);
 
+    const finalVersion = selectedRarity === 'Otro (Custom)'
+      ? (customRarityText.trim() || 'Custom')
+      : selectedRarity;
+
     try {
       const res = await fetch('/api/cards', {
         method: 'POST',
@@ -265,19 +295,20 @@ export default function NewCardPage() {
           name,
           expansion,
           number,
-          version,
+          version: finalVersion,
           language,
           artist: artist || 'Desconocido',
           price: Number(price),
           stock: Number(stock),
           image_url: imageUrl || '/placeholder-card.png',
-          rarity,
+          rarity: finalVersion,
           notes,
           category,
           trainer_type: trainerType,
           seller_id: selectedSellerId,
           seller_name: selectedSellerName,
           seller_phone: selectedSellerPhone,
+          is_foil: isFoil ? 1 : 0,
         }),
       });
 
@@ -299,7 +330,9 @@ export default function NewCardPage() {
       setPrice('');
       setStock(1);
       setImageUrl('');
-      setRarity('');
+      setSelectedRarity('Common (NO FOIL)');
+      setCustomRarityText('');
+      setIsFoil(false);
       setCategory('Pokemon');
       setTrainerType('');
       setSelectedTcgdexCard(null);
@@ -567,23 +600,101 @@ export default function NewCardPage() {
                 </select>
               </div>
 
-              {/* Versión (Común, Reverse, Holo, Full Art, etc.) */}
+              {/* Rareza / Versión Estandarizada */}
               <div className="space-y-1.5">
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                  Versión *
+                  Rareza / Versión *
                 </label>
                 <select
-                  value={version}
-                  onChange={(e) => setVersion(e.target.value)}
+                  value={selectedRarity}
+                  onChange={(e) => handleRarityChange(e.target.value)}
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm text-white focus:outline-none focus:border-blue-500 cursor-pointer"
                 >
-                  {COMMON_VERSIONS.map((v) => (
-                    <option key={v} value={v}>
-                      {v}
+                  {OFFICIAL_RARITIES.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
                     </option>
                   ))}
                 </select>
               </div>
+
+              {/* Casillero FOIL con iconito de brillito ✨ */}
+              <div className="space-y-1.5 flex flex-col justify-end">
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                  Efecto Holográfico
+                </label>
+                <div
+                  onClick={() => {
+                    if (selectedRarity === 'Otro (Custom)') {
+                      setIsFoil(!isFoil);
+                    }
+                  }}
+                  className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border transition-all ${
+                    selectedRarity === 'Otro (Custom)'
+                      ? 'cursor-pointer hover:border-slate-600'
+                      : 'cursor-default'
+                  } ${
+                    isFoil
+                      ? 'bg-amber-950/40 border-amber-500/60 shadow-sm shadow-amber-950/30'
+                      : 'bg-slate-900/90 border-slate-800'
+                  }`}
+                  title={
+                    selectedRarity === 'Otro (Custom)'
+                      ? 'Toca para marcar o desmarcar el efecto FOIL'
+                      : 'Auto-marcado según la rareza seleccionada'
+                  }
+                >
+                  <div className="flex items-center gap-2">
+                    <Sparkles
+                      className={`w-4 h-4 transition-colors ${
+                        isFoil ? 'text-amber-400 animate-pulse' : 'text-slate-600'
+                      }`}
+                    />
+                    <span
+                      className={`text-xs font-bold transition-colors ${
+                        isFoil ? 'text-amber-300' : 'text-slate-400'
+                      }`}
+                    >
+                      {isFoil ? 'Carta FOIL / Con Brillo ✨' : 'Sin Brillo (NO FOIL)'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {selectedRarity !== 'Otro (Custom)' && (
+                      <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">
+                        Auto
+                      </span>
+                    )}
+                    <input
+                      type="checkbox"
+                      checked={isFoil}
+                      disabled={selectedRarity !== 'Otro (Custom)'}
+                      onChange={(e) => setIsFoil(e.target.checked)}
+                      className="w-4 h-4 rounded text-blue-600 bg-slate-800 border-slate-700 cursor-pointer accent-blue-600"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Si seleccionó Otro (Custom), campo de texto para escribir la rareza */}
+              {selectedRarity === 'Otro (Custom)' && (
+                <div className="sm:col-span-2 space-y-1.5 p-3.5 rounded-2xl bg-[#090f1e] border border-amber-500/40 animate-in fade-in">
+                  <label className="block text-xs font-bold text-amber-400 uppercase tracking-wider">
+                    Escribe la rareza personalizada que no figure *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={customRarityText}
+                    onChange={(e) => setCustomRarityText(e.target.value)}
+                    placeholder="Ej: Promo Stamp, Amazing Rare, Ace Spec, Vintage 1st Edition..."
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-amber-500/60 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                  />
+                  <p className="text-[11px] text-slate-400">
+                    💡 Al usar una rareza Custom, puedes marcar o desmarcar libremente el casillero de FOIL de arriba.
+                  </p>
+                </div>
+              )}
 
               {/* Precio */}
               <div className="space-y-1.5">
@@ -634,7 +745,7 @@ export default function NewCardPage() {
               </div>
 
               {/* Artista */}
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 sm:col-span-2">
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
                   Artista / Ilustrador
                 </label>
@@ -643,20 +754,6 @@ export default function NewCardPage() {
                   value={artist}
                   onChange={(e) => setArtist(e.target.value)}
                   placeholder="Ej: AKIRA EGAWA, Ken Sugimori"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                />
-              </div>
-
-              {/* Rareza */}
-              <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                  Rareza Oficial
-                </label>
-                <input
-                  type="text"
-                  value={rarity}
-                  onChange={(e) => setRarity(e.target.value)}
-                  placeholder="Ej: Special Illustration Rare, Ultra Rare"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                 />
               </div>

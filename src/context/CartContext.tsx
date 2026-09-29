@@ -16,6 +16,7 @@ export interface CartItem {
   seller_id?: number;
   seller_name?: string;
   seller_phone?: string;
+  is_foil?: number;
 }
 
 interface CartContextType {
@@ -26,6 +27,7 @@ interface CartContextType {
   toggleCart: () => void;
   addToCart: (card: any, quantity?: number) => void;
   removeFromCart: (id: number) => void;
+  removeSellerItems: (sellerName: string) => void;
   updateQuantity: (id: number, delta: number) => void;
   clearCart: () => void;
   totalCount: number;
@@ -93,6 +95,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             seller_id: card.seller_id,
             seller_name: card.seller_name || 'Luca',
             seller_phone: card.seller_phone || '',
+            is_foil: card.is_foil ?? (card.version?.toLowerCase().includes('foil') || card.version?.toLowerCase().includes('holo') ? 1 : 0),
           },
         ];
       }
@@ -102,6 +105,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const removeFromCart = (id: number) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const removeSellerItems = (sellerName: string) => {
+    setItems((prev) => prev.filter((item) => (item.seller_name || 'Luca').trim() !== sellerName.trim()));
   };
 
   const updateQuantity = (id: number, delta: number) => {
@@ -137,6 +144,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         toggleCart,
         addToCart,
         removeFromCart,
+        removeSellerItems,
         updateQuantity,
         clearCart,
         totalCount,

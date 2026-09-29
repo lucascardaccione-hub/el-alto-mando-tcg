@@ -136,6 +136,7 @@ export async function POST(request: Request) {
       seller_id,
       seller_name,
       seller_phone,
+      is_foil = 0,
     } = body;
 
     if (!name || !expansion || !number) {
@@ -170,8 +171,8 @@ export async function POST(request: Request) {
     const now = new Date().toISOString();
     const result = await db.run(`
       INSERT INTO cards (
-        name, expansion, number, version, language, artist, price, stock, image_url, tcg_id, rarity, notes, category, trainer_type, seller_id, seller_name, seller_phone, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        name, expansion, number, version, language, artist, price, stock, image_url, tcg_id, rarity, notes, category, trainer_type, seller_id, seller_name, seller_phone, is_foil, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       name.trim(),
       expansion.trim(),
@@ -190,6 +191,7 @@ export async function POST(request: Request) {
       finalSellerId,
       finalSellerName,
       finalSellerPhone,
+      is_foil ? 1 : 0,
       now,
       now
     ]);
