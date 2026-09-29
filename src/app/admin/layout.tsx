@@ -124,13 +124,13 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           {/* Brand */}
           <div className="flex items-center gap-3">
             <Link href="/admin" className="flex items-center gap-2.5">
-              <div className="relative w-9 h-9 rounded-xl overflow-hidden p-0.5 bg-gradient-to-br from-blue-600 to-amber-500">
-                <div className="w-full h-full rounded-[10px] overflow-hidden bg-white flex items-center justify-center relative p-0.5">
+              <div className="relative w-9 h-9 aspect-square flex-shrink-0 rounded-full overflow-hidden p-0.5 bg-gradient-to-br from-blue-600 to-amber-500">
+                <div className="w-full h-full rounded-full overflow-hidden bg-white flex items-center justify-center p-0.5">
                   <Image
                     src="/logo.png"
                     alt="El Alto Mando"
-                    width={36}
-                    height={36}
+                    width={32}
+                    height={32}
                     className="w-full h-full object-contain"
                   />
                 </div>
