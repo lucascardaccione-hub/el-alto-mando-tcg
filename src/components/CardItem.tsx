@@ -61,11 +61,14 @@ export default function CardItem({ card, onOpenModal }: CardItemProps) {
   // Version color coding
   const getVersionBadgeClass = (version: string) => {
     const v = version.toLowerCase();
-    if (v.includes('special illustration') || v.includes('secret') || v.includes('hyper') || v.includes('gold')) {
+    if (v.includes('special illustration') || v.includes('secret') || v.includes('hyper') || v.includes('gold') || v.includes('ir/sir')) {
       return 'bg-gradient-to-r from-amber-500/20 to-yellow-500/20 text-amber-300 border-amber-500/40';
     }
     if (v.includes('illustration rare') || v.includes('full art') || v.includes('ultra rare') || v.includes('alternate')) {
       return 'bg-purple-500/20 text-purple-300 border-purple-500/40';
+    }
+    if (v === 'ex' || v.endsWith(' ex')) {
+      return 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40';
     }
     if (v.includes('reverse')) {
       return 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40';

@@ -21,10 +21,10 @@ import {
 import { FlagUS, FlagES, LanguageBadge } from '@/components/FlagIcon';
 
 const OFFICIAL_RARITIES = [
-  'Common (NO FOIL)',
-  'Reverse (FOIL)',
-  'Holo (FOIL)',
-  'Cosmos Holo (FOIL)',
+  'Common',
+  'Reverse',
+  'Holo',
+  'Cosmos Holo',
   'EX',
   'Full Art',
   'IR/SIR',
@@ -106,7 +106,7 @@ export default function NewCardPage() {
   const [name, setName] = useState('');
   const [expansion, setExpansion] = useState('');
   const [number, setNumber] = useState('');
-  const [selectedRarity, setSelectedRarity] = useState<string>('Common (NO FOIL)');
+  const [selectedRarity, setSelectedRarity] = useState<string>('Common');
   const [customRarityText, setCustomRarityText] = useState('');
   const [isFoil, setIsFoil] = useState(false);
   const [isLeague, setIsLeague] = useState(false);
@@ -121,7 +121,7 @@ export default function NewCardPage() {
 
   const handleRarityChange = (newRarity: string) => {
     setSelectedRarity(newRarity);
-    if (newRarity === 'Common (NO FOIL)') {
+    if (newRarity === 'Common') {
       setIsFoil(false);
     } else if (newRarity === 'Otro (Custom)') {
       // User can toggle isFoil manually
@@ -235,13 +235,13 @@ export default function NewCardPage() {
         } else if (rawName.endsWith(' ex') || rawRarity.includes('ex')) {
           handleRarityChange('EX');
         } else if (rawRarity.includes('holo')) {
-          handleRarityChange('Holo (FOIL)');
+          handleRarityChange('Holo');
         } else if (rawRarity.includes('reverse')) {
-          handleRarityChange('Reverse (FOIL)');
+          handleRarityChange('Reverse');
         } else if (rawRarity.includes('common') || rawRarity.includes('uncommon')) {
-          handleRarityChange('Common (NO FOIL)');
+          handleRarityChange('Common');
         } else {
-          handleRarityChange('Common (NO FOIL)');
+          handleRarityChange('Common');
         }
         setLanguage(searchLang === 'es' ? 'Español' : 'Inglés');
         setCategory(detail.category || 'Pokemon');
@@ -333,7 +333,7 @@ export default function NewCardPage() {
       setPrice('');
       setStock(1);
       setImageUrl('');
-      setSelectedRarity('Common (NO FOIL)');
+      setSelectedRarity('Common');
       setCustomRarityText('');
       setIsFoil(false);
       setIsLeague(false);
