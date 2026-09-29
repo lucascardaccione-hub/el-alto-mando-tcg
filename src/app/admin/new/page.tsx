@@ -818,10 +818,15 @@ export default function NewCardPage() {
 
                 <div className="w-full text-left space-y-1">
                   <div className="flex items-center justify-between gap-1 flex-wrap">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="text-[10px] font-semibold px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800/40">
-                        {version}
+                        {selectedRarity === 'Otro (Custom)' ? (customRarityText.trim() || 'Custom') : selectedRarity}
                       </span>
+                      {isFoil && (
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-purple-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-0.5">
+                          ✨ FOIL
+                        </span>
+                      )}
                       <LanguageBadge language={language} size="xs" />
                     </div>
                     <span className="text-[10px] font-bold text-emerald-400">
