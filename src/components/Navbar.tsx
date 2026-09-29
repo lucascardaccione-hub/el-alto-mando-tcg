@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { ShoppingBag, ShieldCheck, Box, Layers, Sparkles, User, UserPlus, LogOut } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
@@ -22,6 +23,25 @@ interface UserSession {
 export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) {
   const { totalCount, openCart } = useCart();
   const [user, setUser] = useState<UserSession | null>(null);
+  const pathname = usePathname() || '/';
+
+  const getSectionBadge = () => {
+    if (pathname.startsWith('/deck-builder')) {
+      return { primary: 'Deck Builder', secondary: 'Creador de Mazos' };
+    }
+    if (pathname.startsWith('/decks')) {
+      return { primary: 'Decks de la Comunidad', secondary: 'Metagame Oficial' };
+    }
+    if (pathname.startsWith('/admin')) {
+      return { primary: 'Panel de Control', secondary: 'Administración' };
+    }
+    if (pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/verify-email')) {
+      return { primary: 'Mi Cuenta', secondary: 'El Alto Mando' };
+    }
+    return { primary: 'Tienda Oficial', secondary: 'Stock en Vivo' };
+  };
+
+  const sectionInfo = getSectionBadge();
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -69,9 +89,9 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-medium tracking-wide flex items-center gap-1.5 mt-0.5">
-              <span>Tienda Oficial</span>
+              <span className="text-slate-300 font-semibold">{sectionInfo.primary}</span>
               <span className="inline-block w-1 h-1 rounded-full bg-blue-500"></span>
-              <span>Stock en Vivo</span>
+              <span>{sectionInfo.secondary}</span>
             </p>
           </div>
         </Link>
@@ -80,7 +100,11 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
         <div className="hidden lg:flex items-center gap-2 text-xs">
           <Link
             href="/"
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium"
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all font-medium ${
+              pathname === '/'
+                ? 'bg-blue-600/20 text-blue-300 border border-blue-500/40 font-semibold'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+            }`}
           >
             <ShoppingBag className="w-3.5 h-3.5 text-blue-400" />
             <span>Tienda</span>
@@ -88,7 +112,11 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
 
           <Link
             href="/deck-builder"
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-blue-950/50 border border-blue-500/40 text-blue-300 hover:text-white hover:bg-blue-900/60 hover:border-blue-400/60 transition-all font-semibold"
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all font-medium ${
+              pathname.startsWith('/deck-builder')
+                ? 'bg-blue-600/20 text-blue-300 border border-blue-500/40 font-semibold'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+            }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-blue-400" />
             <span>Deck Builder</span>
@@ -96,7 +124,11 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
 
           <Link
             href="/decks"
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-800/80 transition-all font-medium"
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full transition-all font-medium ${
+              pathname.startsWith('/decks')
+                ? 'bg-blue-600/20 text-blue-300 border border-blue-500/40 font-semibold'
+                : 'text-slate-300 hover:text-white hover:bg-slate-800/80'
+            }`}
           >
             <Layers className="w-3.5 h-3.5 text-emerald-400" />
             <span>Decks de la Comunidad</span>
