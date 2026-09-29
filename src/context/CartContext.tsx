@@ -13,6 +13,9 @@ export interface CartItem {
   image_url: string;
   stock: number;
   quantity: number;
+  seller_id?: number;
+  seller_name?: string;
+  seller_phone?: string;
 }
 
 interface CartContextType {
@@ -87,6 +90,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             image_url: card.image_url,
             stock: card.stock,
             quantity: initialQty,
+            seller_id: card.seller_id,
+            seller_name: card.seller_name || 'Luca',
+            seller_phone: card.seller_phone || '',
           },
         ];
       }

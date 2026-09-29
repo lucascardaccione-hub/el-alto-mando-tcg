@@ -138,6 +138,15 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
 
                   <div className="flex items-center justify-between text-slate-300">
                     <span className="text-slate-500 flex items-center gap-1.5">
+                      <User className="w-4 h-4 text-blue-400" /> Vendedor
+                    </span>
+                    <span className="font-bold text-blue-300 bg-blue-950/70 px-2.5 py-0.5 rounded-lg border border-blue-800/60">
+                      {card.seller_name || 'Luca'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-slate-300">
+                    <span className="text-slate-500 flex items-center gap-1.5">
                       <Box className="w-4 h-4" /> Stock disponible
                     </span>
                     <span

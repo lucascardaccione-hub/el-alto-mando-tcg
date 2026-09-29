@@ -133,6 +133,9 @@ export async function POST(request: Request) {
       notes = '',
       category = 'Pokemon',
       trainer_type = '',
+      seller_id,
+      seller_name,
+      seller_phone,
     } = body;
 
     if (!name || !expansion || !number) {
@@ -142,11 +145,33 @@ export async function POST(request: Request) {
       );
     }
 
+    const isLuca = user.username.toLowerCase() === 'luca';
+
+    // Default to the current logged in user
+    let finalSellerId = seller_id ? Number(seller_id) : user.id;
+    let finalSellerName = seller_name ? seller_name.trim() : user.username;
+    let finalSellerPhone = seller_phone ? seller_phone.trim() : '';
+
+    // If the logged in user is not Luca, force the card seller to be themselves
+    if (!isLuca) {
+      finalSellerId = user.id;
+      finalSellerName = user.username;
+    }
+
+    // Lookup seller phone from DB if not passed
+    if (!finalSellerPhone && finalSellerId) {
+      const sellerUser = await db.get('SELECT phone, username FROM users WHERE id = ?', [finalSellerId]);
+      if (sellerUser) {
+        finalSellerPhone = sellerUser.phone || '';
+        if (!finalSellerName) finalSellerName = sellerUser.username;
+      }
+    }
+
     const now = new Date().toISOString();
     const result = await db.run(`
       INSERT INTO cards (
-        name, expansion, number, version, language, artist, price, stock, image_url, tcg_id, rarity, notes, category, trainer_type, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        name, expansion, number, version, language, artist, price, stock, image_url, tcg_id, rarity, notes, category, trainer_type, seller_id, seller_name, seller_phone, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `, [
       name.trim(),
       expansion.trim(),
@@ -162,6 +187,9 @@ export async function POST(request: Request) {
       notes ? notes.trim() : '',
       category ? category.trim() : 'Pokemon',
       trainer_type ? trainer_type.trim() : '',
+      finalSellerId,
+      finalSellerName,
+      finalSellerPhone,
       now,
       now
     ]);

@@ -12,7 +12,7 @@ export async function GET() {
 
   const isLuca = currentUser.username.toLowerCase() === 'luca';
 
-  const users = await db.all('SELECT id, username, email, role, is_active, created_at FROM users ORDER BY id ASC');
+  const users = await db.all('SELECT id, username, email, phone, role, is_active, created_at FROM users ORDER BY id ASC');
   return NextResponse.json({
     users,
     canManageUsers: isLuca,
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const { username, password, email, role = 'admin' } = await request.json();
+    const { username, password, email, phone = '', role = 'admin' } = await request.json();
 
     if (!username || !password) {
       return NextResponse.json({ error: 'Nombre de usuario y contraseña son requeridos' }, { status: 400 });
@@ -41,6 +41,7 @@ export async function POST(request: Request) {
 
     const cleanUsername = username.trim();
     const cleanEmail = email ? email.trim().toLowerCase() : null;
+    const cleanPhone = phone ? phone.replace(/[^\d+]/g, '').trim() : '';
 
     const existing = await db.get('SELECT id FROM users WHERE username = ? COLLATE NOCASE', [cleanUsername]);
     if (existing) {
@@ -51,9 +52,9 @@ export async function POST(request: Request) {
     const now = new Date().toISOString();
 
     const result = await db.run(`
-      INSERT INTO users (username, email, password_hash, role, is_active, is_verified, created_at)
-      VALUES (?, ?, ?, ?, 1, 1, ?)
-    `, [cleanUsername, cleanEmail, role, hashed, now]);
+      INSERT INTO users (username, email, phone, password_hash, role, is_active, is_verified, created_at)
+      VALUES (?, ?, ?, ?, ?, 1, 1, ?)
+    `, [cleanUsername, cleanEmail, cleanPhone, hashed, role, now]);
 
     return NextResponse.json({
       success: true,
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
         id: result.lastInsertRowid,
         username: cleanUsername,
         email: cleanEmail,
+        phone: cleanPhone,
         role,
         is_active: 1,
         created_at: now,
@@ -75,17 +77,32 @@ export async function POST(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const currentUser = getCurrentUser();
-    if (!currentUser || currentUser.username.toLowerCase() !== 'luca') {
+    if (!currentUser) {
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    const { id, is_active, password, role, phone } = await request.json();
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID de usuario requerido' }, { status: 400 });
+    }
+
+    const isLuca = currentUser.username.toLowerCase() === 'luca';
+    const isSelf = currentUser.id === id;
+
+    // Only Luca can change other users, or change status/roles
+    if (!isLuca && !isSelf) {
       return NextResponse.json(
-        { error: 'Acceso denegado. Solamente el usuario Luca puede habilitar o deshabilitar usuarios en el panel.' },
+        { error: 'Acceso denegado. Solamente puedes editar tu propia información.' },
         { status: 403 }
       );
     }
 
-    const { id, is_active, password, role } = await request.json();
-
-    if (!id) {
-      return NextResponse.json({ error: 'ID de usuario requerido' }, { status: 400 });
+    if ((is_active !== undefined || role !== undefined) && !isLuca) {
+      return NextResponse.json(
+        { error: 'Acceso denegado. Solamente el usuario Luca puede habilitar o deshabilitar roles.' },
+        { status: 403 }
+      );
     }
 
     // Prevent deactivating own account
@@ -98,12 +115,17 @@ export async function PATCH(request: Request) {
       await db.run('UPDATE users SET password_hash = ? WHERE id = ?', [hashed, id]);
     }
 
-    if (role !== undefined) {
+    if (role !== undefined && isLuca) {
       await db.run('UPDATE users SET role = ? WHERE id = ?', [role, id]);
     }
 
-    if (is_active !== undefined) {
+    if (is_active !== undefined && isLuca) {
       await db.run('UPDATE users SET is_active = ? WHERE id = ?', [is_active ? 1 : 0, id]);
+    }
+
+    if (phone !== undefined) {
+      const cleanPhone = phone ? phone.replace(/[^\d+]/g, '').trim() : '';
+      await db.run('UPDATE users SET phone = ? WHERE id = ?', [cleanPhone, id]);
     }
 
     return NextResponse.json({ success: true, message: 'Usuario actualizado correctamente' });

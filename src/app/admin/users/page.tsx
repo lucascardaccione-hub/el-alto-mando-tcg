@@ -19,6 +19,7 @@ interface AdminUser {
   id: number;
   username: string;
   role: string;
+  phone?: string;
   is_active: number;
   created_at: string;
 }
@@ -31,8 +32,14 @@ export default function UsersManagementPage() {
   // New user form
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [newPhone, setNewPhone] = useState('');
   const [newRole, setNewRole] = useState('admin');
   const [creating, setCreating] = useState(false);
+
+  // Edit phone inline state
+  const [editingPhoneId, setEditingPhoneId] = useState<number | null>(null);
+  const [editingPhoneValue, setEditingPhoneValue] = useState('');
+  const [savingPhone, setSavingPhone] = useState(false);
 
   // Notification
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -78,6 +85,7 @@ export default function UsersManagementPage() {
         body: JSON.stringify({
           username: newUsername,
           password: newPassword,
+          phone: newPhone,
           role: newRole,
         }),
       });
@@ -90,12 +98,40 @@ export default function UsersManagementPage() {
         showNotification('success', `Usuario "${newUsername}" habilitado como Administrador.`);
         setNewUsername('');
         setNewPassword('');
+        setNewPhone('');
         fetchUsers();
       }
     } catch (e) {
       showNotification('error', 'Error de conexión');
     } finally {
       setCreating(false);
+    }
+  };
+
+  // Save phone number
+  const handleSavePhone = async (userId: number) => {
+    setSavingPhone(true);
+    try {
+      const res = await fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, phone: editingPhoneValue }),
+      });
+
+      if (res.ok) {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === userId ? { ...u, phone: editingPhoneValue } : u))
+        );
+        showNotification('success', 'Número de WhatsApp guardado correctamente.');
+        setEditingPhoneId(null);
+      } else {
+        const data = await res.json();
+        showNotification('error', data.error || 'Error al guardar WhatsApp');
+      }
+    } catch {
+      showNotification('error', 'Error de conexión al guardar WhatsApp');
+    } finally {
+      setSavingPhone(false);
     }
   };
 
@@ -235,7 +271,7 @@ export default function UsersManagementPage() {
           <span>Habilitar Nuevo Usuario para el Panel</span>
         </h2>
 
-        <form onSubmit={handleCreateUser} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <form onSubmit={handleCreateUser} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
               Nombre de Usuario
@@ -265,11 +301,24 @@ export default function UsersManagementPage() {
             />
           </div>
 
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              WhatsApp (cód. país + núm)
+            </label>
+            <input
+              type="text"
+              value={newPhone}
+              onChange={(e) => setNewPhone(e.target.value)}
+              placeholder="Ej: 5491123456789"
+              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500"
+            />
+          </div>
+
           <div className="flex items-end">
             <button
               type="submit"
               disabled={creating}
-              className="w-full py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm text-white bg-blue-600 hover:bg-blue-500 shadow-md transition-all flex items-center justify-center gap-2"
+              className="w-full py-2 px-4 rounded-xl font-bold text-xs sm:text-sm text-white bg-blue-600 hover:bg-blue-500 shadow-md transition-all flex items-center justify-center gap-2"
             >
               {creating ? (
                 <>
@@ -291,7 +340,7 @@ export default function UsersManagementPage() {
       <div className="bg-[#0d1629] border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
         <h2 className="text-base font-bold text-white flex items-center gap-2">
           <Shield className="w-4 h-4 text-emerald-400" />
-          <span>Usuarios con Permiso de Carga ({users.length})</span>
+          <span>Usuarios con Permiso de Carga y Venta ({users.length})</span>
         </h2>
 
         {loading ? (
@@ -301,11 +350,11 @@ export default function UsersManagementPage() {
             {users.map((u) => (
               <div
                 key={u.id}
-                className="py-3.5 flex items-center justify-between gap-4 text-xs sm:text-sm"
+                className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs sm:text-sm"
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs ${
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${
                       u.is_active === 1
                         ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40'
                         : 'bg-slate-800 text-slate-500 border border-slate-700'
@@ -314,8 +363,8 @@ export default function UsersManagementPage() {
                     {u.username.substring(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-white">{u.username}</span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-bold text-white text-sm">{u.username}</span>
                       <span
                         className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
                           u.username.toLowerCase() === 'luca'
@@ -323,16 +372,64 @@ export default function UsersManagementPage() {
                             : 'bg-slate-800 text-slate-300 border-slate-700'
                         }`}
                       >
-                        {u.username.toLowerCase() === 'luca' ? '👑 Master / Administrador Principal' : 'Colaborador de Inventario'}
+                        {u.username.toLowerCase() === 'luca' ? '👑 Master / Administrador Principal' : 'Colaborador / Vendedor'}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
-                      Registrado: {new Date(u.created_at).toLocaleDateString()}
-                    </p>
+
+                    {/* WhatsApp Status & Inline editor */}
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                      {editingPhoneId === u.id ? (
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="text"
+                            value={editingPhoneValue}
+                            onChange={(e) => setEditingPhoneValue(e.target.value)}
+                            placeholder="54911XXXXXXXX"
+                            className="px-2 py-1 rounded-lg bg-slate-900 border border-blue-500 text-xs text-white focus:outline-none w-36"
+                          />
+                          <button
+                            onClick={() => handleSavePhone(u.id)}
+                            disabled={savingPhone}
+                            className="px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold"
+                          >
+                            Guardar
+                          </button>
+                          <button
+                            onClick={() => setEditingPhoneId(null)}
+                            className="px-2 py-1 rounded-lg bg-slate-800 text-slate-400 hover:text-white text-[11px]"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            onClick={() => {
+                              setEditingPhoneId(u.id);
+                              setEditingPhoneValue(u.phone || '');
+                            }}
+                            className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border transition-all ${
+                              u.phone
+                                ? 'bg-emerald-950/70 text-emerald-300 border-emerald-700/60 hover:border-emerald-500'
+                                : 'bg-slate-900 text-amber-400 border-amber-700/50 hover:border-amber-500'
+                            }`}
+                            title="Toca para editar el número de WhatsApp de pedidos"
+                          >
+                            <span>💬 WhatsApp:</span>
+                            <span className="font-mono">{u.phone ? `+${u.phone}` : 'Sin configurar (Toca para agregar)'}</span>
+                            <span className="text-[10px] text-slate-400 ml-1 underline">Editar</span>
+                          </button>
+                        </div>
+                      )}
+
+                      <span className="text-[11px] text-slate-500">
+                        · Registrado: {new Date(u.created_at).toLocaleDateString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 self-end md:self-auto">
                   {u.username.toLowerCase() === 'luca' ? (
                     <span className="text-[11px] text-emerald-400 font-semibold px-2.5 py-1 bg-emerald-950/40 border border-emerald-800/40 rounded-lg">
                       Cuenta Principal Activa

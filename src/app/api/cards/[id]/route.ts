@@ -37,6 +37,9 @@ export async function PUT(
       image_url,
       rarity,
       notes,
+      seller_id,
+      seller_name,
+      seller_phone,
     } = body;
 
     const now = new Date().toISOString();
@@ -54,6 +57,9 @@ export async function PUT(
         image_url = COALESCE(?, image_url),
         rarity = COALESCE(?, rarity),
         notes = COALESCE(?, notes),
+        seller_id = COALESCE(?, seller_id),
+        seller_name = COALESCE(?, seller_name),
+        seller_phone = COALESCE(?, seller_phone),
         updated_at = ?
       WHERE id = ?
     `, [
@@ -68,6 +74,9 @@ export async function PUT(
       image_url !== undefined ? image_url.trim() : null,
       rarity !== undefined ? rarity.trim() : null,
       notes !== undefined ? notes.trim() : null,
+      seller_id !== undefined ? Number(seller_id) : null,
+      seller_name !== undefined ? seller_name.trim() : null,
+      seller_phone !== undefined ? seller_phone.trim() : null,
       now,
       cardId
     ]);

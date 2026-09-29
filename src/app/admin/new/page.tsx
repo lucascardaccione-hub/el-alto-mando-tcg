@@ -15,6 +15,8 @@ import {
   Eye,
   RefreshCw,
   Globe,
+  User,
+  Phone,
 } from 'lucide-react';
 import { FlagUS, FlagES, LanguageBadge } from '@/components/FlagIcon';
 
@@ -116,6 +118,53 @@ export default function NewCardPage() {
   const [imageUrl, setImageUrl] = useState('');
   const [rarity, setRarity] = useState('');
   const [notes, setNotes] = useState('Near Mint');
+
+  // Seller State
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [authorizedSellers, setAuthorizedSellers] = useState<any[]>([]);
+  const [selectedSellerId, setSelectedSellerId] = useState<number | null>(null);
+  const [selectedSellerName, setSelectedSellerName] = useState('');
+  const [selectedSellerPhone, setSelectedSellerPhone] = useState('');
+
+  // Fetch current user and authorized sellers on mount
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.authenticated && data?.user) {
+          setCurrentUser(data.user);
+          setSelectedSellerId(data.user.id);
+          setSelectedSellerName(data.user.username);
+          setSelectedSellerPhone(data.user.phone || '');
+
+          if (data.user.username.toLowerCase() === 'luca') {
+            fetch('/api/users')
+              .then((r) => (r.ok ? r.json() : null))
+              .then((uData) => {
+                if (uData?.users) {
+                  const active = uData.users.filter((u: any) => u.is_active === 1);
+                  setAuthorizedSellers(active);
+                  const selfUser = uData.users.find((u: any) => u.id === data.user.id);
+                  if (selfUser?.phone) {
+                    setSelectedSellerPhone(selfUser.phone);
+                  }
+                }
+              })
+              .catch(() => {});
+          }
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSellerChange = (userId: number) => {
+    const found = authorizedSellers.find((s) => s.id === userId);
+    if (found) {
+      setSelectedSellerId(found.id);
+      setSelectedSellerName(found.username);
+      setSelectedSellerPhone(found.phone || '');
+    }
+  };
 
   // Status
   const [loading, setLoading] = useState(false);
@@ -226,6 +275,9 @@ export default function NewCardPage() {
           notes,
           category,
           trainer_type: trainerType,
+          seller_id: selectedSellerId,
+          seller_name: selectedSellerName,
+          seller_phone: selectedSellerPhone,
         }),
       });
 
@@ -412,6 +464,46 @@ export default function NewCardPage() {
                 </span>
               )}
             </h2>
+
+            {/* Vendedor Asignado Banner / Selector */}
+            <div className="p-4 rounded-2xl bg-[#090f1d] border border-blue-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner">
+              <div className="space-y-0.5">
+                <span className="text-[11px] font-bold text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5" />
+                  <span>Vendedor Asignado a esta Carta</span>
+                </span>
+                <p className="text-xs text-slate-400">
+                  Los pedidos por WhatsApp de los clientes llegarán directamente a este vendedor.
+                </p>
+              </div>
+
+              {currentUser?.username?.toLowerCase() === 'luca' && authorizedSellers.length > 0 ? (
+                <div className="flex items-center gap-2">
+                  <select
+                    value={selectedSellerId || ''}
+                    onChange={(e) => handleSellerChange(Number(e.target.value))}
+                    className="px-3.5 py-2 rounded-xl bg-slate-900 border border-blue-500/60 text-xs font-bold text-white focus:outline-none focus:ring-1 focus:ring-blue-500 shadow"
+                  >
+                    {authorizedSellers.map((seller) => (
+                      <option key={seller.id} value={seller.id}>
+                        Vendedor: {seller.username} {seller.phone ? `(+${seller.phone})` : '(Sin WhatsApp)'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-blue-950/80 border border-blue-600/50 text-xs font-bold text-white">
+                  <span>👤 {selectedSellerName || currentUser?.username || 'Cargando...'}</span>
+                  {selectedSellerPhone ? (
+                    <span className="text-emerald-400 font-mono text-[11px] flex items-center gap-1">
+                      <Phone className="w-3 h-3" /> +{selectedSellerPhone}
+                    </span>
+                  ) : (
+                    <span className="text-amber-400 text-[11px]">(Sin WhatsApp configurado)</span>
+                  )}
+                </div>
+              )}
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* Nombre */}

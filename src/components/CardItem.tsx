@@ -19,6 +19,11 @@ export interface CardData {
   image_url: string;
   rarity?: string;
   notes?: string;
+  category?: string;
+  trainer_type?: string;
+  seller_id?: number;
+  seller_name?: string;
+  seller_phone?: string;
 }
 
 interface CardItemProps {
@@ -140,9 +145,15 @@ export default function CardItem({ card, onOpenModal }: CardItemProps) {
           </h3>
 
           {/* Artist */}
-          <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
-            <User className="w-3 h-3 text-slate-500 flex-shrink-0" />
-            <span className="truncate">{card.artist || 'Ilustrador oficial'}</span>
+          <div className="flex items-center justify-between gap-1 text-xs text-slate-400 mt-1">
+            <div className="flex items-center gap-1.5 truncate">
+              <User className="w-3 h-3 text-slate-500 flex-shrink-0" />
+              <span className="truncate">{card.artist || 'Ilustrador oficial'}</span>
+            </div>
+            {/* Seller pill */}
+            <span className="flex-shrink-0 text-[10px] font-bold text-blue-300 bg-blue-950/70 px-2 py-0.5 rounded-md border border-blue-800/50">
+              Vendido por: {card.seller_name || 'Luca'}
+            </span>
           </div>
         </div>
 

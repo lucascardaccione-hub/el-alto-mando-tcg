@@ -225,6 +225,7 @@ export default function InventoryPage() {
                 <th className="py-3.5 px-3">Colección (EN)</th>
                 <th className="py-3.5 px-3">Idioma</th>
                 <th className="py-3.5 px-3">Versión</th>
+                <th className="py-3.5 px-3">Vendedor</th>
                 <th className="py-3.5 px-3">Precio</th>
                 <th className="py-3.5 px-3 text-center">Stock Actual</th>
                 <th className="py-3.5 px-4 text-right">Acciones</th>
@@ -233,7 +234,7 @@ export default function InventoryPage() {
             <tbody className="divide-y divide-slate-800/60 text-slate-200">
               {filteredCards.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-500 text-xs">
+                  <td colSpan={8} className="py-8 text-center text-slate-500 text-xs">
                     {loading ? 'Cargando inventario...' : 'No se encontraron cartas en el inventario.'}
                   </td>
                 </tr>
@@ -278,6 +279,13 @@ export default function InventoryPage() {
                     <td className="py-3.5 px-3">
                       <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-700">
                         {card.version}
+                      </span>
+                    </td>
+
+                    {/* Vendedor */}
+                    <td className="py-3.5 px-3">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-950/80 text-blue-300 border border-blue-800/50">
+                        👤 {card.seller_name || 'Luca'}
                       </span>
                     </td>
 

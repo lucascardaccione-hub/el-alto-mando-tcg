@@ -28,18 +28,40 @@ export default function CartDrawer() {
     }).format(val);
   };
 
-  // Pre-generate WhatsApp message for easy checkout
-  const generateWhatsAppMessage = () => {
-    let text = `👋 *Hola El Alto Mando TCG!* Quisiera consultar por el siguiente pedido de cartas:\n\n`;
-    items.forEach((item, index) => {
+  // Group items by seller
+  const sellerGroups = React.useMemo(() => {
+    const groups: { [key: string]: { sellerName: string; sellerPhone: string; items: typeof items; subtotal: number; count: number } } = {};
+    items.forEach((item) => {
+      const sellerKey = (item.seller_name || 'Luca').trim();
+      if (!groups[sellerKey]) {
+        groups[sellerKey] = {
+          sellerName: sellerKey,
+          sellerPhone: item.seller_phone || '',
+          items: [],
+          subtotal: 0,
+          count: 0,
+        };
+      }
+      groups[sellerKey].items.push(item);
+      groups[sellerKey].subtotal += item.price * item.quantity;
+      groups[sellerKey].count += item.quantity;
+    });
+    return Object.values(groups);
+  }, [items]);
+
+  // Pre-generate WhatsApp message for a specific seller group
+  const generateWhatsAppMessageForGroup = (group: { sellerName: string; sellerPhone: string; items: typeof items; subtotal: number }) => {
+    let text = `👋 *Hola ${group.sellerName}!* Quisiera consultar por el siguiente pedido de cartas en *El Alto Mando TCG*:\n\n`;
+    group.items.forEach((item, index) => {
       text += `${index + 1}. *${item.name}* (${item.expansion} #${item.number})\n`;
       text += `   • Idioma: ${item.language || 'Inglés'}\n`;
       text += `   • Versión: ${item.version}\n`;
       text += `   • Cantidad: ${item.quantity}\n`;
       text += `   • Subtotal: ${formatPrice(item.price * item.quantity)}\n\n`;
     });
-    text += `💰 *TOTAL ESTIMADO:* ${formatPrice(totalPrice)}\n\n¿Tienen disponible para coordinar el retiro/envío? Muchas gracias!`;
-    return `https://wa.me/?text=${encodeURIComponent(text)}`;
+    text += `💰 *TOTAL A COORDINAR:* ${formatPrice(group.subtotal)}\n\n¿Tienes disponible para coordinar el retiro/envío? Muchas gracias!`;
+    const cleanPhone = (group.sellerPhone || '').replace(/[^\d]/g, '');
+    return `https://wa.me/${cleanPhone ? cleanPhone : ''}?text=${encodeURIComponent(text)}`;
   };
 
   return (
@@ -134,6 +156,9 @@ export default function CartDrawer() {
                           {item.version}
                         </span>
                         <LanguageBadge language={item.language} size="xs" />
+                        <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-950 text-slate-300 border border-slate-700/60">
+                          👤 Vendedor: {item.seller_name || 'Luca'}
+                        </span>
                       </div>
                     </div>
 
@@ -187,17 +212,52 @@ export default function CartDrawer() {
                 <span className="text-blue-400 text-lg font-black">{formatPrice(totalPrice)}</span>
               </div>
 
-              {/* Action Buttons */}
+              {/* Action Buttons based on Single / Multi Seller */}
               <div className="space-y-2 pt-2">
-                <a
-                  href={generateWhatsAppMessage()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm text-white bg-[#25D366] hover:bg-[#20ba5a] shadow-lg shadow-emerald-950/40 transition-all duration-200 active:scale-[0.98]"
-                >
-                  <Send className="w-4 h-4" />
-                  <span>Enviar Pedido por WhatsApp</span>
-                </a>
+                {sellerGroups.length === 1 ? (
+                  <div className="space-y-1.5">
+                    <a
+                      href={generateWhatsAppMessageForGroup(sellerGroups[0])}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl font-bold text-sm text-white bg-[#25D366] hover:bg-[#20ba5a] shadow-lg shadow-emerald-950/40 transition-all duration-200 active:scale-[0.98]"
+                    >
+                      <Send className="w-4 h-4" />
+                      <span>Enviar Pedido a {sellerGroups[0].sellerName} por WhatsApp</span>
+                    </a>
+                    {sellerGroups[0].sellerPhone && (
+                      <p className="text-[10px] text-center text-slate-400 font-mono">
+                        📱 Se enviará al WhatsApp (+{sellerGroups[0].sellerPhone})
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-2.5">
+                    <div className="p-2.5 rounded-xl bg-blue-950/70 border border-blue-500/40 text-[11px] text-blue-200 space-y-0.5">
+                      <span className="font-bold text-white block">📦 Cartas de {sellerGroups.length} vendedores distintos</span>
+                      <span>Envía el mensaje correspondiente a cada vendedor para coordinar tu compra:</span>
+                    </div>
+                    {sellerGroups.map((group) => (
+                      <div key={group.sellerName} className="p-3 rounded-xl bg-slate-950/90 border border-slate-800 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-white">👤 Vendedor: {group.sellerName}</span>
+                          <span className="font-black text-blue-400">
+                            {formatPrice(group.subtotal)} ({group.count} {group.count === 1 ? 'carta' : 'cartas'})
+                          </span>
+                        </div>
+                        <a
+                          href={generateWhatsAppMessageForGroup(group)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg font-bold text-xs text-white bg-[#25D366] hover:bg-[#20ba5a] shadow-sm transition-all"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          <span>Enviar a {group.sellerName} {group.sellerPhone ? `(+${group.sellerPhone})` : ''}</span>
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between pt-1">
                   <button
