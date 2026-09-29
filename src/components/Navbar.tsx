@@ -91,13 +91,13 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         {/* Logo and Brand */}
         <Link href="/" className="flex items-center gap-3.5 group">
-          <div className="relative w-12 h-12 flex-shrink-0 flex items-center justify-center group-hover:scale-105 transition-transform duration-300">
+          <div className="relative w-12 h-12 flex-shrink-0 flex items-center justify-center rounded-2xl overflow-hidden bg-white p-1 border border-white/20 shadow-md shadow-blue-500/15 group-hover:scale-105 transition-transform duration-300">
             <Image
               src="/logo.png"
               alt="El Alto Mando TCG"
-              width={48}
-              height={48}
-              className="object-contain drop-shadow-[0_2px_12px_rgba(37,99,235,0.35)]"
+              width={46}
+              height={46}
+              className="w-full h-full object-contain"
               priority
             />
           </div>
