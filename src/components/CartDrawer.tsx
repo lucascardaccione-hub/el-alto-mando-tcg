@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import {
   X,
   Trash2,
@@ -19,6 +20,10 @@ import {
   User,
   ExternalLink,
   ChevronRight,
+  Lock,
+  LogIn,
+  AlertCircle,
+  MessageCircle,
 } from 'lucide-react';
 import { useCart, CartItem } from '@/context/CartContext';
 import { LanguageBadge } from './FlagIcon';
@@ -33,21 +38,27 @@ interface SellerGroup {
 }
 
 interface CompletedOrderModalProps {
+  orderId: number;
   orderNumber: string;
   sellerName: string;
+  sellerPhone: string;
   buyerName: string;
   subtotal: number;
   onClose: () => void;
 }
 
 function OrderSuccessModal({
+  orderId,
   orderNumber,
   sellerName,
+  sellerPhone,
   buyerName,
   subtotal,
   onClose,
 }: CompletedOrderModalProps) {
   const [copied, setCopied] = useState(false);
+  const [waSentChecked, setWaSentChecked] = useState(false);
+  const [updatingWa, setUpdatingWa] = useState(false);
 
   const formatPrice = (val: number) => {
     return new Intl.NumberFormat('es-AR', {
@@ -63,9 +74,27 @@ function OrderSuccessModal({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleToggleWa = async (checked: boolean) => {
+    setWaSentChecked(checked);
+    if (orderId && checked) {
+      setUpdatingWa(true);
+      try {
+        await fetch('/api/orders', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: orderId, wa_notified: 1 }),
+        });
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setUpdatingWa(false);
+      }
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg bg-[#0c1322] border border-blue-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-center">
+      <div className="relative w-full max-w-lg bg-[#0c1322] border border-blue-500/40 rounded-3xl p-6 sm:p-8 shadow-2xl space-y-6 text-center max-h-[90vh] overflow-y-auto">
         {/* Success Icon */}
         <div className="w-16 h-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 mx-auto flex items-center justify-center shadow-lg shadow-emerald-950/50">
           <CheckCircle2 className="w-9 h-9" />
@@ -81,7 +110,7 @@ function OrderSuccessModal({
           </h3>
           <p className="text-xs text-slate-400 max-w-sm mx-auto">
             Hemos registrado tu pedido para <strong className="text-white">{sellerName}</strong>.
-            Se abrió WhatsApp para que puedas coordinar directamente con el vendedor.
+            Se abrió WhatsApp para que envíes la lista de cartas directamente.
           </p>
         </div>
 
@@ -137,15 +166,62 @@ function OrderSuccessModal({
                   3. Preparado (Coordinemos la entrega)
                 </span>
                 <p className="text-[11px] text-slate-500 mt-0.5">
-                  Listo para retiro en punto acordado o envío por correo.
+                  Listo para retiro en punto acordado o despacho.
                 </p>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Checkbox Obligatorio WhatsApp */}
+        <div
+          className={`p-4 rounded-2xl border transition-all text-left space-y-2.5 ${
+            waSentChecked
+              ? 'bg-emerald-950/40 border-emerald-500/60 shadow-md shadow-emerald-950/40'
+              : 'bg-amber-950/40 border-amber-500/60 shadow-md shadow-amber-950/40'
+          }`}
+        >
+          <label className="flex items-start gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={waSentChecked}
+              onChange={(e) => handleToggleWa(e.target.checked)}
+              className="mt-0.5 w-5 h-5 rounded text-emerald-600 bg-slate-900 border-slate-700 cursor-pointer accent-emerald-600"
+            />
+            <div className="space-y-0.5">
+              <span
+                className={`text-xs font-extrabold block ${
+                  waSentChecked ? 'text-emerald-300' : 'text-amber-300'
+                }`}
+              >
+                Envié whatsapp al vendedor para informar mi pedido *
+              </span>
+              <p className="text-[11px] text-slate-400 leading-snug">
+                Confirma que enviaste el mensaje de WhatsApp a {sellerName} para que pueda verificar el stock físico y comenzar la preparación.
+              </p>
+            </div>
+          </label>
+
+          {sellerPhone && (
+            <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px]">
+              <span className="text-slate-400">Vendedor: +{sellerPhone}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const cleanPhone = sellerPhone.replace(/[^\d]/g, '');
+                  window.open(`https://wa.me/${cleanPhone}`, '_blank');
+                }}
+                className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-bold underline"
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                <span>Reabrir WhatsApp</span>
+              </button>
+            </div>
+          )}
+        </div>
+
         {/* Copy & Actions */}
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900 border border-slate-800">
             <div className="text-left">
               <span className="text-[10px] text-slate-500 block uppercase font-bold">Código de Pedido</span>
@@ -168,15 +244,76 @@ function OrderSuccessModal({
               className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-slate-800 hover:bg-slate-700 text-blue-300 border border-slate-700 flex items-center justify-center gap-1.5 transition-all"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>Ver seguimiento en vivo</span>
+              <span>Ver seguimiento</span>
             </a>
             <button
               onClick={onClose}
-              className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/40 transition-all"
+              disabled={!waSentChecked}
+              className="flex-1 py-2.5 rounded-xl font-bold text-xs bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white shadow-lg shadow-blue-900/40 transition-all"
             >
               Listo
             </button>
           </div>
+
+          {!waSentChecked && (
+            <p className="text-[11px] text-amber-400 font-semibold animate-pulse">
+              ⚠️ Tilda la casilla de WhatsApp para finalizar tu pedido.
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AuthRequiredModal({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
+      <div className="relative w-full max-w-md bg-[#0d1527] border border-blue-500/40 rounded-3xl p-6 sm:p-7 shadow-2xl text-center space-y-5">
+        <div className="w-14 h-14 rounded-2xl bg-blue-600/20 text-blue-400 border border-blue-500/30 flex items-center justify-center mx-auto shadow-inner">
+          <Lock className="w-7 h-7" />
+        </div>
+        <div className="space-y-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400 bg-blue-950/80 px-3 py-1 rounded-full border border-blue-800/60">
+            Identificación Requerida
+          </span>
+          <h3 className="text-xl font-extrabold text-white">
+            Registro Obligatorio para Pedir
+          </h3>
+          <p className="text-xs text-slate-300 leading-relaxed">
+            Para realizar un pedido en <strong>El Alto Mando TCG</strong> debes estar registrado e iniciar sesión con tu cuenta. Así el vendedor podrá identificar tus cartas y registrar tu compra.
+          </p>
+        </div>
+
+        <div className="space-y-2.5 pt-2">
+          <button
+            onClick={() => {
+              onClose();
+              router.push('/login');
+            }}
+            className="w-full py-2.5 rounded-xl font-bold text-xs text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-900/40 transition-all flex items-center justify-center gap-2"
+          >
+            <LogIn className="w-4 h-4" />
+            <span>Iniciar Sesión</span>
+          </button>
+          <button
+            onClick={() => {
+              onClose();
+              router.push('/register');
+            }}
+            className="w-full py-2.5 rounded-xl font-bold text-xs text-slate-200 bg-slate-800 hover:bg-slate-700 border border-slate-700 transition-all flex items-center justify-center gap-2"
+          >
+            <User className="w-4 h-4" />
+            <span>Crear una Cuenta Nueva (Gratis)</span>
+          </button>
+          <button
+            onClick={onClose}
+            className="text-xs text-slate-500 hover:text-slate-300 transition-colors pt-1"
+          >
+            Volver al Carrito
+          </button>
         </div>
       </div>
     </div>
@@ -184,6 +321,7 @@ function OrderSuccessModal({
 }
 
 export default function CartDrawer() {
+  const router = useRouter();
   const {
     items,
     isOpen,
@@ -196,6 +334,10 @@ export default function CartDrawer() {
     totalPrice,
   } = useCart();
 
+  // Current authenticated user
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
   // Buyer information persisted in localStorage
   const [buyerName, setBuyerName] = useState('');
   const [buyerPhone, setBuyerPhone] = useState('');
@@ -203,8 +345,10 @@ export default function CartDrawer() {
 
   // Success modal state
   const [completedOrder, setCompletedOrder] = useState<{
+    orderId: number;
     orderNumber: string;
     sellerName: string;
+    sellerPhone: string;
     buyerName: string;
     subtotal: number;
   } | null>(null);
@@ -218,7 +362,18 @@ export default function CartDrawer() {
     } catch (e) {
       console.error(e);
     }
-  }, []);
+
+    // Check user auth
+    fetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.authenticated && data?.user) {
+          setCurrentUser(data.user);
+          setBuyerName((prev) => prev.trim() || data.user.username);
+        }
+      })
+      .catch(() => {});
+  }, [isOpen]);
 
   const saveBuyerData = (name: string, phone: string) => {
     setBuyerName(name);
@@ -263,7 +418,13 @@ export default function CartDrawer() {
 
   // Handle Order confirmation for a specific seller group
   const handleConfirmOrderForGroup = async (group: SellerGroup) => {
-    const finalBuyerName = buyerName.trim() || 'Cliente';
+    // REQUIREMENT 1: User MUST be registered
+    if (!currentUser) {
+      setShowAuthModal(true);
+      return;
+    }
+
+    const finalBuyerName = buyerName.trim() || currentUser.username || 'Cliente';
     setSubmittingSeller(group.sellerName);
 
     try {
@@ -287,6 +448,7 @@ export default function CartDrawer() {
       }
 
       const orderNumber = data.orderNumber;
+      const orderId = data.order?.id;
 
       // 2. Build WhatsApp message with order number and 3-step information
       let text = `🛒 *PEDIDO #${orderNumber} - El Alto Mando TCG*\n`;
@@ -317,10 +479,12 @@ export default function CartDrawer() {
       // 4. Remove this seller's items from the cart (MercadoLibre style)
       removeSellerItems(group.sellerName);
 
-      // 5. Open Success & 3-Step Tracker modal
+      // 5. Open Success & 3-Step Tracker modal with mandatory WhatsApp check
       setCompletedOrder({
+        orderId,
         orderNumber,
         sellerName: group.sellerName,
+        sellerPhone: group.sellerPhone,
         buyerName: finalBuyerName,
         subtotal: group.subtotal,
       });
@@ -336,10 +500,16 @@ export default function CartDrawer() {
 
   return (
     <>
+      {showAuthModal && (
+        <AuthRequiredModal onClose={() => setShowAuthModal(false)} />
+      )}
+
       {completedOrder && (
         <OrderSuccessModal
+          orderId={completedOrder.orderId}
           orderNumber={completedOrder.orderNumber}
           sellerName={completedOrder.sellerName}
+          sellerPhone={completedOrder.sellerPhone}
           buyerName={completedOrder.buyerName}
           subtotal={completedOrder.subtotal}
           onClose={() => setCompletedOrder(null)}
@@ -380,13 +550,29 @@ export default function CartDrawer() {
               </button>
             </div>
 
+            {/* Auth Banner if not logged in */}
+            {!currentUser && items.length > 0 && (
+              <div className="p-3.5 bg-gradient-to-r from-blue-950/80 to-indigo-950/80 border-b border-blue-500/30 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 text-blue-300">
+                  <Lock className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                  <span>Para hacer un pedido debes tener una cuenta iniciada.</span>
+                </div>
+                <button
+                  onClick={() => setShowAuthModal(true)}
+                  className="px-3 py-1 rounded-lg font-bold bg-blue-600 hover:bg-blue-500 text-white whitespace-nowrap shadow-sm"
+                >
+                  Ingresar
+                </button>
+              </div>
+            )}
+
             {/* Buyer Contact Form Banner */}
             {items.length > 0 && (
               <div className="bg-slate-900/90 border-b border-slate-800 p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-blue-400" />
-                    Datos para tu pedido
+                    Datos para tu pedido {currentUser && <span className="text-emerald-400">(@{currentUser.username})</span>}
                   </span>
                   <span className="text-[10px] text-slate-500">Se guardan automáticamente</span>
                 </div>
@@ -572,14 +758,27 @@ export default function CartDrawer() {
                           <button
                             onClick={() => handleConfirmOrderForGroup(group)}
                             disabled={isSubmitting}
-                            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-xs text-white bg-[#25D366] hover:bg-[#20ba5a] shadow-lg shadow-emerald-950/40 transition-all duration-200 active:scale-[0.98] disabled:opacity-50"
+                            className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-xs text-white shadow-lg transition-all duration-200 active:scale-[0.98] disabled:opacity-50 ${
+                              currentUser
+                                ? 'bg-[#25D366] hover:bg-[#20ba5a] shadow-emerald-950/40'
+                                : 'bg-blue-600 hover:bg-blue-500 shadow-blue-950/40'
+                            }`}
                           >
-                            <Send className="w-3.5 h-3.5" />
-                            <span>
-                              {isSubmitting
-                                ? 'Generando pedido...'
-                                : `Confirmar Pedido #${group.sellerName} (${formatPrice(group.subtotal)})`}
-                            </span>
+                            {currentUser ? (
+                              <>
+                                <Send className="w-3.5 h-3.5" />
+                                <span>
+                                  {isSubmitting
+                                    ? 'Generando pedido...'
+                                    : `Confirmar Pedido #${group.sellerName} (${formatPrice(group.subtotal)})`}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <Lock className="w-3.5 h-3.5" />
+                                <span>Iniciar Sesión para Pedir</span>
+                              </>
+                            )}
                           </button>
 
                           <div className="flex items-center justify-between text-[10px] text-slate-500 px-1">
@@ -630,4 +829,3 @@ export default function CartDrawer() {
     </>
   );
 }
-

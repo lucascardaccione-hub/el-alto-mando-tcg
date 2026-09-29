@@ -23,6 +23,7 @@ interface UserSession {
 export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) {
   const { totalCount, openCart } = useCart();
   const [user, setUser] = useState<UserSession | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
   const pathname = usePathname() || '/';
 
   const getSectionBadge = () => {
@@ -49,10 +50,31 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
       .then((data) => {
         if (data?.authenticated && data?.user) {
           setUser(data.user);
+          if (data.user.role === 'admin' || data.user.role === 'owner') {
+            fetch('/api/orders/unread-count')
+              .then((r) => (r.ok ? r.json() : null))
+              .then((d) => {
+                if (d?.unreadCount) setUnreadCount(d.unreadCount);
+              })
+              .catch(() => {});
+          }
         }
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!user || (user.role !== 'admin' && user.role !== 'owner')) return;
+    const interval = setInterval(() => {
+      fetch('/api/orders/unread-count')
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => {
+          setUnreadCount(d?.unreadCount || 0);
+        })
+        .catch(() => {});
+    }, 12000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -161,14 +183,26 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
           {user ? (
             <div className="flex items-center gap-2">
               {(user.role === 'admin' || user.role === 'owner') && (
-                <Link
-                  href="/admin"
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-white/[0.08] hover:border-white/[0.15] transition-all duration-200"
-                  title="Panel de Administración"
-                >
-                  <ShieldCheck className="w-4 h-4 text-blue-400" />
-                  <span className="hidden sm:inline">Admin</span>
-                </Link>
+                <>
+                  {unreadCount > 0 && (
+                    <Link
+                      href="/admin/orders"
+                      className="animate-pulse flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 text-white shadow-lg shadow-rose-950/60 border border-amber-400/50 hover:scale-105 transition-all"
+                      title="¡Tienes nuevos pedidos pendientes de revisión!"
+                    >
+                      <ShoppingBag className="w-3.5 h-3.5" />
+                      <span>Pedidos ({unreadCount})</span>
+                    </Link>
+                  )}
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-white/[0.08] hover:border-white/[0.15] transition-all duration-200"
+                    title="Panel de Administración"
+                  >
+                    <ShieldCheck className="w-4 h-4 text-blue-400" />
+                    <span className="hidden sm:inline">Admin</span>
+                  </Link>
+                </>
               )}
               <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-200 bg-slate-900/80 border border-white/[0.08]">
                 <User className="w-3.5 h-3.5 text-blue-400" />

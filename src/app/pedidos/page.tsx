@@ -1,24 +1,25 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import Image from 'next/image';
 import Link from 'next/link';
+import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
+import Navbar from '@/components/Navbar';
 import {
-  ShoppingBag,
   Search,
   Clock,
   PackageCheck,
   Handshake,
   CheckCircle2,
-  Sparkles,
-  ExternalLink,
-  MessageCircle,
-  ArrowLeft,
   Copy,
   Check,
+  MessageCircle,
+  ArrowLeft,
+  ShoppingBag,
+  Sparkles,
+  AlertCircle,
+  XCircle,
 } from 'lucide-react';
-import Navbar from '@/components/Navbar';
 import { LanguageBadge } from '@/components/FlagIcon';
 
 interface OrderItem {
@@ -43,7 +44,9 @@ interface OrderData {
   buyer_phone: string;
   total_price: number;
   total_items: number;
-  status: 'solicitado' | 'en_preparacion' | 'preparado';
+  status: 'solicitado' | 'en_preparacion' | 'preparado' | 'entregado' | 'cancelado';
+  cancel_reason?: string;
+  wa_notified?: number;
   created_at: string;
   updated_at: string;
 }
@@ -115,6 +118,10 @@ function TrackingContent() {
         return 2;
       case 'preparado':
         return 3;
+      case 'entregado':
+        return 4;
+      case 'cancelado':
+        return -1;
       default:
         return 1;
     }
@@ -149,7 +156,7 @@ function TrackingContent() {
               placeholder="EAM-XXXXX"
               value={inputNum}
               onChange={(e) => setInputNum(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-sm text-white uppercase placeholder-slate-500 focus:outline-none focus:border-blue-500"
+              className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-sm text-white uppercase placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono"
             />
           </div>
           <button
@@ -195,10 +202,15 @@ function TrackingContent() {
                     })}
                   </span>
                 </div>
-                <div className="text-xs text-slate-400 mt-1 flex items-center gap-2">
+                <div className="text-xs text-slate-400 mt-1 flex items-center gap-2 flex-wrap">
                   <span>Comprador: <strong className="text-white">{order.buyer_name}</strong></span>
                   <span>·</span>
                   <span>Vendedor: <strong className="text-blue-300">{order.seller_name}</strong></span>
+                  {order.wa_notified === 1 && (
+                    <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded-full border border-emerald-800/60">
+                      ✓ WhatsApp informado
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -215,102 +227,138 @@ function TrackingContent() {
               )}
             </div>
 
-            {/* 3 Steps Progress Bar Visualizer */}
-            <div className="space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                Estado del Pedido (Proceso de 3 pasos)
-              </h3>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {/* Step 1 */}
-                <div
-                  className={`p-4 rounded-2xl border transition-all ${
-                    currentStep >= 1
-                      ? currentStep === 1
-                        ? 'bg-blue-950/70 border-blue-500 shadow-md shadow-blue-950/50'
-                        : 'bg-slate-900/60 border-slate-700'
-                      : 'bg-slate-950/40 border-slate-800/60 opacity-40'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`p-2 rounded-xl text-xs ${
-                      currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'
-                    }`}>
-                      <Clock className="w-4 h-4" />
-                    </span>
-                    {currentStep === 1 && (
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/40">
-                        Paso Actual
-                      </span>
-                    )}
-                    {currentStep > 1 && (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    )}
-                  </div>
-                  <h4 className="text-xs font-extrabold text-white">1. Solicitado (En Revisión)</h4>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Tu pedido fue enviado al vendedor. Esperando reconfirmación de stock.
-                  </p>
+            {/* Cancelled Banner if applicable */}
+            {order.status === 'cancelado' && (
+              <div className="p-4 rounded-2xl bg-rose-950/60 border border-rose-800/80 text-left space-y-2">
+                <div className="flex items-center gap-2 text-rose-300 font-extrabold text-sm">
+                  <XCircle className="w-5 h-5 text-rose-400" />
+                  <span>Pedido Cancelado por el Vendedor</span>
                 </div>
+                <p className="text-xs text-rose-200">
+                  <strong>Motivo:</strong> {order.cancel_reason || 'No especificado'}
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  Si deseas consultar detalles adicionales o coordinar una alternativa, puedes contactar a {order.seller_name} por WhatsApp.
+                </p>
+              </div>
+            )}
 
-                {/* Step 2 */}
-                <div
-                  className={`p-4 rounded-2xl border transition-all ${
-                    currentStep >= 2
-                      ? currentStep === 2
-                        ? 'bg-amber-950/70 border-amber-500 shadow-md shadow-amber-950/50'
-                        : 'bg-slate-900/60 border-slate-700'
-                      : 'bg-slate-950/40 border-slate-800/60 opacity-40'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`p-2 rounded-xl text-xs ${
-                      currentStep === 2 ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-400'
-                    }`}>
-                      <PackageCheck className="w-4 h-4" />
-                    </span>
-                    {currentStep === 2 && (
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40">
-                        Paso Actual
-                      </span>
-                    )}
-                    {currentStep > 2 && (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                    )}
-                  </div>
-                  <h4 className="text-xs font-extrabold text-white">2. En preparación (Stock Reconfirmado)</h4>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    Stock reconfirmado por el vendedor. Cartas protegidas y separadas.
-                  </p>
+            {/* Delivered Celebratory Banner if applicable */}
+            {order.status === 'entregado' && (
+              <div className="p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/60 text-left space-y-1">
+                <div className="flex items-center gap-2 text-emerald-300 font-extrabold text-sm">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                  <span>¡Pedido Entregado y Cerrado con Éxito!</span>
                 </div>
+                <p className="text-xs text-emerald-200">
+                  Este pedido fue entregado y completado satisfactoriamente. ¡Muchas gracias por tu compra en El Alto Mando TCG!
+                </p>
+              </div>
+            )}
 
-                {/* Step 3 */}
-                <div
-                  className={`p-4 rounded-2xl border transition-all ${
-                    currentStep === 3
-                      ? 'bg-emerald-950/70 border-emerald-500 shadow-md shadow-emerald-950/50'
-                      : 'bg-slate-950/40 border-slate-800/60 opacity-40'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className={`p-2 rounded-xl text-xs ${
-                      currentStep === 3 ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'
-                    }`}>
-                      <Handshake className="w-4 h-4" />
-                    </span>
-                    {currentStep === 3 && (
-                      <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/40">
-                        ¡Listo!
+            {/* 3 Steps Progress Bar Visualizer (if not cancelled) */}
+            {order.status !== 'cancelado' && (
+              <div className="space-y-3">
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                  Estado del Pedido (Proceso de 3 pasos)
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Step 1 */}
+                  <div
+                    className={`p-4 rounded-2xl border transition-all ${
+                      currentStep >= 1
+                        ? currentStep === 1
+                          ? 'bg-blue-950/70 border-blue-500 shadow-md shadow-blue-950/50'
+                          : 'bg-slate-900/60 border-slate-700'
+                        : 'bg-slate-950/40 border-slate-800/60 opacity-40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`p-2 rounded-xl text-xs ${
+                        currentStep === 1 ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400'
+                      }`}>
+                        <Clock className="w-4 h-4" />
                       </span>
-                    )}
+                      {currentStep === 1 && (
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/40">
+                          Paso Actual
+                        </span>
+                      )}
+                      {currentStep > 1 && (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      )}
+                    </div>
+                    <h4 className="text-xs font-extrabold text-white">1. Solicitado (En Revisión)</h4>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Tu pedido fue enviado al vendedor. Esperando reconfirmación de stock.
+                    </p>
                   </div>
-                  <h4 className="text-xs font-extrabold text-white">3. Preparado (Coordinemos la entrega)</h4>
-                  <p className="text-[11px] text-slate-400 mt-1">
-                    ¡Tu paquete está listo! Coordinando punto de encuentro o despacho.
-                  </p>
+
+                  {/* Step 2 */}
+                  <div
+                    className={`p-4 rounded-2xl border transition-all ${
+                      currentStep >= 2
+                        ? currentStep === 2
+                          ? 'bg-amber-950/70 border-amber-500 shadow-md shadow-amber-950/50'
+                          : 'bg-slate-900/60 border-slate-700'
+                        : 'bg-slate-950/40 border-slate-800/60 opacity-40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`p-2 rounded-xl text-xs ${
+                        currentStep === 2 ? 'bg-amber-600 text-white' : 'bg-slate-800 text-slate-400'
+                      }`}>
+                        <PackageCheck className="w-4 h-4" />
+                      </span>
+                      {currentStep === 2 && (
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-400/40">
+                          Paso Actual
+                        </span>
+                      )}
+                      {currentStep > 2 && (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      )}
+                    </div>
+                    <h4 className="text-xs font-extrabold text-white">2. En preparación (Stock Reconfirmado)</h4>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      Stock reconfirmado por el vendedor. Cartas protegidas y separadas.
+                    </p>
+                  </div>
+
+                  {/* Step 3 */}
+                  <div
+                    className={`p-4 rounded-2xl border transition-all ${
+                      currentStep >= 3
+                        ? currentStep === 3
+                          ? 'bg-purple-950/70 border-purple-500 shadow-md shadow-purple-950/50'
+                          : 'bg-slate-900/60 border-slate-700'
+                        : 'bg-slate-950/40 border-slate-800/60 opacity-40'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className={`p-2 rounded-xl text-xs ${
+                        currentStep === 3 ? 'bg-purple-600 text-white' : 'bg-slate-800 text-slate-400'
+                      }`}>
+                        <Handshake className="w-4 h-4" />
+                      </span>
+                      {currentStep === 3 && (
+                        <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-400/40">
+                          ¡Listo!
+                        </span>
+                      )}
+                      {currentStep > 3 && (
+                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      )}
+                    </div>
+                    <h4 className="text-xs font-extrabold text-white">3. Preparado (Coordinemos la entrega)</h4>
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      ¡Tu paquete está listo! Coordinando punto de encuentro o despacho.
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Items List */}
             <div className="space-y-3 pt-4 border-t border-slate-800">
@@ -329,15 +377,11 @@ function TrackingContent() {
                         <Image
                           src={it.image_url || '/placeholder-card.svg'}
                           alt={it.name}
-                          fill
+                          width={44}
+                          height={60}
                           className="object-contain"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = '/placeholder-card.svg';
-                          }}
                         />
                       </div>
-
                       <div className="min-w-0">
                         <h4 className="font-bold text-xs sm:text-sm text-white truncate">{it.name}</h4>
                         <p className="text-[11px] text-slate-400 truncate">
@@ -352,32 +396,30 @@ function TrackingContent() {
                               ✨ FOIL
                             </span>
                           )}
-                          {it.is_league === 1 && (
-                            <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-red-950/80 text-red-200 border border-red-700/60 flex items-center gap-1">
-                              <img src="/prize-pack-stamp.png" alt="Prize Pack" className="w-3 h-2.5 object-contain" />
-                              <span>Liga</span>
-                            </span>
-                          )}
                           <LanguageBadge language={it.language} size="xs" />
                         </div>
                       </div>
                     </div>
 
                     <div className="text-right flex-shrink-0">
-                      <span className="text-xs font-bold text-slate-300 block">x{it.quantity}</span>
-                      <span className="text-xs font-black text-white">
+                      <span className="text-xs text-slate-400 block">
+                        {it.quantity} un. x {formatPrice(it.price)}
+                      </span>
+                      <span className="font-black text-sm text-white">
                         {formatPrice(it.price * it.quantity)}
                       </span>
                     </div>
                   </div>
                 ))}
               </div>
+            </div>
 
-              {/* Total Summary */}
-              <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-between mt-4">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                  Total del Pedido
-                </span>
+            {/* Total Footer */}
+            <div className="p-4 rounded-2xl bg-slate-900/90 border border-slate-800 flex items-center justify-between">
+              <div className="text-xs text-slate-400">
+                <span>Total del pedido ({order.total_items} cartas)</span>
+              </div>
+              <div className="text-right">
                 <span className="text-lg font-black text-blue-400">
                   {formatPrice(order.total_price)}
                 </span>
@@ -392,10 +434,14 @@ function TrackingContent() {
 
 export default function PedidosPage() {
   return (
-    <div className="min-h-screen bg-[#070b14] text-slate-100 flex flex-col">
+    <div className="min-h-screen flex flex-col bg-[#070b14] text-slate-100">
       <Navbar />
       <main className="flex-1">
-        <Suspense fallback={<div className="text-center py-20 text-slate-400">Cargando...</div>}>
+        <Suspense fallback={
+          <div className="text-center py-20 text-slate-400 text-xs">
+            Cargando seguimiento...
+          </div>
+        }>
           <TrackingContent />
         </Suspense>
       </main>

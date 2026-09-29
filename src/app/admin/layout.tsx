@@ -25,9 +25,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<{ id: number; username: string; role: string } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [unreadOrders, setUnreadOrders] = useState(0);
 
   // If already on login page, render children directly
   const isLoginPage = pathname === '/admin/login';
+
+  const fetchUnread = async () => {
+    try {
+      const res = await fetch('/api/orders/unread-count');
+      if (res.ok) {
+        const data = await res.json();
+        setUnreadOrders(data.unreadCount || 0);
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     if (isLoginPage) {
@@ -53,6 +66,22 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
     checkAuth();
   }, [isLoginPage, router]);
 
+  useEffect(() => {
+    if (!currentUser) return;
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 10000);
+    return () => clearInterval(interval);
+  }, [currentUser]);
+
+  useEffect(() => {
+    // If the seller is on the orders page, reset unread count
+    if (pathname === '/admin/orders') {
+      fetch('/api/orders/unread-count', { method: 'POST' })
+        .then(() => setUnreadOrders(0))
+        .catch(() => {});
+    }
+  }, [pathname]);
+
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/admin/login');
@@ -75,11 +104,16 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
   const isLuca = currentUser?.username?.toLowerCase() === 'luca';
 
   const navLinks = [
-    { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/admin/orders', label: 'Pedidos', icon: ShoppingBag },
-    { href: '/admin/new', label: 'Cargar Cartas', icon: PlusCircle },
-    { href: '/admin/inventory', label: 'Inventario y Stock', icon: Package },
-    ...(isLuca ? [{ href: '/admin/users', label: 'Usuarios Habilitados', icon: Users }] : []),
+    { href: '/admin', label: 'Dashboard', icon: LayoutDashboard, isPulsing: false },
+    {
+      href: '/admin/orders',
+      label: unreadOrders > 0 ? `Pedidos (${unreadOrders})` : 'Pedidos',
+      icon: ShoppingBag,
+      isPulsing: unreadOrders > 0,
+    },
+    { href: '/admin/new', label: 'Cargar Cartas', icon: PlusCircle, isPulsing: false },
+    { href: '/admin/inventory', label: 'Inventario y Stock', icon: Package, isPulsing: false },
+    ...(isLuca ? [{ href: '/admin/users', label: 'Usuarios Habilitados', icon: Users, isPulsing: false }] : []),
   ];
 
   return (
@@ -118,13 +152,15 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                      isActive
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                      link.isPulsing
+                        ? 'animate-pulse bg-gradient-to-r from-amber-600/30 to-rose-600/30 text-amber-300 border border-amber-500/60 shadow-lg shadow-amber-950/50 font-bold'
+                        : isActive
                         ? 'bg-blue-600 text-white shadow-sm'
                         : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5" />
+                    <Icon className={`w-3.5 h-3.5 ${link.isPulsing ? 'text-amber-400' : ''}`} />
                     <span>{link.label}</span>
                   </Link>
                 );
@@ -173,10 +209,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 key={link.href}
                 href={link.href}
                 className={`flex flex-col items-center gap-1 py-1 px-2 rounded-lg ${
-                  isActive ? 'text-blue-400 font-bold' : 'text-slate-400'
+                  link.isPulsing
+                    ? 'animate-pulse text-amber-300 font-extrabold'
+                    : isActive
+                    ? 'text-blue-400 font-bold'
+                    : 'text-slate-400'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className={`w-4 h-4 ${link.isPulsing ? 'text-amber-400' : ''}`} />
                 <span className="text-[10px]">{link.label}</span>
               </Link>
             );
