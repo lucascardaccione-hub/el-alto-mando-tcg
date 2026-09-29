@@ -109,8 +109,8 @@ export async function POST(request: Request) {
     for (const it of items) {
       await db.run(`
         INSERT INTO order_items (
-          order_id, card_id, name, expansion, number, version, is_foil, language, price, quantity, image_url
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          order_id, card_id, name, expansion, number, version, is_foil, is_league, language, price, quantity, image_url
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         orderId,
         it.id || it.card_id || 0,
@@ -119,6 +119,7 @@ export async function POST(request: Request) {
         it.number || '',
         it.version || 'Común',
         it.is_foil ? 1 : 0,
+        it.is_league ? 1 : 0,
         it.language || 'Inglés',
         Number(it.price) || 0,
         Number(it.quantity) || 1,

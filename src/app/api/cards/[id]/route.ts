@@ -40,6 +40,8 @@ export async function PUT(
       seller_id,
       seller_name,
       seller_phone,
+      is_foil,
+      is_league,
     } = body;
 
     const now = new Date().toISOString();
@@ -61,6 +63,7 @@ export async function PUT(
         seller_name = COALESCE(?, seller_name),
         seller_phone = COALESCE(?, seller_phone),
         is_foil = COALESCE(?, is_foil),
+        is_league = COALESCE(?, is_league),
         updated_at = ?
       WHERE id = ?
     `, [
@@ -79,6 +82,7 @@ export async function PUT(
       seller_name !== undefined ? seller_name.trim() : null,
       seller_phone !== undefined ? seller_phone.trim() : null,
       is_foil !== undefined ? (is_foil ? 1 : 0) : null,
+      is_league !== undefined ? (is_league ? 1 : 0) : null,
       now,
       cardId
     ]);

@@ -24,6 +24,7 @@ const OFFICIAL_RARITIES = [
   'Common (NO FOIL)',
   'Reverse (FOIL)',
   'Holo (FOIL)',
+  'Cosmos Holo (FOIL)',
   'EX',
   'Full Art',
   'IR/SIR',
@@ -108,6 +109,7 @@ export default function NewCardPage() {
   const [selectedRarity, setSelectedRarity] = useState<string>('Common (NO FOIL)');
   const [customRarityText, setCustomRarityText] = useState('');
   const [isFoil, setIsFoil] = useState(false);
+  const [isLeague, setIsLeague] = useState(false);
   const [language, setLanguage] = useState<'Inglés' | 'Español'>('Inglés');
   const [artist, setArtist] = useState('');
   const [category, setCategory] = useState('Pokemon');
@@ -124,7 +126,7 @@ export default function NewCardPage() {
     } else if (newRarity === 'Otro (Custom)') {
       // User can toggle isFoil manually
     } else {
-      // Reverse, Holo, EX, Full Art, IR/SIR are FOIL automatically
+      // Reverse, Holo, Cosmos Holo, EX, Full Art, IR/SIR are FOIL automatically
       setIsFoil(true);
     }
   };
@@ -309,6 +311,7 @@ export default function NewCardPage() {
           seller_name: selectedSellerName,
           seller_phone: selectedSellerPhone,
           is_foil: isFoil ? 1 : 0,
+          is_league: isLeague ? 1 : 0,
         }),
       });
 
@@ -333,6 +336,7 @@ export default function NewCardPage() {
       setSelectedRarity('Common (NO FOIL)');
       setCustomRarityText('');
       setIsFoil(false);
+      setIsLeague(false);
       setCategory('Pokemon');
       setTrainerType('');
       setSelectedTcgdexCard(null);
@@ -676,6 +680,50 @@ export default function NewCardPage() {
                 </div>
               </div>
 
+              {/* Checkbox Opcional Carta de Liga (Prize Pack) */}
+              <div className="space-y-1.5 sm:col-span-2">
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+                  <span>Edición de Liga / Prize Pack (Play! Pokémon)</span>
+                  <span className="text-[10px] text-slate-400 font-normal">Opcional</span>
+                </label>
+                <div
+                  onClick={() => setIsLeague(!isLeague)}
+                  className={`flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer ${
+                    isLeague
+                      ? 'bg-red-950/40 border-red-500/70 shadow-md shadow-red-950/40'
+                      : 'bg-slate-900/80 border-slate-800 hover:border-slate-700'
+                  }`}
+                  title="Marcar si esta carta incluye el logo/sello oficial de Liga (Prize Pack)"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-8 rounded-lg bg-slate-950 border border-slate-800 flex items-center justify-center p-1 flex-shrink-0">
+                      <img
+                        src="/prize-pack-stamp.png"
+                        alt="Play! Pokémon Prize Pack"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                    <div>
+                      <span className={`text-xs font-bold block ${isLeague ? 'text-red-300' : 'text-slate-300'}`}>
+                        {isLeague ? 'Carta Oficial de Liga (Prize Pack)' : 'Carta Regular (Sin Sello de Liga)'}
+                      </span>
+                      <p className="text-[11px] text-slate-400">
+                        {isLeague
+                          ? 'Se mostrará el sello oficial de Liga en la carta en el catálogo y tienda.'
+                          : 'Marca esta casilla si la carta proviene de un sobre oficial de Liga (Prize Pack).'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <input
+                    type="checkbox"
+                    checked={isLeague}
+                    onChange={(e) => setIsLeague(e.target.checked)}
+                    className="w-5 h-5 rounded text-red-600 bg-slate-800 border-slate-700 cursor-pointer accent-red-600 ml-2"
+                  />
+                </div>
+              </div>
+
               {/* Si seleccionó Otro (Custom), campo de texto para escribir la rareza */}
               {selectedRarity === 'Otro (Custom)' && (
                 <div className="sm:col-span-2 space-y-1.5 p-3.5 rounded-2xl bg-[#090f1e] border border-amber-500/40 animate-in fade-in">
@@ -799,16 +847,30 @@ export default function NewCardPage() {
               <div className="bg-slate-950/80 rounded-2xl border border-slate-800 p-4 flex flex-col items-center text-center space-y-3">
                 <div className="relative w-44 aspect-[2.5/3.5] rounded-xl overflow-hidden bg-slate-900 flex items-center justify-center shadow-lg">
                   {imageUrl ? (
-                    <Image
-                      src={imageUrl}
-                      alt="Preview"
-                      fill
-                      className="object-contain"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/placeholder-card.svg';
-                      }}
-                    />
+                    <div className="relative w-full h-full">
+                      <Image
+                        src={imageUrl}
+                        alt="Preview"
+                        fill
+                        className="object-contain"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder-card.svg';
+                        }}
+                      />
+                      {isLeague && (
+                        <div
+                          className="absolute bottom-2 right-2 p-1 rounded-md bg-black/80 border border-red-500/60 shadow-lg flex items-center"
+                          title="Sello Oficial de Liga (Prize Pack)"
+                        >
+                          <img
+                            src="/prize-pack-stamp.png"
+                            alt="Play! Pokémon League"
+                            className="w-5 h-4 object-contain"
+                          />
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div className="p-4 text-xs text-slate-500">
                       Selecciona una carta o pega una URL de imagen
@@ -825,6 +887,16 @@ export default function NewCardPage() {
                       {isFoil && (
                         <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-amber-500/20 to-purple-500/20 text-amber-300 border border-amber-500/40 flex items-center gap-0.5">
                           ✨ FOIL
+                        </span>
+                      )}
+                      {isLeague && (
+                        <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-red-950/80 text-red-200 border border-red-700/60 flex items-center gap-1 shadow-sm">
+                          <img
+                            src="/prize-pack-stamp.png"
+                            alt="Prize Pack"
+                            className="w-3.5 h-3 object-contain"
+                          />
+                          <span>Liga</span>
                         </span>
                       )}
                       <LanguageBadge language={language} size="xs" />

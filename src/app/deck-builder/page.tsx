@@ -706,9 +706,9 @@ function DeckBuilderContent() {
             <button
               onClick={handleSaveDeck}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-900/30 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black text-white bg-gradient-to-r from-red-600 via-rose-600 to-red-600 hover:from-red-500 hover:to-rose-500 shadow-lg shadow-red-950/60 border border-red-500/50 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 ring-2 ring-red-500/30"
             >
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5 text-white" />}
               <span>{deckId ? 'Guardar Cambios' : 'Guardar Mazo'}</span>
             </button>
           </div>

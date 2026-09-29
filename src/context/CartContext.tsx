@@ -17,6 +17,7 @@ export interface CartItem {
   seller_name?: string;
   seller_phone?: string;
   is_foil?: number;
+  is_league?: number;
 }
 
 interface CartContextType {
@@ -96,6 +97,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             seller_name: card.seller_name || 'Luca',
             seller_phone: card.seller_phone || '',
             is_foil: card.is_foil ?? (card.version?.toLowerCase().includes('foil') || card.version?.toLowerCase().includes('holo') ? 1 : 0),
+            is_league: card.is_league ? 1 : 0,
           },
         ];
       }

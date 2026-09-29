@@ -297,8 +297,9 @@ export default function CartDrawer() {
 
       group.items.forEach((it, idx) => {
         const foilTag = it.is_foil === 1 || it.version?.toLowerCase().includes('foil') ? ' [✨ FOIL]' : '';
+        const leagueTag = it.is_league === 1 ? ' [🏆 Prize Pack]' : '';
         text += `${idx + 1}. *${it.name}* (${it.expansion} #${it.number})\n`;
-        text += `   • Versión: ${it.version}${foilTag} | Idioma: ${it.language || 'Inglés'}\n`;
+        text += `   • Versión: ${it.version}${foilTag}${leagueTag} | Idioma: ${it.language || 'Inglés'}\n`;
         text += `   • Cantidad: ${it.quantity} un. x ${formatPrice(it.price)} = ${formatPrice(it.price * it.quantity)}\n`;
       });
 
@@ -515,6 +516,12 @@ export default function CartDrawer() {
                                     {isFoil && (
                                       <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-gradient-to-r from-amber-500/20 to-purple-500/20 text-amber-300 border border-amber-500/40">
                                         ✨ FOIL
+                                      </span>
+                                    )}
+                                    {item.is_league === 1 && (
+                                      <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-red-950/80 text-red-200 border border-red-700/60 flex items-center gap-1">
+                                        <img src="/prize-pack-stamp.png" alt="Prize Pack" className="w-3 h-2.5 object-contain" />
+                                        <span>Liga</span>
                                       </span>
                                     )}
                                     <LanguageBadge language={item.language} size="xs" />

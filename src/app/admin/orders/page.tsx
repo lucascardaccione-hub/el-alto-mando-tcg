@@ -438,6 +438,12 @@ export default function AdminOrdersPage() {
                                   ✨ FOIL
                                 </span>
                               )}
+                              {it.is_league === 1 && (
+                                <span className="px-1.5 py-0.2 rounded text-[10px] font-black bg-red-950/80 text-red-200 border border-red-700/60 flex items-center gap-1">
+                                  <img src="/prize-pack-stamp.png" alt="Prize Pack" className="w-3 h-2.5 object-contain" />
+                                  <span>Liga</span>
+                                </span>
+                              )}
                               <LanguageBadge language={it.language} size="xs" />
                             </div>
                           </div>

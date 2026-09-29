@@ -76,12 +76,18 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                 cardName={card.name}
                 isHolo={card.is_foil === 1 || card.version?.toLowerCase().includes('foil') || card.version?.toLowerCase().includes('holo') || card.version?.toLowerCase().includes('secret')}
               />
+
+              {/* Disclaimer */}
+              <div className="mt-4 px-3 py-1.5 rounded-full bg-slate-900/90 border border-slate-800 text-[11px] text-slate-400 text-center flex items-center justify-center gap-1.5 shadow-sm max-w-xs">
+                <span className="text-blue-400 font-bold">ℹ️</span>
+                <span>Imagen y animación 3D de referencia ilustrativa.</span>
+              </div>
             </div>
 
             {/* Card Information Right */}
             <div className="p-6 md:p-8 flex flex-col justify-between space-y-6">
               <div className="space-y-4">
-                {/* Expansión, Number, Version & Language */}
+                {/* Expansión, Number, Version, FOIL & Language */}
                 <div className="flex items-center gap-2 flex-wrap text-xs">
                   <span className="px-2.5 py-1 rounded-lg bg-blue-950/80 text-blue-300 font-semibold border border-blue-800/50">
                     {card.expansion}
@@ -96,6 +102,16 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
                   {(card.is_foil === 1 || card.version?.toLowerCase().includes('foil')) && (
                     <span className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/20 via-pink-500/20 to-purple-500/20 text-amber-300 font-black border border-amber-500/40 flex items-center gap-1 shadow-sm">
                       ✨ FOIL
+                    </span>
+                  )}
+                  {card.is_league === 1 && (
+                    <span className="px-2.5 py-1 rounded-lg bg-red-950/80 text-red-200 font-black border border-red-700/60 flex items-center gap-1.5 shadow-sm">
+                      <img
+                        src="/prize-pack-stamp.png"
+                        alt="Play! Pokémon League Prize Pack"
+                        className="w-4 h-3.5 object-contain"
+                      />
+                      <span>Carta de Liga (Prize Pack)</span>
                     </span>
                   )}
                   <LanguageBadge language={card.language} size="md" />
