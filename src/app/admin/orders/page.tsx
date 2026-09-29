@@ -80,6 +80,7 @@ export default function AdminOrdersPage() {
   const [selectedReason, setSelectedReason] = useState<string>('Pedido Incorrecto');
   const [customReason, setCustomReason] = useState('');
   const [deletingLoading, setDeletingLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -99,7 +100,17 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     fetchOrders();
+    fetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.authenticated && data?.user) {
+          setCurrentUser(data.user);
+        }
+      })
+      .catch(() => {});
   }, []);
+
+  const isLuca = currentUser?.username?.toLowerCase() === 'luca';
 
   const formatPrice = (val: number) => {
     return new Intl.NumberFormat('es-AR', {
@@ -683,18 +694,20 @@ export default function AdminOrdersPage() {
                 {deletingLoading ? 'Procesando...' : 'Cancelar Pedido (Registrar motivo)'}
               </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm('¿Seguro que deseas ELIMINAR PERMANENTEMENTE este pedido de la base de datos?')) {
-                    handleCancelOrDelete(true);
-                  }
-                }}
-                disabled={deletingLoading}
-                className="w-full py-2 rounded-xl font-semibold text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 transition-all disabled:opacity-50"
-              >
-                Eliminar definitivamente del sistema
-              </button>
+              {isLuca && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('¿Seguro que deseas ELIMINAR PERMANENTEMENTE este pedido de la base de datos?\n(Esta acción solo puede realizarla Luca)')) {
+                      handleCancelOrDelete(true);
+                    }
+                  }}
+                  disabled={deletingLoading}
+                  className="w-full py-2 rounded-xl font-semibold text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-950/40 transition-all disabled:opacity-50 border border-rose-900/30"
+                >
+                  🗑️ Eliminar definitivamente del sistema (Solo Luca)
+                </button>
+              )}
 
               <button
                 type="button"

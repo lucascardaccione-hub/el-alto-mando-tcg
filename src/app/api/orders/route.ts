@@ -353,6 +353,12 @@ export async function DELETE(request: Request) {
     }
 
     if (permanent) {
+      if (!isLuca) {
+        return NextResponse.json(
+          { error: 'Solo el Administrador Master Luca puede eliminar pedidos definitivamente del sistema.' },
+          { status: 403 }
+        );
+      }
       await db.run('DELETE FROM order_items WHERE order_id = ?', [id]);
       await db.run('DELETE FROM orders WHERE id = ?', [id]);
       return NextResponse.json({ success: true, deleted: true });
