@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { PTCGL_SET_MAP, getQuickCardImage } from '@/lib/deckParser';
+import { PTCGL_SET_MAP, getQuickCardImage, isBasicEnergy, getBasicEnergyTypeNumber } from '@/lib/deckParser';
 import { resolveLimitlessCardImage, getLimitlessCardImageSync } from '@/lib/limitlessResolver';
 
 export const dynamic = 'force-dynamic';
@@ -102,11 +102,24 @@ export async function POST(request: Request) {
           }
         }
 
+        // 6. Basic Energy fallback (Guarantees authentic SVE image)
+        let category = c.category;
+        if (isBasicEnergy({ card_name: cardName, expansion: set })) {
+          category = 'energy';
+          if (!imageUrl || imageUrl.includes('placeholder')) {
+            const typeNum = getBasicEnergyTypeNumber(cardName);
+            if (typeNum) {
+              imageUrl = `https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_00${typeNum}_R_EN_SM.png`;
+            }
+          }
+        }
+
         return {
           ...c,
           card_name: cardName,
           expansion: set || 'PROMO',
           number: number || '1',
+          category: category || 'pokemon',
           image_url: imageUrl || '/placeholder-card.svg',
           store_available: Boolean(storeCard && storeCard.stock > 0),
           store_card: storeCard || null,

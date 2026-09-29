@@ -137,6 +137,91 @@ export function getQuickCardImage(set: string, number: string): string | undefin
   return undefined;
 }
 
+export function isBasicEnergy(card: {
+  card_name?: string;
+  name?: string;
+  category?: string;
+  expansion?: string;
+  set?: string;
+  number?: string;
+}): boolean {
+  const cardName = (card.card_name || card.name || '').toLowerCase().trim();
+  const category = (card.category || '').toLowerCase().trim();
+  const setCode = (card.expansion || card.set || '').toUpperCase().trim();
+
+  // If set is SVE or MEE and it's an energy or mentions energy, it's definitely basic energy
+  if (
+    (setCode === 'SVE' || setCode === 'MEE') &&
+    (category === 'energy' || cardName.includes('energy') || cardName.includes('energía') || cardName.includes('energia'))
+  ) {
+    return true;
+  }
+
+  // Must be in energy category or have energy in name
+  const isEnergy =
+    category === 'energy' ||
+    cardName.includes('energy') ||
+    cardName.includes('energía') ||
+    cardName.includes('energia');
+  if (!isEnergy) return false;
+
+  // Explicit basic indicator
+  if (cardName.includes('basic') || cardName.includes('básica') || cardName.includes('basica')) {
+    return true;
+  }
+
+  // Keywords that identify special energies
+  const specialKeywords = [
+    'special', 'especial', 'double', 'doble', 'jet', 'mist', 'niebla', 'reversal', 'inversión', 'inversion',
+    'gift', 'regalo', 'therapeutic', 'terapéutica', 'terapeutica', 'luminous', 'luminosa',
+    'legacy', 'legado', 'boomerang', 'neo upper', 'medical', 'médica', 'medica',
+    'treasure', 'tesoro', 'regenerative', 'regeneradora', 'v guard', 'v-guard', 'capture', 'captura',
+    'twin', 'gemela', 'aurora', 'coating', 'horror', 'speed', 'velocidad', 'spiral', 'espiral',
+    'single strike', 'rapid strike', 'fusion strike', 'golpe brusco', 'golpe fluido', 'golpe fusión', 'golpe fusion',
+    'lucky', 'suerte', 'impact', 'impacto', 'enriching', 'prism', 'prisma', 'rainbow', 'arcoíris', 'arcoiris',
+    'unit', 'unidad', 'beast', 'ultra', 'counter', 'contraataque', 'draw', 'robo', 'heat', 'calor',
+    'powerful', 'poderosa', 'aroma', 'blended', 'plasma', 'recycle', 'reciclaje', 'call', 'llamada',
+    'warp', 'salto', 'boost', 'scramble', 'multi', 'holon'
+  ];
+
+  if (specialKeywords.some((kw) => cardName.includes(kw))) {
+    return false;
+  }
+
+  // Basic energy type names
+  const basicTypes = [
+    'grass', 'planta',
+    'fire', 'fuego',
+    'water', 'agua',
+    'lightning', 'rayo', 'eléctrica', 'electrica',
+    'psychic', 'psíquica', 'psiquica',
+    'fighting', 'lucha',
+    'darkness', 'oscura', 'siniestra',
+    'metal', 'metálica', 'metalica', 'acero',
+    'fairy', 'hada',
+    '{g}', '{r}', '{w}', '{l}', '{p}', '{f}', '{d}', '{m}', '{y}'
+  ];
+
+  if (basicTypes.some((type) => cardName.includes(type))) {
+    return true;
+  }
+
+  return false;
+}
+
+export function getBasicEnergyTypeNumber(name: string): number | null {
+  const n = (name || '').toLowerCase();
+  if (n.includes('grass') || n.includes('planta') || n.includes('{g}')) return 1;
+  if (n.includes('fire') || n.includes('fuego') || n.includes('{r}')) return 2;
+  if (n.includes('water') || n.includes('agua') || n.includes('{w}')) return 3;
+  if (n.includes('lightning') || n.includes('rayo') || n.includes('eléctrica') || n.includes('electrica') || n.includes('{l}')) return 4;
+  if (n.includes('psychic') || n.includes('psíquica') || n.includes('psiquica') || n.includes('{p}')) return 5;
+  if (n.includes('fighting') || n.includes('lucha') || n.includes('{f}')) return 6;
+  if (n.includes('darkness') || n.includes('oscura') || n.includes('siniestra') || n.includes('{d}')) return 7;
+  if (n.includes('metal') || n.includes('metálica') || n.includes('metalica') || n.includes('acero') || n.includes('{m}')) return 8;
+  return null;
+}
+
 /**
  * Parses PTCGL / Limitless standard deck export format (English & Spanish):
  * Pokémon: 8
@@ -160,26 +245,20 @@ export function parsePtcglDeck(text: string): ParsedDeck {
     const lower = line.toLowerCase();
 
     // Section headers (English & Spanish)
-    if (lower.startsWith('pokémon:') || lower.startsWith('pokemon:')) {
+    if (/^(pokémon|pokemon)[\s:\-\(]/i.test(line) || /^(pokémon|pokemon)$/i.test(line)) {
       currentCategory = 'pokemon';
       continue;
     }
     if (
-      lower.startsWith('trainer:') ||
-      lower.startsWith('trainers:') ||
-      lower.startsWith('entrenador:') ||
-      lower.startsWith('entrenadores:')
+      /^(trainer|trainers|entrenador|entrenadores)[\s:\-\(]/i.test(line) ||
+      /^(trainer|trainers|entrenador|entrenadores)$/i.test(line)
     ) {
       currentCategory = 'trainer';
       continue;
     }
     if (
-      lower.startsWith('energy:') ||
-      lower.startsWith('energies:') ||
-      lower.startsWith('energía:') ||
-      lower.startsWith('energia:') ||
-      lower.startsWith('energías:') ||
-      lower.startsWith('energias:')
+      /^(energy|energies|energía|energia|energías|energias)[\s:\-\(]/i.test(line) ||
+      /^(energy|energies|energía|energia|energías|energias)$/i.test(line)
     ) {
       currentCategory = 'energy';
       continue;
@@ -208,30 +287,63 @@ export function parsePtcglDeck(text: string): ParsedDeck {
         name = normalizeEnergyName(name);
       }
 
-      const image = getQuickCardImage(set, number);
+      let category = currentCategory;
+      if (
+        name.toLowerCase().includes('energy') ||
+        name.toLowerCase().includes('energía') ||
+        name.toLowerCase().includes('energia') ||
+        isBasicEnergy({ card_name: name, expansion: set })
+      ) {
+        category = 'energy';
+      }
+
+      let image = getQuickCardImage(set, number);
+      if (!image && isBasicEnergy({ card_name: name, expansion: set })) {
+        const typeNum = getBasicEnergyTypeNumber(name);
+        if (typeNum) {
+          image = `https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_00${typeNum}_R_EN_SM.png`;
+        }
+      }
 
       cards.push({
         count,
         name,
         set,
         number,
-        category: currentCategory,
+        category,
         image,
       });
     } else {
-      // Fallback: line without set/number, e.g. "4 Ultra Ball"
+      // Fallback: line without set/number, e.g. "4 Ultra Ball" or "10 Water Energy"
       const simpleMatch = line.match(/^(\d+)\s+(.+)$/);
       if (simpleMatch) {
         let name = simpleMatch[2].trim();
         if (currentCategory === 'energy' || name.includes('{')) {
           name = normalizeEnergyName(name);
         }
+        let category = currentCategory;
+        if (
+          name.toLowerCase().includes('energy') ||
+          name.toLowerCase().includes('energía') ||
+          name.toLowerCase().includes('energia') ||
+          isBasicEnergy({ card_name: name })
+        ) {
+          category = 'energy';
+        }
+        let image: string | undefined = undefined;
+        if (isBasicEnergy({ card_name: name })) {
+          const typeNum = getBasicEnergyTypeNumber(name);
+          if (typeNum) {
+            image = `https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_00${typeNum}_R_EN_SM.png`;
+          }
+        }
         cards.push({
           count: parseInt(simpleMatch[1], 10) || 1,
           name,
-          set: 'PROMO',
+          set: 'SVE',
           number: '1',
-          category: currentCategory,
+          category,
+          image,
         });
       }
     }

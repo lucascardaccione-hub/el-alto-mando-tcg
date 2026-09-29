@@ -13,7 +13,7 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { toPng, toBlob } from 'html-to-image';
-import { exportToPtcgl } from '@/lib/deckParser';
+import { exportToPtcgl, isBasicEnergy, getBasicEnergyTypeNumber } from '@/lib/deckParser';
 import { DeckCardItem } from '@/app/deck-builder/page';
 
 interface DeckImageModalProps {
@@ -60,20 +60,31 @@ function ModalCardThumbnail({ card }: { card: DeckCardItem }) {
       list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_${paddedNum}_R_EN_SM.png`);
     }
 
-    // 3. Store card matched image
+    // 3. Basic Energy fallbacks
+    if (isBasicEnergy(card)) {
+      const typeNum = getBasicEnergyTypeNumber(card.card_name);
+      if (typeNum) {
+        list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_00${typeNum}_R_EN_SM.png`);
+        list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEE/MEE_00${typeNum}_R_EN_SM.png`);
+      }
+    }
+
+    // 4. Store card matched image
     if (card.store_card?.image_url) {
       list.push(card.store_card.image_url);
     }
 
     list.push('/placeholder-card.svg');
     return Array.from(new Set(list));
-  }, [card.expansion, card.number, card.image_url, card.store_card, lSet, cleanNum, paddedNum, setUpper]);
+  }, [card.expansion, card.number, card.image_url, card.store_card, card.card_name, lSet, cleanNum, paddedNum, setUpper]);
 
   const [srcIndex, setSrcIndex] = useState(0);
 
   const rawUrl = candidateUrls[srcIndex] || '/placeholder-card.svg';
+  // Use unique path segment per card to prevent canvas/html-to-image cache collisions
+  const cardSlug = `${(setUpper || 'CARD').replace(/[^a-zA-Z0-9]/g, '')}_${(cleanNum || '1').replace(/[^a-zA-Z0-9]/g, '')}_${(card.card_name || '').replace(/[^a-zA-Z0-9]/g, '')}`;
   const displaySrc = rawUrl.startsWith('http')
-    ? `/api/proxy-image?url=${encodeURIComponent(rawUrl)}`
+    ? `/api/proxy-image/${cardSlug}?url=${encodeURIComponent(rawUrl)}`
     : rawUrl;
 
   const handleError = () => {
@@ -141,12 +152,8 @@ export default function DeckImageModal({
     const otherTrainers = trainers.filter((c) => !supporters.includes(c));
 
     // Sub-sort energies: Special first, then Basic
-    const specialEnergies = energies.filter(
-      (c) => !c.card_name.toLowerCase().includes('basic') && !c.card_name.toLowerCase().includes('básica')
-    );
-    const basicEnergies = energies.filter(
-      (c) => c.card_name.toLowerCase().includes('basic') || c.card_name.toLowerCase().includes('básica')
-    );
+    const specialEnergies = energies.filter((c) => !isBasicEnergy(c));
+    const basicEnergies = energies.filter((c) => isBasicEnergy(c));
 
     return [
       ...pokemons,
@@ -164,9 +171,10 @@ export default function DeckImageModal({
     if (!boardRef.current) return;
     setGenerating(true);
     try {
-      // Use pixelRatio: 2 for sharp 2x retina export
+      // Use pixelRatio: 2 for sharp 2x retina export, includeQueryParams: true to preserve distinct card URLs
       const dataUrl = await toPng(boardRef.current, {
         cacheBust: false,
+        includeQueryParams: true,
         pixelRatio: 2,
         backgroundColor: '#070b14',
       });
@@ -190,6 +198,7 @@ export default function DeckImageModal({
     try {
       const blob = await toBlob(boardRef.current, {
         cacheBust: false,
+        includeQueryParams: true,
         pixelRatio: 2,
         backgroundColor: '#070b14',
       });

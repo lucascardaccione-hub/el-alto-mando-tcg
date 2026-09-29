@@ -34,7 +34,7 @@ import {
   Globe,
   Lock,
 } from 'lucide-react';
-import { parsePtcglDeck, exportToPtcgl } from '@/lib/deckParser';
+import { parsePtcglDeck, exportToPtcgl, isBasicEnergy, getBasicEnergyTypeNumber } from '@/lib/deckParser';
 import DeckImageModal from '@/components/DeckImageModal';
 
 export interface DeckCardItem {
@@ -308,12 +308,8 @@ function DeckBuilderContent() {
 
     const otherTrainers = trainers.filter((c) => !supporters.includes(c));
 
-    const specialEnergies = energies.filter(
-      (c) => !c.card_name.toLowerCase().includes('basic') && !c.card_name.toLowerCase().includes('básica')
-    );
-    const basicEnergies = energies.filter(
-      (c) => c.card_name.toLowerCase().includes('basic') || c.card_name.toLowerCase().includes('básica')
-    );
+    const specialEnergies = energies.filter((c) => !isBasicEnergy(c));
+    const basicEnergies = energies.filter((c) => isBasicEnergy(c));
 
     return [
       ...pokemons,
@@ -378,9 +374,9 @@ function DeckBuilderContent() {
       }
 
       // Check max 4 copies rule (except basic energy)
-      const isBasicEnergy = target.category === 'energy' && target.card_name.toLowerCase().includes('basic');
-      if (!isBasicEnergy && newCount > 4) {
-        showNotification('error', 'Un mazo solo puede tener un máximo de 4 copias de la misma carta.');
+      const isBasic = isBasicEnergy(target);
+      if (!isBasic && newCount > 4) {
+        showNotification('error', 'Un mazo solo puede tener un máximo de 4 copias de la misma carta (excepto energías básicas).');
         return prev;
       }
 
@@ -444,7 +440,12 @@ function DeckBuilderContent() {
     // Determine category based on card name
     let category: 'pokemon' | 'trainer' | 'energy' = 'pokemon';
     const nameLower = tcgCard.name.toLowerCase();
-    if (nameLower.includes('energy') || nameLower.includes('energía')) {
+    if (
+      nameLower.includes('energy') ||
+      nameLower.includes('energía') ||
+      nameLower.includes('energia') ||
+      isBasicEnergy({ card_name: tcgCard.name, expansion: tcgCard.setName })
+    ) {
       category = 'energy';
     } else if (
       nameLower.includes('ball') ||
@@ -456,9 +457,19 @@ function DeckBuilderContent() {
       nameLower.includes('rod') ||
       nameLower.includes('switch') ||
       nameLower.includes('belt') ||
-      nameLower.includes('stone')
+      nameLower.includes('stone') ||
+      nameLower.includes('vessel') ||
+      nameLower.includes('poffin')
     ) {
       category = 'trainer';
+    }
+
+    let cardImage = tcgCard.image || '/placeholder-card.svg';
+    if (category === 'energy' && isBasicEnergy({ card_name: tcgCard.name }) && (!cardImage || cardImage.includes('placeholder'))) {
+      const typeNum = getBasicEnergyTypeNumber(tcgCard.name);
+      if (typeNum) {
+        cardImage = 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_00' + typeNum + '_R_EN_SM.png';
+      }
     }
 
     const newCard: DeckCardItem = {
@@ -468,7 +479,7 @@ function DeckBuilderContent() {
       category,
       count: 1,
       owned_count: 0,
-      image_url: tcgCard.image || '/placeholder-card.svg',
+      image_url: cardImage,
       tcg_id: tcgCard.id,
     };
 
@@ -579,16 +590,31 @@ function DeckBuilderContent() {
       const finalCards = resolvedData?.cards || parsed.cards;
 
       setCards(
-        finalCards.map((c: any) => ({
-          card_name: c.card_name || c.name,
-          expansion: c.expansion || c.set || 'PROMO',
-          number: c.number || '1',
-          category: c.category || 'pokemon',
-          trainer_type: c.trainer_type || c.trainerType || '',
-          count: c.count || 1,
-          owned_count: importAsOwned ? (c.count || 1) : 0,
-          image_url: c.image_url || c.image || '/placeholder-card.svg',
-        }))
+        finalCards.map((c: any) => {
+          const cardName = c.card_name || c.name;
+          const expansion = c.expansion || c.set || 'PROMO';
+          let category = c.category || 'pokemon';
+          if (isBasicEnergy({ card_name: cardName, expansion })) {
+            category = 'energy';
+          }
+          let imageUrl = c.image_url || c.image || '/placeholder-card.svg';
+          if (isBasicEnergy({ card_name: cardName, expansion }) && (!imageUrl || imageUrl.includes('placeholder'))) {
+            const typeNum = getBasicEnergyTypeNumber(cardName);
+            if (typeNum) {
+              imageUrl = 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_00' + typeNum + '_R_EN_SM.png';
+            }
+          }
+          return {
+            card_name: cardName,
+            expansion,
+            number: c.number || '1',
+            category,
+            trainer_type: c.trainer_type || c.trainerType || '',
+            count: c.count || 1,
+            owned_count: importAsOwned ? (c.count || 1) : 0,
+            image_url: imageUrl,
+          };
+        })
       );
 
       setImportModalOpen(false);
