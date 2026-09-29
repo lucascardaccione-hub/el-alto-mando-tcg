@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import FiltersBar from '@/components/FiltersBar';
 import CardItem, { CardData } from '@/components/CardItem';
 import CartDrawer from '@/components/CartDrawer';
 import CardDetailModal from '@/components/CardDetailModal';
-import { Sparkles, RefreshCw, AlertCircle } from 'lucide-react';
+import { Sparkles, RefreshCw, AlertCircle, Layers, Globe, ArrowRight } from 'lucide-react';
 
 export default function HomePage() {
   const [cards, setCards] = useState<CardData[]>([]);
@@ -117,31 +118,85 @@ export default function HomePage() {
           <div className="absolute top-0 right-0 -mr-24 -mt-24 w-96 h-96 rounded-full bg-blue-600/[0.08] blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-1/4 -mb-24 w-80 h-80 rounded-full bg-blue-500/[0.05] blur-3xl pointer-events-none" />
 
-          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="space-y-4 text-center md:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-blue-600/10 text-blue-400 border border-blue-500/20 shadow-sm">
-                <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                <span>Inventario y Stock en Tiempo Real</span>
+          <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
+            {/* Left Column: Heading, Value Prop & Quick Action CTAs */}
+            <div className="space-y-5 text-center lg:text-left flex-1 max-w-2xl">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-600/15 text-blue-400 border border-blue-500/30 shadow-sm backdrop-blur-md">
+                <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+                <span>Inventario Oficial & Deck Builder Competitivo</span>
               </div>
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white">
-                EL ALTO MANDO <span className="text-blue-400">TCG</span>
+
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
+                EL ALTO MANDO <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-blue-500 bg-clip-text text-transparent">TCG</span>
               </h1>
-              <p className="text-sm sm:text-base text-slate-300 max-w-xl font-normal leading-relaxed">
-                Catálogo especializado de cartas Pokémon singles, versiones Holo, Reverse, Full Art y Secret Rares. Stock oficial actualizado al instante.
+
+              <p className="text-sm sm:text-base text-slate-300 font-normal leading-relaxed">
+                Catálogo especializado de cartas Pokémon singles, versiones Holo, Reverse y Secret Rares con stock en tiempo real. Crea tus mazos y conéctate con la comunidad competitiva.
               </p>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 pt-2">
+                <Link
+                  href="/deck-builder"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:via-indigo-500 hover:to-blue-600 shadow-lg shadow-blue-900/30 border border-blue-400/30 transition-all hover:scale-105 active:scale-95"
+                >
+                  <Layers className="w-4 h-4 text-blue-200" />
+                  <span>Armar Mazo (Deck Builder)</span>
+                  <ArrowRight className="w-4 h-4 text-blue-200" />
+                </Link>
+
+                <Link
+                  href="/decks"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700/80 hover:border-slate-600 shadow-sm transition-all hover:scale-105 active:scale-95"
+                >
+                  <Globe className="w-4 h-4 text-emerald-400" />
+                  <span>Decks de la Comunidad</span>
+                </Link>
+              </div>
             </div>
 
-            {/* Logo Showcase with Natural Aspect Ratio and Clean Glow */}
-            <div className="flex-shrink-0 flex items-center justify-center">
-              <div className="relative w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center p-3 rounded-3xl bg-slate-900/50 border border-white/[0.08] shadow-2xl brand-glow">
-                <Image
-                  src="/logo.png"
-                  alt="El Alto Mando TCG"
-                  width={180}
-                  height={180}
-                  className="object-contain filter drop-shadow-[0_8px_25px_rgba(0,0,0,0.7)]"
-                  priority
-                />
+            {/* Right Column: 3D Holographic Card Fan Showcase */}
+            <div className="flex-shrink-0 relative flex items-center justify-center py-6 px-4 select-none">
+              {/* Backlight Radial Glow */}
+              <div className="absolute w-64 h-64 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
+
+              <div className="relative flex items-center justify-center">
+                {/* Left Card: Charizard ex */}
+                <div className="relative w-28 sm:w-32 aspect-[2.5/3.5] -mr-10 -rotate-12 transform hover:-translate-y-3 hover:rotate-[-8deg] transition-all duration-300 rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-slate-950 group cursor-pointer">
+                  <img
+                    src="https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/OBF/OBF_125_R_EN_SM.png"
+                    alt="Charizard ex"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                </div>
+
+                {/* Center Main Card: Teal Mask Ogerpon ex */}
+                <div className="relative z-20 w-32 sm:w-36 aspect-[2.5/3.5] -translate-y-3 transform hover:-translate-y-5 transition-all duration-300 rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(37,99,235,0.4)] border-2 border-blue-400/40 bg-slate-950 group cursor-pointer">
+                  <img
+                    src="https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TWM/TWM_025_R_EN_SM.png"
+                    alt="Teal Mask Ogerpon ex"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-400/10 via-white/20 to-transparent pointer-events-none" />
+
+                  {/* Floating Pill Badge */}
+                  <div className="absolute bottom-2 inset-x-2 px-2 py-1 rounded-lg bg-black/85 backdrop-blur-md border border-white/20 text-center shadow-lg">
+                    <span className="text-[10px] font-black text-blue-300 tracking-wider uppercase block">
+                      ⚡ 60 Cartas · PTCGL
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right Card: Fezandipiti ex */}
+                <div className="relative z-10 w-28 sm:w-32 aspect-[2.5/3.5] -ml-10 rotate-12 transform hover:-translate-y-3 hover:rotate-[8deg] transition-all duration-300 rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-slate-950 group cursor-pointer">
+                  <img
+                    src="https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SFA/SFA_038_R_EN_SM.png"
+                    alt="Fezandipiti ex"
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                </div>
               </div>
             </div>
           </div>
