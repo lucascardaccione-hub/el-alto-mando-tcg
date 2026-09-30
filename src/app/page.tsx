@@ -182,11 +182,22 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-          {/* BLOQUE 1: MAZOS */}
-          <div className="relative group rounded-3xl bg-gradient-to-b from-[#0d1630]/90 to-[#080d1e]/90 border border-blue-500/25 p-7 sm:p-8 flex flex-col justify-between shadow-xl hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-900/20 transition-all duration-300">
-            <div className="space-y-5">
+          {/* BLOQUE 1: MAZOS — Greninja */}
+          <div className="relative group rounded-3xl bg-gradient-to-b from-[#0d1630]/90 to-[#080d1e]/90 border border-blue-500/25 p-7 sm:p-8 flex flex-col justify-between shadow-xl hover:border-blue-400/60 hover:shadow-2xl hover:shadow-blue-600/25 transition-all duration-500 overflow-hidden">
+            {/* Pokémon Mascot: Greninja */}
+            <div className="absolute -right-4 -top-2 w-44 h-44 sm:w-52 sm:h-52 pointer-events-none select-none z-0">
+              {/* Ambient glow */}
+              <div className="absolute inset-0 bg-blue-500/20 rounded-full blur-3xl scale-75 group-hover:scale-100 group-hover:bg-blue-400/30 transition-all duration-700" />
+              <img
+                src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/658.png"
+                alt="Greninja"
+                className="relative w-full h-full object-contain drop-shadow-[0_8px_30px_rgba(59,130,246,0.45)] transition-all duration-500 ease-out group-hover:-translate-y-3 group-hover:scale-110 group-hover:drop-shadow-[0_12px_40px_rgba(59,130,246,0.7)] group-hover:brightness-110"
+              />
+            </div>
+
+            <div className="space-y-5 relative z-10">
               <div className="flex items-center justify-between">
-                <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:bg-blue-600/30 group-hover:border-blue-400/50 transition-all duration-300">
                   <Layers className="w-6 h-6" />
                 </div>
                 <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-blue-950/80 text-blue-300 border border-blue-800/50 uppercase tracking-wider">
@@ -195,11 +206,11 @@ export default function HomePage() {
               </div>
 
               <div>
-                <h3 className="text-2xl font-black text-white group-hover:text-blue-300 transition-colors">
+                <h3 className="text-2xl font-black text-white group-hover:text-blue-300 transition-colors duration-300">
                   Mazos
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
-                  Creación, importación y estudio del metagame competitivo con validación oficial de Pokémon TCG Live.
+                <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed max-w-[75%]">
+                  Creación, importación y estudio del metagame competitivo con validación oficial PTCGL.
                 </p>
               </div>
 
@@ -239,10 +250,10 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="pt-6">
+            <div className="pt-6 relative z-10">
               <Link
                 href="/deck-builder"
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-900/40 transition-all"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-900/40 transition-all hover:shadow-lg hover:shadow-blue-800/50"
               >
                 <span>Armar Mi Mazo Ahora</span>
                 <ArrowRight className="w-4 h-4" />
@@ -250,11 +261,22 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* BLOQUE 2: TIENDA */}
-          <div className="relative group rounded-3xl bg-gradient-to-b from-[#1c160c]/90 to-[#0e0c07]/90 border border-amber-500/25 p-7 sm:p-8 flex flex-col justify-between shadow-xl hover:border-amber-500/50 hover:shadow-2xl hover:shadow-amber-900/20 transition-all duration-300">
-            <div className="space-y-5">
+          {/* BLOQUE 2: TIENDA — Alakazam */}
+          <div className="relative group rounded-3xl bg-gradient-to-b from-[#1c160c]/90 to-[#0e0c07]/90 border border-amber-500/25 p-7 sm:p-8 flex flex-col justify-between shadow-xl hover:border-amber-400/60 hover:shadow-2xl hover:shadow-amber-600/25 transition-all duration-500 overflow-hidden">
+            {/* Pokémon Mascot: Alakazam */}
+            <div className="absolute -right-4 -top-2 w-44 h-44 sm:w-52 sm:h-52 pointer-events-none select-none z-0">
+              {/* Ambient glow */}
+              <div className="absolute inset-0 bg-amber-500/20 rounded-full blur-3xl scale-75 group-hover:scale-100 group-hover:bg-amber-400/30 transition-all duration-700" />
+              <img
+                src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/65.png"
+                alt="Alakazam"
+                className="relative w-full h-full object-contain drop-shadow-[0_8px_30px_rgba(245,158,11,0.45)] transition-all duration-500 ease-out group-hover:-translate-y-3 group-hover:scale-110 group-hover:drop-shadow-[0_12px_40px_rgba(245,158,11,0.7)] group-hover:brightness-110"
+              />
+            </div>
+
+            <div className="space-y-5 relative z-10">
               <div className="flex items-center justify-between">
-                <div className="w-12 h-12 rounded-2xl bg-amber-600/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <div className="w-12 h-12 rounded-2xl bg-amber-600/20 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:bg-amber-600/30 group-hover:border-amber-400/50 transition-all duration-300">
                   <ShoppingBag className="w-6 h-6" />
                 </div>
                 <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-950/80 text-amber-300 border border-amber-800/50 uppercase tracking-wider">
@@ -263,11 +285,11 @@ export default function HomePage() {
               </div>
 
               <div>
-                <h3 className="text-2xl font-black text-white group-hover:text-amber-300 transition-colors">
+                <h3 className="text-2xl font-black text-white group-hover:text-amber-300 transition-colors duration-300">
                   Tienda
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
-                  Catálogo de cartas sueltas con stock verificado, precios claros y seguimiento en vivo de compras.
+                <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed max-w-[75%]">
+                  Catálogo de cartas sueltas con stock verificado, precios claros y seguimiento en vivo.
                 </p>
               </div>
 
@@ -304,10 +326,10 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="pt-6">
+            <div className="pt-6 relative z-10">
               <Link
                 href="/tienda"
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold text-amber-100 bg-amber-600 hover:bg-amber-500 shadow-md shadow-amber-900/40 transition-all"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold text-amber-100 bg-amber-600 hover:bg-amber-500 shadow-md shadow-amber-900/40 transition-all hover:shadow-lg hover:shadow-amber-800/50"
               >
                 <span>Explorar la Tienda</span>
                 <ArrowRight className="w-4 h-4" />
@@ -315,11 +337,22 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* BLOQUE 3: MI CUENTA */}
-          <div className="relative group rounded-3xl bg-gradient-to-b from-[#180f2c]/90 to-[#0b0717]/90 border border-violet-500/25 p-7 sm:p-8 flex flex-col justify-between shadow-xl hover:border-violet-500/50 hover:shadow-2xl hover:shadow-violet-900/20 transition-all duration-300">
-            <div className="space-y-5">
+          {/* BLOQUE 3: MI CUENTA — Lucario */}
+          <div className="relative group rounded-3xl bg-gradient-to-b from-[#180f2c]/90 to-[#0b0717]/90 border border-violet-500/25 p-7 sm:p-8 flex flex-col justify-between shadow-xl hover:border-violet-400/60 hover:shadow-2xl hover:shadow-violet-600/25 transition-all duration-500 overflow-hidden">
+            {/* Pokémon Mascot: Lucario */}
+            <div className="absolute -right-4 -top-2 w-44 h-44 sm:w-52 sm:h-52 pointer-events-none select-none z-0">
+              {/* Ambient glow */}
+              <div className="absolute inset-0 bg-violet-500/20 rounded-full blur-3xl scale-75 group-hover:scale-100 group-hover:bg-violet-400/30 transition-all duration-700" />
+              <img
+                src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/448.png"
+                alt="Lucario"
+                className="relative w-full h-full object-contain drop-shadow-[0_8px_30px_rgba(139,92,246,0.45)] transition-all duration-500 ease-out group-hover:-translate-y-3 group-hover:scale-110 group-hover:drop-shadow-[0_12px_40px_rgba(139,92,246,0.7)] group-hover:brightness-110"
+              />
+            </div>
+
+            <div className="space-y-5 relative z-10">
               <div className="flex items-center justify-between">
-                <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400">
+                <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400 group-hover:bg-violet-600/30 group-hover:border-violet-400/50 transition-all duration-300">
                   <User className="w-6 h-6" />
                 </div>
                 <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-violet-950/80 text-violet-300 border border-violet-800/50 uppercase tracking-wider">
@@ -328,11 +361,11 @@ export default function HomePage() {
               </div>
 
               <div>
-                <h3 className="text-2xl font-black text-white group-hover:text-violet-300 transition-colors">
+                <h3 className="text-2xl font-black text-white group-hover:text-violet-300 transition-colors duration-300">
                   Mi Cuenta
                 </h3>
-                <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
-                  Tu perfil de entrenador Pokémon: personalización de avatar, pedidos realizados y mazos guardados.
+                <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed max-w-[75%]">
+                  Tu perfil de entrenador Pokémon: avatar, pedidos realizados y mazos guardados.
                 </p>
               </div>
 
@@ -372,10 +405,10 @@ export default function HomePage() {
               </div>
             </div>
 
-            <div className="pt-6">
+            <div className="pt-6 relative z-10">
               <Link
                 href="/perfil"
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 shadow-md shadow-violet-900/40 transition-all"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 shadow-md shadow-violet-900/40 transition-all hover:shadow-lg hover:shadow-violet-800/50"
               >
                 <span>Acceder a Mi Cuenta</span>
                 <ArrowRight className="w-4 h-4" />
