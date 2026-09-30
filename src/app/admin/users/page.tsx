@@ -13,6 +13,7 @@ import {
   Lock,
   ArrowLeft,
   Loader2,
+  ExternalLink,
 } from 'lucide-react';
 import { getDefaultAvatar } from '@/lib/avatars';
 import { getRoleBadge } from '@/lib/roles';

@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 let cachedSetsMap: Map<string, string> | null = null;
 
 // Sets that are strictly Pokémon Pocket (tcgp) - NEVER allowed in TCG Live
-export function isPocketSet(setId: string): boolean {
+function isPocketSet(setId: string): boolean {
   if (!setId) return false;
   const lower = setId.toLowerCase().trim();
   // Pocket sets in TCGdex start with 'a' or 'b' followed by numbers (e.g. A1, A1a, A2, A2b, B1, B1a, B2), or 'p-a', or 'tcgp'

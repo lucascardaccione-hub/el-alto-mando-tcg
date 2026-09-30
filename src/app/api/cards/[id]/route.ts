@@ -112,7 +112,7 @@ export async function DELETE(
 
     const result = await db.run('DELETE FROM cards WHERE id = ?', [cardId]);
 
-    if (result.changes === 0) {
+    if (result.rowsAffected === 0) {
       return NextResponse.json({ error: 'Carta no encontrada' }, { status: 404 });
     }
 
