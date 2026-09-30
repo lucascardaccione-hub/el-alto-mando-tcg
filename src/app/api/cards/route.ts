@@ -117,6 +117,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No autorizado. Inicie sesión en el panel.' }, { status: 401 });
     }
 
+    const isLuca = user.username?.toLowerCase() === 'luca';
+    const role = (user.role || '').toLowerCase();
+    const canSell = isLuca || role === 'admin' || role === 'owner' || role === 'seller' || role === 'vendedor';
+
+    if (!canSell) {
+      return NextResponse.json(
+        { error: 'Acceso denegado. Solamente los usuarios con rol Vendedor o Administrador pueden cargar cartas al catálogo. Los Jugadores no tienen permiso de venta.' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const {
       name,
@@ -146,8 +157,6 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
-    const isLuca = user.username.toLowerCase() === 'luca';
 
     // Default to the current logged in user
     let finalSellerId = seller_id ? Number(seller_id) : user.id;

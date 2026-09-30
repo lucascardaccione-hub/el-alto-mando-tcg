@@ -30,7 +30,7 @@ const STANDARD_SET_IDS = new Set([
   'swsh12', 'swsh12tg', 'swsh12.5', 'swsh12.5gg', 'swshp',
 ]);
 
-export function isStandardSet(setId: string): boolean {
+function isStandardSet(setId: string): boolean {
   if (!setId) return false;
   const lower = setId.toLowerCase().trim();
   if (isPocketSet(lower)) return false;

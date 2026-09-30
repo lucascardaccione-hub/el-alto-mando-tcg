@@ -48,6 +48,9 @@ export default function UsersManagementPage() {
   // Notification
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
+  // Filter: all | sellers | players
+  const [roleFilter, setRoleFilter] = useState<'all' | 'sellers' | 'players'>('all');
+
   const fetchUsers = async () => {
     setLoading(true);
     try {
@@ -266,10 +269,21 @@ export default function UsersManagementPage() {
       <div>
         <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
           <Users className="w-7 h-7 text-purple-400" />
-          <span>Gestión de Usuarios Autorizados</span>
+          <span>Gestión de Usuarios y Vendedores</span>
         </h1>
         <p className="text-xs sm:text-sm text-slate-400 mt-1">
-          Controla quiénes pueden iniciar sesión en el panel y subir o modificar cartas de stock.
+          Control exclusivo de Luca: define qué usuarios tienen permiso de vender cartas y administrar stock.
+        </p>
+      </div>
+
+      {/* Luca Master Info Banner */}
+      <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-950/40 via-blue-950/40 to-slate-900 border border-amber-500/40 text-xs text-slate-300 space-y-1.5 shadow-lg">
+        <div className="flex items-center gap-2 font-bold text-amber-300">
+          <span className="text-sm">👑</span>
+          <span className="uppercase tracking-wider text-[11px]">Control Maestro de Roles (Exclusivo Luca)</span>
+        </div>
+        <p className="text-[12px] text-slate-300 leading-relaxed">
+          <strong className="text-white">Importante:</strong> Los usuarios con rol <strong className="text-emerald-400">Jugador</strong> NO pueden cargar cartas ni vender en la plataforma. Solamente los usuarios con rol <strong className="text-blue-400">Vendedor</strong> o <strong className="text-purple-400">Administrador</strong> tienen habilitada la carga al catálogo y la gestión de inventario. Como Admin Master, solamente tú puedes asignar o modificar el rol de vendedor.
         </p>
       </div>
 
@@ -379,67 +393,164 @@ export default function UsersManagementPage() {
       </div>
 
       {/* Users List */}
-      <div className="bg-[#0d1629] border border-slate-800 rounded-3xl p-6 space-y-4 shadow-xl">
-        <h2 className="text-base font-bold text-white flex items-center gap-2">
-          <Shield className="w-4 h-4 text-emerald-400" />
-          <span>Usuarios con Permiso de Carga y Venta ({users.length})</span>
-        </h2>
+      {(() => {
+        const isSellerOrAdmin = (u: AdminUser) =>
+          u.username.toLowerCase() === 'luca' ||
+          u.role === 'admin' ||
+          u.role === 'owner' ||
+          u.role === 'seller' ||
+          u.role === 'vendedor';
 
-        {loading ? (
-          <div className="py-8 text-center text-xs text-slate-500">Cargando usuarios...</div>
-        ) : (
-          <div className="divide-y divide-slate-800/80">
-            {users.map((u) => (
-              <div
-                key={u.id}
-                className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs sm:text-sm"
-              >
-                <div className="flex items-center gap-3">
-                  <div
-                    className={`w-11 h-11 rounded-full overflow-hidden flex items-center justify-center p-0.5 flex-shrink-0 ${
-                      u.is_active === 1
-                        ? 'bg-slate-900 border-2 border-blue-500/50 shadow-md'
-                        : 'bg-slate-900 border-2 border-slate-700 opacity-60'
-                    }`}
-                  >
-                    <img
-                      src={u.avatar_url || getDefaultAvatar(u.username)}
-                      alt={u.username}
-                      className="w-full h-full object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = getDefaultAvatar(u.username);
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Link
-                        href={`/perfil/${u.id}`}
-                        target="_blank"
-                        className="font-bold text-white text-sm hover:text-blue-400 hover:underline transition-colors flex items-center gap-1"
-                        title="Ver perfil de usuario"
-                      >
-                        <span>{u.username}</span>
-                        <ExternalLink className="w-3 h-3 text-slate-500" />
-                      </Link>
+        const sellersCount = users.filter(isSellerOrAdmin).length;
+        const playersCount = users.filter((u) => !isSellerOrAdmin(u)).length;
 
-                      {u.username.toLowerCase() === 'luca' ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded border bg-amber-950/80 text-amber-300 border-amber-600/70 shadow-sm">
-                          👑 Admin Master
-                        </span>
-                      ) : (
-                        <select
-                          value={u.role || 'user'}
-                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                          className="text-[11px] font-semibold px-2 py-0.5 rounded border bg-slate-900 text-slate-200 border-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
-                          title="Cambiar rol del usuario"
+        const filteredUsers = users.filter((u) => {
+          if (roleFilter === 'sellers') return isSellerOrAdmin(u);
+          if (roleFilter === 'players') return !isSellerOrAdmin(u);
+          return true;
+        });
+
+        return (
+          <div className="bg-[#0d1629] border border-slate-800 rounded-3xl p-6 space-y-5 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+              <div>
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-emerald-400" />
+                  <span>Directorio de Usuarios ({users.length})</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Solo los <strong className="text-blue-300">Vendedores</strong> y <strong className="text-purple-300">Admins</strong> pueden cargar cartas y stock. Los <strong className="text-emerald-300">Jugadores</strong> no tienen permisos de venta.
+                </p>
+              </div>
+
+              {/* Filter Pills */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setRoleFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    roleFilter === 'all'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  Todos ({users.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRoleFilter('sellers')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    roleFilter === 'sellers'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  <span>💼 Vendedores y Admins</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-blue-950 text-blue-200">
+                    {sellersCount}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRoleFilter('players')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    roleFilter === 'players'
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  <span>🎮 Jugadores (Sin venta)</span>
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-800 text-slate-300">
+                    {playersCount}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {loading ? (
+              <div className="py-8 text-center text-xs text-slate-500">Cargando usuarios...</div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-500">
+                No hay usuarios en esta categoría.
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-800/80">
+                {filteredUsers.map((u) => {
+                  const canSell = isSellerOrAdmin(u);
+                  return (
+                    <div
+                      key={u.id}
+                      className="py-4 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs sm:text-sm"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-11 h-11 rounded-full overflow-hidden flex items-center justify-center p-0.5 flex-shrink-0 ${
+                            u.is_active === 1
+                              ? 'bg-slate-900 border-2 border-blue-500/50 shadow-md'
+                              : 'bg-slate-900 border-2 border-slate-700 opacity-60'
+                          }`}
                         >
-                          <option value="seller">💼 Vendedor</option>
-                          <option value="admin">🛡️ Administrador</option>
-                          <option value="user">🎮 Jugador</option>
-                        </select>
-                      )}
-                    </div>
+                          <img
+                            src={u.avatar_url || getDefaultAvatar(u.username)}
+                            alt={u.username}
+                            className="w-full h-full object-contain"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = getDefaultAvatar(u.username);
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Link
+                              href={`/perfil/${u.id}`}
+                              target="_blank"
+                              className="font-bold text-white text-sm hover:text-blue-400 hover:underline transition-colors flex items-center gap-1"
+                              title="Ver perfil de usuario"
+                            >
+                              <span>{u.username}</span>
+                              <ExternalLink className="w-3 h-3 text-slate-500" />
+                            </Link>
+
+                            {u.username.toLowerCase() === 'luca' ? (
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded border bg-amber-950/80 text-amber-300 border-amber-600/70 shadow-sm">
+                                👑 Admin Master
+                              </span>
+                            ) : (
+                              <div className="flex items-center gap-1.5">
+                                <select
+                                  value={u.role || 'user'}
+                                  onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                                  className="text-[11px] font-semibold px-2 py-0.5 rounded border bg-slate-900 text-slate-200 border-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
+                                  title="Cambiar rol del usuario (Solo Luca)"
+                                >
+                                  <option value="seller">💼 Vendedor</option>
+                                  <option value="admin">🛡️ Administrador</option>
+                                  <option value="user">🎮 Jugador</option>
+                                </select>
+
+                                {canSell ? (
+                                  <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-700/50">
+                                    ✓ Permiso de Venta
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                                    ❌ Sin Permiso de Venta
+                                  </span>
+                                )}
+                              </div>
+                            )}
+
+                            {!canSell && u.username.toLowerCase() !== 'luca' && (
+                              <button
+                                type="button"
+                                onClick={() => handleRoleChange(u.id, 'seller')}
+                                className="text-[10px] font-bold px-2.5 py-0.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-sm cursor-pointer ml-1"
+                                title="Asignar rol de Vendedor a este usuario"
+                              >
+                                + Promover a Vendedor
+                              </button>
+                            )}
+                          </div>
 
                     {/* WhatsApp Status & Inline editor */}
                     <div className="flex items-center gap-2 mt-1.5 flex-wrap">
@@ -525,10 +636,13 @@ export default function UsersManagementPage() {
                   )}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
+            );
+          })}
+            </div>
+          )}
+        </div>
+      );
+    })()}
+  </div>
+);
 }

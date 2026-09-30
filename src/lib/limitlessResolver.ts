@@ -38,9 +38,9 @@ function saveCache() {
       fs.mkdirSync(dataDir, { recursive: true });
     }
     const obj: Record<string, string> = {};
-    for (const [k, v] of memoryCache.entries()) {
+    memoryCache.forEach((v, k) => {
       obj[k] = v;
-    }
+    });
     fs.writeFileSync(cacheFile, JSON.stringify(obj, null, 2), 'utf8');
   } catch (e) {
     console.error('Error saving Limitless cache:', e);

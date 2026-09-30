@@ -14,6 +14,17 @@ export async function PUT(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    const isLuca = user.username?.toLowerCase() === 'luca';
+    const role = (user.role || '').toLowerCase();
+    const canSell = isLuca || role === 'admin' || role === 'owner' || role === 'seller' || role === 'vendedor';
+
+    if (!canSell) {
+      return NextResponse.json(
+        { error: 'Acceso denegado. Solamente los usuarios con rol Vendedor o Administrador pueden modificar cartas.' },
+        { status: 403 }
+      );
+    }
+
     const cardId = parseInt(params.id, 10);
     if (isNaN(cardId)) {
       return NextResponse.json({ error: 'ID de carta inválido' }, { status: 400 });
@@ -103,6 +114,17 @@ export async function DELETE(
     const user = getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+    }
+
+    const isLuca = user.username?.toLowerCase() === 'luca';
+    const role = (user.role || '').toLowerCase();
+    const canSell = isLuca || role === 'admin' || role === 'owner' || role === 'seller' || role === 'vendedor';
+
+    if (!canSell) {
+      return NextResponse.json(
+        { error: 'Acceso denegado. Solamente los usuarios con rol Vendedor o Administrador pueden eliminar cartas.' },
+        { status: 403 }
+      );
     }
 
     const cardId = parseInt(params.id, 10);
