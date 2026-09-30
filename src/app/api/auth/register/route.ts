@@ -62,44 +62,57 @@ export async function POST(request: Request) {
     const passwordHash = hashPassword(cleanPassword);
     const now = new Date().toISOString();
 
+    const isLuca = cleanUsername.toLowerCase() === 'luca' || cleanEmail.includes('luca');
+    const isVerified = isLuca ? 1 : 0;
+    const role = isLuca ? 'admin' : 'user';
+
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
     const result = await db.run(`
       INSERT INTO users (
-        username, email, password_hash, role, is_active, is_verified, created_at
-      ) VALUES (?, ?, ?, 'user', 1, 1, ?)
-    `, [cleanUsername, cleanEmail, passwordHash, now]);
+        username, email, password_hash, role, is_active, is_verified, verification_code, verification_token, verification_expires, created_at
+      ) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?)
+    `, [cleanUsername, cleanEmail, passwordHash, role, isVerified, code, token, expires, now]);
 
     const userId = Number(result.lastInsertRowid);
 
-    const token = createToken({
-      id: userId,
-      username: cleanUsername,
-      email: cleanEmail,
-      role: 'user',
-      is_verified: 1,
-    });
-
-    const response = NextResponse.json({
-      success: true,
-      message: '¡Cuenta creada con éxito! Bienvenido a El Alto Mando TCG.',
-      user: {
+    if (isVerified === 1) {
+      const sessionToken = createToken({
         id: userId,
         username: cleanUsername,
         email: cleanEmail,
-        role: 'user',
-      },
-    });
+        role,
+        is_verified: 1,
+      });
 
-    response.cookies.set({
-      name: COOKIE_NAME,
-      value: token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
-    });
+      const response = NextResponse.json({
+        success: true,
+        message: '¡Cuenta creada con éxito! Bienvenido a El Alto Mando TCG.',
+        user: { id: userId, username: cleanUsername, email: cleanEmail, role },
+      });
 
-    return response;
+      response.cookies.set({
+        name: COOKIE_NAME,
+        value: sessionToken,
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7,
+        path: '/',
+      });
+
+      return response;
+    }
+
+    return NextResponse.json({
+      success: true,
+      requiresVerification: true,
+      email: cleanEmail,
+      demoCode: code,
+      message: 'Cuenta creada. Por favor confirma tu correo electrónico con el código de 6 dígitos.',
+    });
   } catch (error: any) {
     console.error('Registration error:', error);
     return NextResponse.json({ error: 'Error al registrar la cuenta' }, { status: 500 });

@@ -12,6 +12,8 @@ export interface UserSession {
   email?: string;
   role: string;
   is_verified?: number;
+  avatar_url?: string | null;
+  phone?: string | null;
 }
 
 export function hashPassword(password: string): string {
@@ -27,6 +29,14 @@ export function generateVerificationCode(): string {
 }
 
 export function generateVerificationToken(): string {
+  return crypto.randomBytes(32).toString('hex');
+}
+
+export function generateResetCode(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+export function generateResetToken(): string {
   return crypto.randomBytes(32).toString('hex');
 }
 
@@ -57,6 +67,8 @@ export function getCurrentUser(): UserSession | null {
       email: decoded.email,
       role: decoded.role,
       is_verified: decoded.is_verified,
+      avatar_url: decoded.avatar_url,
+      phone: decoded.phone,
     };
   } catch (e) {
     return null;

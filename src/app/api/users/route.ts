@@ -12,7 +12,7 @@ export async function GET() {
 
   const isLuca = currentUser.username.toLowerCase() === 'luca';
 
-  const users = await db.all('SELECT id, username, email, phone, role, is_active, created_at FROM users ORDER BY id ASC');
+  const users = await db.all('SELECT id, username, email, phone, role, is_active, avatar_url, created_at FROM users ORDER BY id ASC');
   return NextResponse.json({
     users,
     canManageUsers: isLuca,

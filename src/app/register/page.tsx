@@ -54,7 +54,11 @@ export default function RegisterPage() {
 
       setSuccess(true);
       setTimeout(() => {
-        router.push('/decks');
+        if (data.requiresVerification) {
+          router.push(`/verify-email?email=${encodeURIComponent(email)}&demoCode=${data.demoCode || ''}`);
+        } else {
+          router.push('/decks');
+        }
         router.refresh();
       }, 1000);
     } catch (err) {

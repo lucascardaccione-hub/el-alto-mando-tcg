@@ -53,7 +53,17 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
         const res = await fetch('/api/auth/me');
         if (res.ok) {
           const data = await res.json();
-          setCurrentUser(data.user);
+          if (data.authenticated && data.user) {
+            const role = (data.user.role || '').toLowerCase();
+            const isLuca = (data.user.username || '').toLowerCase() === 'luca';
+            if (isLuca || role === 'admin' || role === 'owner' || role === 'seller' || role === 'vendedor') {
+              setCurrentUser(data.user);
+            } else {
+              router.push('/decks');
+            }
+          } else {
+            router.push('/admin/login');
+          }
         } else {
           router.push('/admin/login');
         }
@@ -174,7 +184,12 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
               <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-300">
                 <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
                 <span>
-                  Admin: <strong className="text-white">{currentUser.username}</strong>
+                  {currentUser.username.toLowerCase() === 'luca'
+                    ? '👑 Admin Master'
+                    : currentUser.role === 'admin'
+                    ? '🛡️ Admin'
+                    : '💼 Vendedor'}
+                  : <strong className="text-white">{currentUser.username}</strong>
                 </span>
               </div>
             )}

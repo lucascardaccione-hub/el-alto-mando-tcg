@@ -17,7 +17,9 @@ function VerifyEmailForm() {
   const [email, setEmail] = useState(emailParam);
   const [code, setCode] = useState(demoCode);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
   const [error, setError] = useState('');
+  const [infoMessage, setInfoMessage] = useState('');
   const [success, setSuccess] = useState(false);
 
   // Auto-verify if token is present in URL
@@ -29,6 +31,7 @@ function VerifyEmailForm() {
 
   const handleVerify = async (params: { code?: string; token?: string }) => {
     setError('');
+    setInfoMessage('');
     setLoading(true);
 
     try {
@@ -58,6 +61,34 @@ function VerifyEmailForm() {
       setError('Error al procesar la verificación.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResendCode = async () => {
+    if (!email) {
+      setError('Ingresa tu email para reenviar el código.');
+      return;
+    }
+    setError('');
+    setInfoMessage('');
+    setResending(true);
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Error al reenviar código.');
+      } else {
+        if (data.code) setCode(data.code);
+        setInfoMessage('¡Nuevo código enviado con éxito!');
+      }
+    } catch {
+      setError('Error al reenviar el código.');
+    } finally {
+      setResending(false);
     }
   };
 
@@ -108,6 +139,13 @@ function VerifyEmailForm() {
                 <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-rose-950/80 border border-rose-800 text-rose-300 text-xs sm:text-sm animate-in fade-in">
                   <AlertCircle className="w-4 h-4 flex-shrink-0 text-rose-400" />
                   <span>{error}</span>
+                </div>
+              )}
+
+              {infoMessage && (
+                <div className="flex items-center gap-2.5 p-3.5 rounded-xl bg-emerald-950/80 border border-emerald-600 text-emerald-300 text-xs sm:text-sm animate-in fade-in">
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-400" />
+                  <span>{infoMessage}</span>
                 </div>
               )}
 
@@ -175,9 +213,19 @@ function VerifyEmailForm() {
                 </button>
               </form>
 
-              <div className="pt-3 border-t border-slate-800 text-center text-xs text-slate-400">
+              <div className="flex items-center justify-between pt-3 border-t border-slate-800 text-xs">
+                <button
+                  type="button"
+                  disabled={resending}
+                  onClick={handleResendCode}
+                  className="text-slate-400 hover:text-white transition-colors disabled:opacity-50 flex items-center gap-1.5"
+                >
+                  {resending && <Loader2 className="w-3 h-3 animate-spin text-blue-400" />}
+                  <span>¿No recibiste el código? Reenviar</span>
+                </button>
+
                 <Link href="/login" className="text-blue-400 hover:text-blue-300 font-semibold underline underline-offset-2">
-                  Volver al Inicio de Sesión
+                  Iniciar Sesión
                 </Link>
               </div>
             </>

@@ -14,12 +14,15 @@ import {
   ArrowLeft,
   Loader2,
 } from 'lucide-react';
+import { getDefaultAvatar } from '@/lib/avatars';
+import { getRoleBadge } from '@/lib/roles';
 
 interface AdminUser {
   id: number;
   username: string;
   role: string;
   phone?: string;
+  avatar_url?: string;
   is_active: number;
   created_at: string;
 }
@@ -33,7 +36,7 @@ export default function UsersManagementPage() {
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newPhone, setNewPhone] = useState('');
-  const [newRole, setNewRole] = useState('admin');
+  const [newRole, setNewRole] = useState('seller');
   const [creating, setCreating] = useState(false);
 
   // Edit phone inline state
@@ -162,6 +165,29 @@ export default function UsersManagementPage() {
     }
   };
 
+  // Change Role
+  const handleRoleChange = async (userId: number, nextRole: string) => {
+    try {
+      const res = await fetch('/api/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: userId, role: nextRole }),
+      });
+
+      if (res.ok) {
+        setUsers((prev) =>
+          prev.map((u) => (u.id === userId ? { ...u, role: nextRole } : u))
+        );
+        showNotification('success', 'Rol de usuario actualizado correctamente.');
+      } else {
+        const data = await res.json();
+        showNotification('error', data.error || 'Error al cambiar rol.');
+      }
+    } catch {
+      showNotification('error', 'Error de conexión');
+    }
+  };
+
   // Delete User
   const handleDeleteUser = async (user: AdminUser) => {
     if (!window.confirm(`¿Estás seguro de revocar el acceso a "${user.username}"?`)) {
@@ -271,7 +297,7 @@ export default function UsersManagementPage() {
           <span>Habilitar Nuevo Usuario para el Panel</span>
         </h2>
 
-        <form onSubmit={handleCreateUser} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <form onSubmit={handleCreateUser} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           <div>
             <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
               Nombre de Usuario
@@ -314,6 +340,21 @@ export default function UsersManagementPage() {
             />
           </div>
 
+          <div>
+            <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1">
+              Rol Asignado
+            </label>
+            <select
+              value={newRole}
+              onChange={(e) => setNewRole(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs sm:text-sm text-white focus:outline-none focus:border-blue-500"
+            >
+              <option value="seller">💼 Vendedor</option>
+              <option value="admin">🛡️ Administrador</option>
+              <option value="user">🎮 Jugador</option>
+            </select>
+          </div>
+
           <div className="flex items-end">
             <button
               type="submit"
@@ -354,26 +395,49 @@ export default function UsersManagementPage() {
               >
                 <div className="flex items-center gap-3">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${
+                    className={`w-11 h-11 rounded-full overflow-hidden flex items-center justify-center p-0.5 flex-shrink-0 ${
                       u.is_active === 1
-                        ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40'
-                        : 'bg-slate-800 text-slate-500 border border-slate-700'
+                        ? 'bg-slate-900 border-2 border-blue-500/50 shadow-md'
+                        : 'bg-slate-900 border-2 border-slate-700 opacity-60'
                     }`}
                   >
-                    {u.username.substring(0, 2).toUpperCase()}
+                    <img
+                      src={u.avatar_url || getDefaultAvatar(u.username)}
+                      alt={u.username}
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = getDefaultAvatar(u.username);
+                      }}
+                    />
                   </div>
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-white text-sm">{u.username}</span>
-                      <span
-                        className={`text-[10px] font-semibold px-2 py-0.5 rounded border ${
-                          u.username.toLowerCase() === 'luca'
-                            ? 'bg-amber-950/80 text-amber-300 border-amber-600/70 font-bold'
-                            : 'bg-slate-800 text-slate-300 border-slate-700'
-                        }`}
+                      <Link
+                        href={`/perfil/${u.id}`}
+                        target="_blank"
+                        className="font-bold text-white text-sm hover:text-blue-400 hover:underline transition-colors flex items-center gap-1"
+                        title="Ver perfil de usuario"
                       >
-                        {u.username.toLowerCase() === 'luca' ? '👑 Master / Administrador Principal' : 'Colaborador / Vendedor'}
-                      </span>
+                        <span>{u.username}</span>
+                        <ExternalLink className="w-3 h-3 text-slate-500" />
+                      </Link>
+
+                      {u.username.toLowerCase() === 'luca' ? (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded border bg-amber-950/80 text-amber-300 border-amber-600/70 shadow-sm">
+                          👑 Admin Master
+                        </span>
+                      ) : (
+                        <select
+                          value={u.role || 'user'}
+                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                          className="text-[11px] font-semibold px-2 py-0.5 rounded border bg-slate-900 text-slate-200 border-slate-700 focus:outline-none focus:border-blue-500 cursor-pointer"
+                          title="Cambiar rol del usuario"
+                        >
+                          <option value="seller">💼 Vendedor</option>
+                          <option value="admin">🛡️ Administrador</option>
+                          <option value="user">🎮 Jugador</option>
+                        </select>
+                      )}
                     </div>
 
                     {/* WhatsApp Status & Inline editor */}

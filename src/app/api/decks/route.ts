@@ -14,7 +14,7 @@ export async function GET(request: Request) {
 
     if (filter === 'public') {
       decks = await db.all(`
-        SELECT d.*, u.username as author_name,
+        SELECT d.*, u.id as author_id, u.username as author_name, u.role as author_role, u.avatar_url as author_avatar,
                (SELECT COUNT(*) FROM deck_cards WHERE deck_id = d.id) as card_types_count,
                (SELECT SUM(count) FROM deck_cards WHERE deck_id = d.id) as total_cards
         FROM decks d
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
         return NextResponse.json({ decks: [] });
       }
       decks = await db.all(`
-        SELECT d.*, u.username as author_name,
+        SELECT d.*, u.id as author_id, u.username as author_name, u.role as author_role, u.avatar_url as author_avatar,
                (SELECT COUNT(*) FROM deck_cards WHERE deck_id = d.id) as card_types_count,
                (SELECT SUM(count) FROM deck_cards WHERE deck_id = d.id) as total_cards
         FROM decks d

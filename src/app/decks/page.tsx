@@ -32,6 +32,8 @@ import {
   Loader2,
 } from 'lucide-react';
 import { parsePtcglDeck, getGenericEnergyImage } from '@/lib/deckParser';
+import { getRoleBadge } from '@/lib/roles';
+import { getDefaultAvatar } from '@/lib/avatars';
 
 export default function DecksPage() {
   const router = useRouter();
@@ -526,9 +528,34 @@ export default function DecksPage() {
                       {deck.description && (
                         <p className="text-xs text-slate-400 line-clamp-2">{deck.description}</p>
                       )}
-                      <div className="pt-1 flex items-center gap-1 text-[11px] text-slate-400">
-                        <User className="w-3 h-3 text-blue-400" />
-                        <span>Por: <strong className="text-slate-200 font-semibold">@{deck.author_name}</strong></span>
+                      <div className="pt-1.5 flex items-center gap-1.5 text-[11px] text-slate-300 flex-wrap">
+                        <Link
+                          href={deck.author_id ? `/perfil/${deck.author_id}` : '#'}
+                          onClick={(e) => e.stopPropagation()}
+                          className="flex items-center gap-1.5 hover:text-blue-400 group/author"
+                          title="Ver perfil del autor"
+                        >
+                          <div className="w-4 h-4 rounded-full overflow-hidden bg-slate-800 border border-slate-700 flex-shrink-0 flex items-center justify-center">
+                            <img
+                              src={deck.author_avatar || getDefaultAvatar(deck.author_name)}
+                              alt={deck.author_name}
+                              className="w-full h-full object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = getDefaultAvatar(deck.author_name);
+                              }}
+                            />
+                          </div>
+                          <span>Por: <strong className="text-white group-hover/author:underline">@{deck.author_name}</strong></span>
+                        </Link>
+
+                        {(() => {
+                          const badge = getRoleBadge({ username: deck.author_name, role: deck.author_role });
+                          return (
+                            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded border ${badge.badgeClass}`}>
+                              {badge.icon} {badge.label}
+                            </span>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>

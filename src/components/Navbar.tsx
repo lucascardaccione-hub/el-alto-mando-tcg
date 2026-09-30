@@ -6,6 +6,8 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { ShoppingBag, ShieldCheck, Box, Layers, Sparkles, User, UserPlus, LogOut, Clock } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { getRoleBadge, canAccessAdmin } from '@/lib/roles';
+import { getDefaultAvatar } from '@/lib/avatars';
 
 interface NavbarProps {
   totalCards?: number;
@@ -17,6 +19,7 @@ interface UserSession {
   username: string;
   role: string;
   email?: string;
+  avatar_url?: string;
   is_verified?: number;
 }
 
@@ -36,7 +39,10 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
     if (pathname.startsWith('/admin')) {
       return { primary: 'Panel de Control', secondary: 'Administración' };
     }
-    if (pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/verify-email')) {
+    if (pathname.startsWith('/perfil')) {
+      return { primary: 'Mi Perfil', secondary: 'Panel de Entrenador' };
+    }
+    if (pathname.startsWith('/login') || pathname.startsWith('/register') || pathname.startsWith('/verify-email') || pathname.startsWith('/recuperar-contrasena')) {
       return { primary: 'Mi Cuenta', secondary: 'El Alto Mando' };
     }
     return { primary: 'Tienda Oficial', secondary: 'Stock en Vivo' };
@@ -50,7 +56,7 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
       .then((data) => {
         if (data?.authenticated && data?.user) {
           setUser(data.user);
-          if (data.user.role === 'admin' || data.user.role === 'owner') {
+          if (canAccessAdmin(data.user)) {
             fetch('/api/orders/unread-count')
               .then((r) => (r.ok ? r.json() : null))
               .then((d) => {
@@ -64,7 +70,7 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
   }, []);
 
   useEffect(() => {
-    if (!user || (user.role !== 'admin' && user.role !== 'owner')) return;
+    if (!user || !canAccessAdmin(user)) return;
     const interval = setInterval(() => {
       fetch('/api/orders/unread-count')
         .then((r) => (r.ok ? r.json() : null))
@@ -182,7 +188,7 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
 
           {user ? (
             <div className="flex items-center gap-2">
-              {(user.role === 'admin' || user.role === 'owner') && (
+              {canAccessAdmin(user) && (
                 <>
                   {unreadCount > 0 && (
                     <Link
@@ -197,24 +203,49 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
                   <Link
                     href="/admin"
                     className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/80 hover:bg-slate-800 border border-white/[0.08] hover:border-white/[0.15] transition-all duration-200"
-                    title="Panel de Administración"
+                    title="Panel de Administración y Ventas"
                   >
                     <ShieldCheck className="w-4 h-4 text-blue-400" />
-                    <span className="hidden sm:inline">Admin</span>
+                    <span className="hidden sm:inline">
+                      {user.role === 'seller' || user.role === 'vendedor' ? 'Ventas' : 'Admin'}
+                    </span>
                   </Link>
                 </>
               )}
-              <div className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium text-slate-200 bg-slate-900/80 border border-white/[0.08]">
-                <User className="w-3.5 h-3.5 text-blue-400" />
-                <span className="max-w-[90px] truncate">{user.username}</span>
-                <button
-                  onClick={handleLogout}
-                  title="Cerrar Sesión"
-                  className="ml-1 text-slate-400 hover:text-rose-400 transition-colors"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                </button>
-              </div>
+
+              {/* User Profile Chip */}
+              <Link
+                href="/perfil"
+                className="flex items-center gap-2 px-2.5 py-1 rounded-2xl text-xs font-medium text-slate-200 bg-slate-900/80 hover:bg-slate-800 border border-white/[0.08] hover:border-blue-500/40 transition-all group"
+                title="Mi Perfil"
+              >
+                <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-800 border border-white/20 flex-shrink-0 flex items-center justify-center p-0.5">
+                  <img
+                    src={user.avatar_url || getDefaultAvatar(user.username)}
+                    alt={user.username}
+                    className="w-full h-full object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = getDefaultAvatar(user.username);
+                    }}
+                  />
+                </div>
+                <div className="flex flex-col text-left leading-tight max-w-[85px] sm:max-w-[100px]">
+                  <span className="font-bold text-white truncate text-[11px] group-hover:text-blue-400 transition-colors">
+                    {user.username}
+                  </span>
+                  <span className="text-[9px] font-semibold text-slate-400 truncate">
+                    {getRoleBadge(user).label}
+                  </span>
+                </div>
+              </Link>
+
+              <button
+                onClick={handleLogout}
+                title="Cerrar Sesión"
+                className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 transition-colors"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
             </div>
           ) : (
             <div className="flex items-center gap-2">
