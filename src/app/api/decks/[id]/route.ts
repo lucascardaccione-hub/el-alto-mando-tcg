@@ -55,9 +55,20 @@ export async function GET(
     const ownedCards = cards.reduce((acc, c) => acc + Math.min(c.count, c.owned_count || 0), 0);
     const missingCards = Math.max(0, totalCards - ownedCards);
 
+    const user = getCurrentUser();
+    const isOwner = user ? deck.user_id === user.id : false;
+    const isLuca = user
+      ? user.username?.toLowerCase() === 'luca' ||
+        user.email?.toLowerCase().includes('luca') ||
+        user.role === 'admin'
+      : false;
+    const canEdit = isOwner || isLuca;
+
     return NextResponse.json({
       deck: {
         ...deck,
+        can_edit: canEdit,
+        is_owner: isOwner,
         total_cards: totalCards,
         owned_cards: ownedCards,
         missing_cards: missingCards,
@@ -87,8 +98,20 @@ export async function PUT(
       return NextResponse.json({ error: 'Mazo no encontrado' }, { status: 404 });
     }
 
-    if (deck.user_id !== user.id && user.role !== 'admin') {
-      return NextResponse.json({ error: 'No tienes permiso para editar este mazo' }, { status: 403 });
+    const isOwner = deck.user_id === user.id;
+    const isLuca =
+      user.username?.toLowerCase() === 'luca' ||
+      user.email?.toLowerCase().includes('luca') ||
+      user.role === 'admin';
+
+    if (!isOwner && !isLuca) {
+      return NextResponse.json(
+        {
+          error:
+            'No tienes permiso para modificar este mazo. Solo el creador original o el Admin Master Luca pueden editarlo. Puedes crear una copia en tus mazos.',
+        },
+        { status: 403 }
+      );
     }
 
     const { name, format, description, is_public, cover_card_image, cards } = await request.json();
@@ -161,8 +184,20 @@ export async function DELETE(
       return NextResponse.json({ error: 'Mazo no encontrado' }, { status: 404 });
     }
 
-    if (deck.user_id !== user.id && user.role !== 'admin') {
-      return NextResponse.json({ error: 'No tienes permiso para eliminar este mazo' }, { status: 403 });
+    const isOwner = deck.user_id === user.id;
+    const isLuca =
+      user.username?.toLowerCase() === 'luca' ||
+      user.email?.toLowerCase().includes('luca') ||
+      user.role === 'admin';
+
+    if (!isOwner && !isLuca) {
+      return NextResponse.json(
+        {
+          error:
+            'No tienes permiso para eliminar este mazo. Solo el creador original o el Admin Master Luca pueden eliminarlo.',
+        },
+        { status: 403 }
+      );
     }
 
     await db.run('DELETE FROM deck_cards WHERE deck_id = ?', [deckId]);

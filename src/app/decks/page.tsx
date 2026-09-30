@@ -28,6 +28,8 @@ import {
   Award,
   BarChart3,
   Filter,
+  Copy,
+  Loader2,
 } from 'lucide-react';
 import { parsePtcglDeck, getGenericEnergyImage } from '@/lib/deckParser';
 
@@ -38,6 +40,7 @@ export default function DecksPage() {
   const [activeTab, setActiveTab] = useState<'my' | 'community' | 'frequent'>('my');
   const [loading, setLoading] = useState(true);
   const [togglingId, setTogglingId] = useState<number | null>(null);
+  const [cloningId, setCloningId] = useState<number | null>(null);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importText, setImportText] = useState('');
   const [importName, setImportName] = useState('');
@@ -180,6 +183,31 @@ export default function DecksPage() {
       router.push('/deck-builder?import=1');
     } finally {
       setSavingImport(false);
+    }
+  };
+
+  const handleCloneDeck = async (id: number, name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCloningId(id);
+    try {
+      const res = await fetch(`/api/decks/${id}/clone`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (res.ok && data.deckId) {
+        router.push(`/deck-builder/${data.deckId}`);
+      } else {
+        if (res.status === 401) {
+          alert('Debes iniciar sesión para hacer una copia de este mazo.');
+          router.push('/login');
+        } else {
+          alert(data.error || 'Error al duplicar el mazo.');
+        }
+      }
+    } catch {
+      alert('Error de conexión al duplicar el mazo.');
+    } finally {
+      setCloningId(null);
     }
   };
 
@@ -511,9 +539,26 @@ export default function DecksPage() {
                       {new Date(deck.updated_at).toLocaleDateString('es-AR')}
                     </span>
 
-                    <span className="font-semibold text-blue-400 group-hover:translate-x-0.5 transition-transform flex items-center gap-1 text-xs">
-                      Ver Mazo <ArrowRight className="w-3.5 h-3.5" />
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => handleCloneDeck(deck.id, deck.name, e)}
+                        disabled={cloningId === deck.id}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-900 hover:bg-emerald-950/70 text-emerald-400 hover:text-emerald-300 border border-slate-700 hover:border-emerald-600/50 transition-all active:scale-95 disabled:opacity-50"
+                        title="Crear una copia de este mazo en Mis Mazos"
+                      >
+                        {cloningId === deck.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+                        ) : (
+                          <Copy className="w-3 h-3 text-emerald-400" />
+                        )}
+                        <span>Hacer Copia</span>
+                      </button>
+
+                      <span className="font-semibold text-blue-400 group-hover:translate-x-0.5 transition-transform flex items-center gap-1 text-xs">
+                        Ver Mazo <ArrowRight className="w-3.5 h-3.5" />
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}

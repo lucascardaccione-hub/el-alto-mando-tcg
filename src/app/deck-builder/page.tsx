@@ -70,6 +70,10 @@ function DeckBuilderContent() {
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [canEdit, setCanEdit] = useState<boolean>(true);
+  const [isOwner, setIsOwner] = useState<boolean>(true);
+  const [authorName, setAuthorName] = useState<string>('');
+  const [cloning, setCloning] = useState<boolean>(false);
 
   // View mode: 'detailed' (app list with full controls) or 'visual' (PTCGL / Limitless gallery board)
   const [viewMode, setViewMode] = useState<'detailed' | 'visual'>('detailed');
@@ -233,6 +237,9 @@ function DeckBuilderContent() {
         setFormat(data.deck.format);
         setDescription(data.deck.description || '');
         setIsPublic(data.deck.is_public === 1 || data.deck.is_public === true || data.deck.is_public === undefined);
+        setCanEdit(data.deck.can_edit !== undefined ? Boolean(data.deck.can_edit) : true);
+        setIsOwner(data.deck.is_owner !== undefined ? Boolean(data.deck.is_owner) : true);
+        setAuthorName(data.deck.author_name || '');
         const rawList = data.cards || data.deck?.cards || [];
         setCards(
           rawList.map((c: any) => {
@@ -518,7 +525,38 @@ function DeckBuilderContent() {
     }
   };
 
-  // Save Deck
+  // Clone current deck (makes an independent copy in user's decks)
+  const handleCloneCurrentDeck = async () => {
+    if (!deckId) return;
+    setCloning(true);
+    try {
+      const res = await fetch(`/api/decks/${deckId}/clone`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (res.ok && data.deckId) {
+        showNotification('success', '¡Copia creada con éxito en Mis Mazos!');
+        setDeckId(data.deckId);
+        setName(data.name || (`Copia de ${name}`));
+        setCanEdit(true);
+        setIsOwner(true);
+        router.replace(`/deck-builder?id=${data.deckId}`);
+      } else {
+        if (res.status === 401) {
+          showNotification('error', 'Debes iniciar sesión para hacer una copia de este mazo.');
+          router.push('/login');
+        } else {
+          showNotification('error', data.error || 'Error al duplicar el mazo.');
+        }
+      }
+    } catch {
+      showNotification('error', 'Error de conexión al duplicar el mazo.');
+    } finally {
+      setCloning(false);
+    }
+  };
+
+  // Save Deck (or Save as Copy if viewing community deck)
   const handleSaveDeck = async () => {
     if (!name.trim()) {
       showNotification('error', 'Por favor ingresa un nombre para el mazo.');
@@ -528,8 +566,13 @@ function DeckBuilderContent() {
     setSaving(true);
     try {
       const coverImage = cards.length > 0 ? cards[0].image_url : '';
+      const isSavingAsCopy = Boolean(deckId && !canEdit);
+      const saveName = isSavingAsCopy
+        ? (name.toLowerCase().startsWith('copia de') ? name : `Copia de ${name}`)
+        : name.trim();
+
       const payload = {
-        name: name.trim(),
+        name: saveName,
         format,
         description,
         is_public: isPublic ? 1 : 0,
@@ -537,8 +580,8 @@ function DeckBuilderContent() {
         cards,
       };
 
-      const url = deckId ? `/api/decks/${deckId}` : '/api/decks';
-      const method = deckId ? 'PUT' : 'POST';
+      const url = (deckId && canEdit) ? `/api/decks/${deckId}` : '/api/decks';
+      const method = (deckId && canEdit) ? 'PUT' : 'POST';
 
       const res = await fetch(url, {
         method,
@@ -551,9 +594,16 @@ function DeckBuilderContent() {
       if (res.ok) {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2500);
-        showNotification('success', '¡Mazo guardado correctamente!');
-        if (data.deckId && !deckId) {
+        if (isSavingAsCopy) {
+          showNotification('success', '¡Copia guardada con éxito en Mis Mazos!');
+        } else {
+          showNotification('success', '¡Mazo guardado correctamente!');
+        }
+        if (data.deckId) {
           setDeckId(data.deckId);
+          setCanEdit(true);
+          setIsOwner(true);
+          setName(saveName);
           router.replace(`/deck-builder?id=${data.deckId}`);
         }
       } else {
@@ -739,16 +789,68 @@ function DeckBuilderContent() {
               <span>Ver Lista en Imagen</span>
             </button>
 
+            {deckId && canEdit && (
+              <button
+                type="button"
+                onClick={handleCloneCurrentDeck}
+                disabled={cloning}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all active:scale-95"
+                title="Crear un duplicado independiente de este mazo"
+              >
+                {cloning ? <Loader2 className="w-3.5 h-3.5 animate-spin text-blue-400" /> : <Copy className="w-3.5 h-3.5 text-blue-400" />}
+                <span>Duplicar Mazo</span>
+              </button>
+            )}
+
             <button
               onClick={handleSaveDeck}
               disabled={saving}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black text-white bg-gradient-to-r from-red-600 via-rose-600 to-red-600 hover:from-red-500 hover:to-rose-500 shadow-lg shadow-red-950/60 border border-red-500/50 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 ring-2 ring-red-500/30"
             >
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5 text-white" />}
-              <span>{deckId ? 'Guardar Cambios' : 'Guardar Mazo'}</span>
+              {saving ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : deckId && !canEdit ? (
+                <Copy className="w-3.5 h-3.5 text-white" />
+              ) : (
+                <Save className="w-3.5 h-3.5 text-white" />
+              )}
+              <span>{deckId ? (canEdit ? 'Guardar Cambios' : 'Guardar como Copia') : 'Guardar Mazo'}</span>
             </button>
           </div>
         </div>
+
+        {/* Community Deck Read-Only / Clone Mode Banner */}
+        {deckId && !canEdit && (
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-blue-950/70 via-indigo-950/60 to-purple-950/70 border border-blue-500/40 shadow-lg">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-400/30 flex-shrink-0">
+                <Globe className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-1.5 flex-wrap">
+                  <span>Mazo de la Comunidad</span>
+                  <span className="text-blue-300 font-bold">@{authorName || 'Entrenador'}</span>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-900/60 text-blue-200 border border-blue-700/50">
+                    Modo Lectura / Copia
+                  </span>
+                </p>
+                <p className="text-[11px] text-slate-300">
+                  Solo el autor original o el Admin Master Luca pueden modificar el mazo original. Puedes crear una copia para guardarlo en tus mazos y personalizarlo.
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleCloneCurrentDeck}
+              disabled={cloning}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl text-xs font-black text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-md shadow-emerald-950/40 border border-emerald-400/40 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 flex-shrink-0 cursor-pointer"
+            >
+              {cloning ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5 text-emerald-100" />}
+              <span>Crear mi Copia</span>
+            </button>
+          </div>
+        )}
 
         {/* Notifications */}
         {notification && (
