@@ -111,32 +111,32 @@ export default function HomePage() {
 
             {/* Quick 3-Block CTAs */}
             <div className="flex flex-wrap items-center justify-center gap-3.5 pt-4 w-full">
-              {/* Bloque 1 CTA */}
+              {/* Mazos CTA — Greninja */}
               <Link
                 href="/deck-builder"
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:via-indigo-500 hover:to-blue-600 shadow-xl shadow-blue-900/40 border border-blue-400/40 transition-all hover:scale-105 active:scale-95"
+                className="flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:via-indigo-500 hover:to-blue-600 shadow-xl shadow-blue-900/40 border border-blue-400/40 transition-all hover:scale-105 active:scale-95"
               >
-                <Layers className="w-4 h-4 text-blue-200" />
-                <span>Bloque Mazos</span>
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/658.png" alt="Greninja" className="w-6 h-6 object-contain drop-shadow-md" />
+                <span>Mazos</span>
                 <ArrowRight className="w-3.5 h-3.5 text-blue-200" />
               </Link>
 
-              {/* Bloque 2 CTA */}
+              {/* Tienda CTA — Alakazam */}
               <Link
                 href="/tienda"
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-amber-200 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-600/40 hover:border-amber-500 shadow-lg shadow-amber-950/30 transition-all hover:scale-105 active:scale-95"
+                className="flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-amber-200 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-600/40 hover:border-amber-500 shadow-lg shadow-amber-950/30 transition-all hover:scale-105 active:scale-95"
               >
-                <ShoppingBag className="w-4 h-4 text-amber-400" />
-                <span>Bloque Tienda</span>
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/65.png" alt="Alakazam" className="w-6 h-6 object-contain drop-shadow-md" />
+                <span>Tienda</span>
               </Link>
 
-              {/* Bloque 3 CTA */}
+              {/* Mi Cuenta CTA — Lucario */}
               <Link
                 href="/perfil"
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 transition-all hover:scale-105 active:scale-95"
+                className="flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 transition-all hover:scale-105 active:scale-95"
               >
-                <User className="w-4 h-4 text-violet-400" />
-                <span>Bloque Mi Cuenta</span>
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/448.png" alt="Lucario" className="w-6 h-6 object-contain drop-shadow-md" />
+                <span>Mi Cuenta</span>
               </Link>
             </div>
 
@@ -200,9 +200,7 @@ export default function HomePage() {
                 <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400 group-hover:bg-blue-600/30 group-hover:border-blue-400/50 transition-all duration-300">
                   <Layers className="w-6 h-6" />
                 </div>
-                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-blue-950/80 text-blue-300 border border-blue-800/50 uppercase tracking-wider">
-                  Bloque 1
-                </span>
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/658.png" alt="Greninja" className="w-10 h-10 object-contain drop-shadow-[0_2px_8px_rgba(59,130,246,0.5)] group-hover:scale-110 transition-transform duration-300" />
               </div>
 
               <div>
@@ -279,9 +277,7 @@ export default function HomePage() {
                 <div className="w-12 h-12 rounded-2xl bg-amber-600/20 border border-amber-500/30 flex items-center justify-center text-amber-400 group-hover:bg-amber-600/30 group-hover:border-amber-400/50 transition-all duration-300">
                   <ShoppingBag className="w-6 h-6" />
                 </div>
-                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-950/80 text-amber-300 border border-amber-800/50 uppercase tracking-wider">
-                  Bloque 2
-                </span>
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/65.png" alt="Alakazam" className="w-10 h-10 object-contain drop-shadow-[0_2px_8px_rgba(245,158,11,0.5)] group-hover:scale-110 transition-transform duration-300" />
               </div>
 
               <div>
@@ -355,9 +351,7 @@ export default function HomePage() {
                 <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400 group-hover:bg-violet-600/30 group-hover:border-violet-400/50 transition-all duration-300">
                   <User className="w-6 h-6" />
                 </div>
-                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-violet-950/80 text-violet-300 border border-violet-800/50 uppercase tracking-wider">
-                  Bloque 3
-                </span>
+                <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/448.png" alt="Lucario" className="w-10 h-10 object-contain drop-shadow-[0_2px_8px_rgba(139,92,246,0.5)] group-hover:scale-110 transition-transform duration-300" />
               </div>
 
               <div>
