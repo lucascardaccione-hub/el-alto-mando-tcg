@@ -134,7 +134,7 @@ function TrackingContent() {
       {/* Header */}
       <div className="text-center space-y-3">
         <Link
-          href="/"
+          href="/tienda"
           className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold mb-2"
         >
           <ArrowLeft className="w-3.5 h-3.5" />

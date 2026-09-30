@@ -136,6 +136,18 @@ export default function DecksPage() {
   useEffect(() => {
     fetchDecks();
     fetchFrequentCards();
+
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tabParam = params.get('tab');
+      if (tabParam === 'community') {
+        setActiveTab('community');
+      } else if (tabParam === 'my') {
+        setActiveTab('my');
+      } else if (tabParam === 'frequent') {
+        setActiveTab('frequent');
+      }
+    }
   }, []);
 
   const handleCreateNew = () => {

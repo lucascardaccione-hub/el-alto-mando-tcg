@@ -1,326 +1,684 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import Image from 'next/image';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
-import FiltersBar from '@/components/FiltersBar';
-import CardItem, { CardData } from '@/components/CardItem';
 import CartDrawer from '@/components/CartDrawer';
 import CardDetailModal from '@/components/CardDetailModal';
-import { Sparkles, RefreshCw, AlertCircle, Layers, Globe, ArrowRight } from 'lucide-react';
+import { CardData } from '@/components/CardItem';
+import {
+  Sparkles,
+  Layers,
+  ShoppingBag,
+  User,
+  ArrowRight,
+  ShieldCheck,
+  Clock,
+  Globe,
+  Search,
+  CheckCircle2,
+  ExternalLink,
+  ChevronRight,
+  Zap,
+  TrendingUp,
+  Award,
+} from 'lucide-react';
+import { getDefaultAvatar } from '@/lib/avatars';
 
 export default function HomePage() {
-  const [cards, setCards] = useState<CardData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [metadata, setMetadata] = useState<{
-    expansions: string[];
-    artists: string[];
-    versions: string[];
-    languages: string[];
-    stats: { totalCards: number; totalStock: number; totalExpansions: number };
-  }>({
-    expansions: [],
-    artists: [],
-    versions: [],
-    languages: ['Inglés', 'Español'],
-    stats: { totalCards: 0, totalStock: 0, totalExpansions: 0 },
-  });
-
-  // Filter States
-  const [search, setSearch] = useState('');
-  const [selectedExpansion, setSelectedExpansion] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedTrainerType, setSelectedTrainerType] = useState('');
-  const [selectedVersion, setSelectedVersion] = useState('');
-  const [selectedLanguage, setSelectedLanguage] = useState('');
-  const [sort, setSort] = useState('newest');
-  const [inStockOnly, setInStockOnly] = useState(false);
-
-  // Modal State
+  const router = useRouter();
+  const [featuredCards, setFeaturedCards] = useState<CardData[]>([]);
+  const [featuredDecks, setFeaturedDecks] = useState<any[]>([]);
+  const [loadingCards, setLoadingCards] = useState(true);
+  const [loadingDecks, setLoadingDecks] = useState(true);
+  const [stats, setStats] = useState({ totalCards: 0, totalStock: 0, totalExpansions: 0 });
+  const [trackingCode, setTrackingCode] = useState('');
   const [activeCardModal, setActiveCardModal] = useState<CardData | null>(null);
 
   useEffect(() => {
-    document.title = 'Tienda — El Alto Mando TCG';
+    document.title = 'El Alto Mando TCG — Mazos, Tienda & Comunidad Pokémon';
+
+    // Fetch store stats & featured cards
+    fetch('/api/expansions')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.stats) setStats(data.stats);
+      })
+      .catch(() => {});
+
+    fetch('/api/cards?limit=8&inStockOnly=true')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.cards) setFeaturedCards(data.cards);
+      })
+      .catch(() => {})
+      .finally(() => setLoadingCards(false));
+
+    // Fetch featured community decks
+    fetch('/api/decks?filter=public')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.decks) setFeaturedDecks(data.decks.slice(0, 4));
+      })
+      .catch(() => {})
+      .finally(() => setLoadingDecks(false));
   }, []);
 
-  // Fetch filter metadata (expansions, versions)
-  const fetchMetadata = async () => {
-    try {
-      const res = await fetch('/api/expansions');
-      if (res.ok) {
-        const data = await res.json();
-        setMetadata(data);
-      }
-    } catch (e) {
-      console.error('Error fetching metadata:', e);
+  const handleTrackingSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (trackingCode.trim()) {
+      router.push(`/pedidos?code=${encodeURIComponent(trackingCode.trim())}`);
+    } else {
+      router.push('/pedidos');
     }
   };
-
-  // Fetch cards with active filters
-  const fetchCards = async () => {
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (search.trim()) params.append('q', search.trim());
-      if (selectedExpansion) params.append('expansion', selectedExpansion);
-      if (selectedCategory) params.append('category', selectedCategory);
-      if (selectedTrainerType) params.append('trainerType', selectedTrainerType);
-      if (selectedVersion) params.append('version', selectedVersion);
-      if (selectedLanguage) params.append('language', selectedLanguage);
-      if (inStockOnly) params.append('inStockOnly', 'true');
-      if (sort) params.append('sort', sort);
-
-      const res = await fetch(`/api/cards?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setCards(data.cards || []);
-      }
-    } catch (e) {
-      console.error('Error fetching cards:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchMetadata();
-  }, []);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchCards();
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [search, selectedExpansion, selectedCategory, selectedTrainerType, selectedVersion, selectedLanguage, sort, inStockOnly]);
-
-  const handleResetFilters = () => {
-    setSearch('');
-    setSelectedExpansion('');
-    setSelectedCategory('');
-    setSelectedTrainerType('');
-    setSelectedVersion('');
-    setSelectedLanguage('');
-    setSort('newest');
-    setInStockOnly(false);
-  };
-
-  const hasActiveFilters = Boolean(
-    search || selectedExpansion || selectedCategory || selectedTrainerType || selectedVersion || selectedLanguage || inStockOnly || sort !== 'newest'
-  );
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#070b14] text-slate-100">
-      {/* Top Navbar */}
-      <Navbar
-        totalCards={metadata.stats?.totalCards || cards.length}
-        totalStock={metadata.stats?.totalStock || 0}
-      />
+    <div className="min-h-screen flex flex-col bg-[#060913] text-slate-100 selection:bg-blue-600 selection:text-white">
+      {/* Top Navbar with the 3 main blocks */}
+      <Navbar totalCards={stats.totalCards} totalStock={stats.totalStock} />
 
-      {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Minimalist Hero Section */}
-        <section className="relative rounded-3xl overflow-hidden bg-[#0a0f1d]/90 border border-white/[0.08] p-6 sm:p-10 shadow-2xl backdrop-blur-xl">
-          {/* Subtle sapphire ambient glow */}
-          <div className="absolute top-0 right-0 -mr-24 -mt-24 w-96 h-96 rounded-full bg-blue-600/[0.08] blur-3xl pointer-events-none" />
-          <div className="absolute bottom-0 left-1/4 -mb-24 w-80 h-80 rounded-full bg-blue-500/[0.05] blur-3xl pointer-events-none" />
+      {/* Hero Section */}
+      <section className="relative overflow-hidden pt-10 pb-16 lg:pt-16 lg:pb-24 border-b border-white/[0.06]">
+        {/* Glow ambient backgrounds */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] sm:w-[800px] sm:h-[450px] bg-gradient-to-r from-blue-600/20 via-indigo-600/20 to-purple-600/20 blur-[120px] rounded-full pointer-events-none -z-10" />
+        <div className="absolute top-0 right-10 w-72 h-72 bg-amber-500/10 blur-[100px] rounded-full pointer-events-none -z-10" />
 
-          <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
-            {/* Left Column: Heading, Value Prop & Quick Action CTAs */}
-            <div className="space-y-5 text-center lg:text-left flex-1 max-w-2xl">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-blue-600/15 text-blue-400 border border-blue-500/30 shadow-sm backdrop-blur-md">
-                <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
-                <span>Tienda Oficial & Catálogo de Cartas</span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col items-center text-center space-y-6 max-w-4xl mx-auto">
+            {/* Community Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-blue-600/15 text-blue-400 border border-blue-500/30 shadow-sm backdrop-blur-md animate-in fade-in duration-500">
+              <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
+              <span>Plataforma Oficial Pokémon TCG Argentina & LATAM</span>
+            </div>
+
+            {/* Main Headline */}
+            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black tracking-tight text-white leading-tight">
+              EL ALTO MANDO{' '}
+              <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-amber-300 bg-clip-text text-transparent">
+                TCG
+              </span>
+            </h1>
+
+            {/* Subtitle */}
+            <p className="text-base sm:text-lg lg:text-xl text-slate-300 font-normal leading-relaxed max-w-2xl">
+              Tu centro definitivo de <strong className="text-white font-semibold">Mazos competitivos</strong>,{' '}
+              <strong className="text-white font-semibold">Tienda de singles</strong> en tiempo real y{' '}
+              <strong className="text-white font-semibold">Comunidad de entrenadores</strong>.
+            </p>
+
+            {/* Quick 3-Block CTAs */}
+            <div className="flex flex-wrap items-center justify-center gap-3.5 pt-4 w-full">
+              {/* Bloque 1 CTA */}
+              <Link
+                href="/deck-builder"
+                className="flex items-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:via-indigo-500 hover:to-blue-600 shadow-xl shadow-blue-900/40 border border-blue-400/40 transition-all hover:scale-105 active:scale-95"
+              >
+                <Layers className="w-4 h-4 text-blue-200" />
+                <span>Bloque Mazos</span>
+                <ArrowRight className="w-3.5 h-3.5 text-blue-200" />
+              </Link>
+
+              {/* Bloque 2 CTA */}
+              <Link
+                href="/tienda"
+                className="flex items-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-amber-200 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-600/40 hover:border-amber-500 shadow-lg shadow-amber-950/30 transition-all hover:scale-105 active:scale-95"
+              >
+                <ShoppingBag className="w-4 h-4 text-amber-400" />
+                <span>Bloque Tienda</span>
+              </Link>
+
+              {/* Bloque 3 CTA */}
+              <Link
+                href="/perfil"
+                className="flex items-center gap-2 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 transition-all hover:scale-105 active:scale-95"
+              >
+                <User className="w-4 h-4 text-violet-400" />
+                <span>Bloque Mi Cuenta</span>
+              </Link>
+            </div>
+
+            {/* Fast Stats Bar */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-8 w-full max-w-3xl">
+              <div className="bg-[#0b1124]/80 border border-white/[0.08] rounded-2xl p-3.5 text-center">
+                <span className="text-xl sm:text-2xl font-black text-white block">
+                  {stats.totalCards || '500+'}
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium">Cartas en Catálogo</span>
+              </div>
+              <div className="bg-[#0b1124]/80 border border-white/[0.08] rounded-2xl p-3.5 text-center">
+                <span className="text-xl sm:text-2xl font-black text-emerald-400 block">
+                  {stats.totalStock || '1,200+'}
+                </span>
+                <span className="text-[11px] text-slate-400 font-medium">Stock en Vivo</span>
+              </div>
+              <div className="bg-[#0b1124]/80 border border-white/[0.08] rounded-2xl p-3.5 text-center">
+                <span className="text-xl sm:text-2xl font-black text-blue-400 block">PTCGL</span>
+                <span className="text-[11px] text-slate-400 font-medium">Formato Estándar</span>
+              </div>
+              <div className="bg-[#0b1124]/80 border border-white/[0.08] rounded-2xl p-3.5 text-center">
+                <span className="text-xl sm:text-2xl font-black text-amber-400 block">100%</span>
+                <span className="text-[11px] text-slate-400 font-medium">Vendedores Reales</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* LOS 3 BLOQUES PRINCIPALES */}
+      <section className="py-16 sm:py-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+        <div className="text-center space-y-2 max-w-2xl mx-auto">
+          <span className="text-xs font-bold uppercase tracking-wider text-blue-400">
+            Estructura de la Plataforma
+          </span>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
+            Los 3 Bloques del Alto Mando
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-400">
+            Todo lo que necesitas para tu juego competitivo y colección, organizado de forma simple y potente.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+          {/* BLOQUE 1: MAZOS */}
+          <div className="relative group rounded-3xl bg-gradient-to-b from-[#0d1630]/90 to-[#080d1e]/90 border border-blue-500/25 p-7 sm:p-8 flex flex-col justify-between shadow-xl hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-900/20 transition-all duration-300">
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="w-12 h-12 rounded-2xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                  <Layers className="w-6 h-6" />
+                </div>
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-blue-950/80 text-blue-300 border border-blue-800/50 uppercase tracking-wider">
+                  Bloque 1
+                </span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white leading-tight">
-                Tienda — <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-blue-500 bg-clip-text text-transparent">El Alto Mando TCG</span>
-              </h1>
+              <div>
+                <h3 className="text-2xl font-black text-white group-hover:text-blue-300 transition-colors">
+                  Mazos
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
+                  Creación, importación y estudio del metagame competitivo con validación oficial de Pokémon TCG Live.
+                </p>
+              </div>
 
-              <p className="text-sm sm:text-base text-slate-300 font-normal leading-relaxed">
-                Catálogo y Stock Oficial de Cartas Pokémon singles, versiones Holo, Reverse y Secret Rares con disponibilidad en tiempo real. Crea tus mazos y conéctate con la comunidad competitiva.
-              </p>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 pt-2">
+              <div className="space-y-2.5 pt-2 border-t border-slate-800/80">
                 <Link
                   href="/deck-builder"
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-black text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:via-indigo-500 hover:to-blue-600 shadow-lg shadow-blue-900/30 border border-blue-400/30 transition-all hover:scale-105 active:scale-95"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/80 hover:bg-blue-950/50 border border-slate-800/80 hover:border-blue-500/40 text-xs font-semibold text-slate-200 hover:text-white transition-all"
                 >
-                  <Layers className="w-4 h-4 text-blue-200" />
-                  <span>Armar Mazo (Deck Builder)</span>
-                  <ArrowRight className="w-4 h-4 text-blue-200" />
+                  <span className="flex items-center gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Deck Builder (Creador)</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-slate-500" />
                 </Link>
 
                 <Link
-                  href="/decks"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-800/90 border border-slate-700/80 hover:border-slate-600 shadow-sm transition-all hover:scale-105 active:scale-95"
+                  href="/decks?tab=community"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/80 hover:bg-emerald-950/50 border border-slate-800/80 hover:border-emerald-500/40 text-xs font-semibold text-slate-200 hover:text-white transition-all"
                 >
-                  <Globe className="w-4 h-4 text-emerald-400" />
-                  <span>Decks de la Comunidad</span>
+                  <span className="flex items-center gap-2">
+                    <Globe className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Decks de la Comunidad</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                </Link>
+
+                <Link
+                  href="/decks?tab=my"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/80 hover:bg-indigo-950/50 border border-slate-800/80 hover:border-indigo-500/40 text-xs font-semibold text-slate-200 hover:text-white transition-all"
+                >
+                  <span className="flex items-center gap-2">
+                    <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Mis Mazos Guardados</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-slate-500" />
                 </Link>
               </div>
             </div>
 
-            {/* Right Column: 3D Holographic Card Fan Showcase */}
-            <div className="flex-shrink-0 relative flex items-center justify-center py-6 px-4 select-none">
-              {/* Backlight Radial Glow */}
-              <div className="absolute w-64 h-64 bg-blue-600/20 rounded-full blur-3xl pointer-events-none" />
+            <div className="pt-6">
+              <Link
+                href="/deck-builder"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-md shadow-blue-900/40 transition-all"
+              >
+                <span>Armar Mi Mazo Ahora</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
 
-              <div className="relative flex items-center justify-center">
-                {/* Left Card: Charizard ex */}
-                <div className="relative w-28 sm:w-32 aspect-[2.5/3.5] -mr-10 -rotate-12 transform hover:-translate-y-3 hover:rotate-[-8deg] transition-all duration-300 rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-slate-950 group cursor-pointer">
-                  <img
-                    src="https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/OBF/OBF_125_R_EN_SM.png"
-                    alt="Charizard ex"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+          {/* BLOQUE 2: TIENDA */}
+          <div className="relative group rounded-3xl bg-gradient-to-b from-[#1c160c]/90 to-[#0e0c07]/90 border border-amber-500/25 p-7 sm:p-8 flex flex-col justify-between shadow-xl hover:border-amber-500/50 hover:shadow-2xl hover:shadow-amber-900/20 transition-all duration-300">
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="w-12 h-12 rounded-2xl bg-amber-600/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                  <ShoppingBag className="w-6 h-6" />
                 </div>
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-amber-950/80 text-amber-300 border border-amber-800/50 uppercase tracking-wider">
+                  Bloque 2
+                </span>
+              </div>
 
-                {/* Center Main Card: Teal Mask Ogerpon ex */}
-                <div className="relative z-20 w-32 sm:w-36 aspect-[2.5/3.5] -translate-y-3 transform hover:-translate-y-5 transition-all duration-300 rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(37,99,235,0.4)] border-2 border-blue-400/40 bg-slate-950 group cursor-pointer">
-                  <img
-                    src="https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/TWM/TWM_025_R_EN_SM.png"
-                    alt="Teal Mask Ogerpon ex"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-400/10 via-white/20 to-transparent pointer-events-none" />
+              <div>
+                <h3 className="text-2xl font-black text-white group-hover:text-amber-300 transition-colors">
+                  Tienda
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
+                  Catálogo de cartas sueltas con stock verificado, precios claros y seguimiento en vivo de compras.
+                </p>
+              </div>
 
-                  {/* Floating Pill Badge */}
-                  <div className="absolute bottom-2 inset-x-2 px-2 py-1 rounded-lg bg-black/85 backdrop-blur-md border border-white/20 text-center shadow-lg">
-                    <span className="text-[10px] font-black text-blue-300 tracking-wider uppercase block">
-                      ⚡ 60 Cartas · PTCGL
-                    </span>
-                  </div>
-                </div>
+              <div className="space-y-2.5 pt-2 border-t border-slate-800/80">
+                <Link
+                  href="/tienda"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/80 hover:bg-amber-950/50 border border-slate-800/80 hover:border-amber-500/40 text-xs font-semibold text-slate-200 hover:text-white transition-all"
+                >
+                  <span className="flex items-center gap-2">
+                    <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Catálogo de Singles & Filtros</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                </Link>
 
-                {/* Right Card: Fezandipiti ex */}
-                <div className="relative z-10 w-28 sm:w-32 aspect-[2.5/3.5] -ml-10 rotate-12 transform hover:-translate-y-3 hover:rotate-[8deg] transition-all duration-300 rounded-xl overflow-hidden shadow-2xl border border-white/10 bg-slate-950 group cursor-pointer">
-                  <img
-                    src="https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SFA/SFA_038_R_EN_SM.png"
-                    alt="Fezandipiti ex"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+                <Link
+                  href="/pedidos"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/80 hover:bg-blue-950/50 border border-slate-800/80 hover:border-blue-500/40 text-xs font-semibold text-slate-200 hover:text-white transition-all"
+                >
+                  <span className="flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Seguimiento de Pedidos</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                </Link>
+
+                <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/60 border border-slate-800/60 text-xs text-slate-400">
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Vendedores Verificados</span>
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-bold">100% Directo</span>
                 </div>
               </div>
+            </div>
+
+            <div className="pt-6">
+              <Link
+                href="/tienda"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold text-amber-100 bg-amber-600 hover:bg-amber-500 shadow-md shadow-amber-900/40 transition-all"
+              >
+                <span>Explorar la Tienda</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+
+          {/* BLOQUE 3: MI CUENTA */}
+          <div className="relative group rounded-3xl bg-gradient-to-b from-[#180f2c]/90 to-[#0b0717]/90 border border-violet-500/25 p-7 sm:p-8 flex flex-col justify-between shadow-xl hover:border-violet-500/50 hover:shadow-2xl hover:shadow-violet-900/20 transition-all duration-300">
+            <div className="space-y-5">
+              <div className="flex items-center justify-between">
+                <div className="w-12 h-12 rounded-2xl bg-violet-600/20 border border-violet-500/30 flex items-center justify-center text-violet-400">
+                  <User className="w-6 h-6" />
+                </div>
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-violet-950/80 text-violet-300 border border-violet-800/50 uppercase tracking-wider">
+                  Bloque 3
+                </span>
+              </div>
+
+              <div>
+                <h3 className="text-2xl font-black text-white group-hover:text-violet-300 transition-colors">
+                  Mi Cuenta
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
+                  Tu perfil de entrenador Pokémon: personalización de avatar, pedidos realizados y mazos guardados.
+                </p>
+              </div>
+
+              <div className="space-y-2.5 pt-2 border-t border-slate-800/80">
+                <Link
+                  href="/perfil"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/80 hover:bg-violet-950/50 border border-slate-800/80 hover:border-violet-500/40 text-xs font-semibold text-slate-200 hover:text-white transition-all"
+                >
+                  <span className="flex items-center gap-2">
+                    <User className="w-3.5 h-3.5 text-violet-400" />
+                    <span>Mi Perfil & Avatar</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                </Link>
+
+                <Link
+                  href="/pedidos"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/80 hover:bg-amber-950/50 border border-slate-800/80 hover:border-amber-500/40 text-xs font-semibold text-slate-200 hover:text-white transition-all"
+                >
+                  <span className="flex items-center gap-2">
+                    <Clock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Mis Compras & Pedidos</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                </Link>
+
+                <Link
+                  href="/admin"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-900/80 hover:bg-emerald-950/50 border border-slate-800/80 hover:border-emerald-500/40 text-xs font-semibold text-slate-200 hover:text-white transition-all"
+                >
+                  <span className="flex items-center gap-2">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Panel de Control (Vendedor / Admin)</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                </Link>
+              </div>
+            </div>
+
+            <div className="pt-6">
+              <Link
+                href="/perfil"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-xs font-bold text-white bg-violet-600 hover:bg-violet-500 shadow-md shadow-violet-900/40 transition-all"
+              >
+                <span>Acceder a Mi Cuenta</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SECCIÓN PREVIEW: CARTAS DESTACADAS EN TIENDA */}
+      <section className="py-12 border-t border-white/[0.06] bg-[#070b16]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>Tienda Oficial</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                Últimas Cartas Ingresadas en Stock
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400">
+                Cartas individuales listas para comprar y agregar a tus mazos.
+              </p>
+            </div>
+
+            <Link
+              href="/tienda"
+              className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-amber-400 hover:text-amber-300 transition-colors group"
+            >
+              <span>Ver todas las cartas en la Tienda</span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+          </div>
+
+          {loadingCards ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {[...Array(4)].map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 aspect-[2.5/3.5] animate-pulse"
+                />
+              ))}
+            </div>
+          ) : featuredCards.length === 0 ? (
+            <div className="text-center py-8 text-xs text-slate-500">
+              No hay cartas disponibles de momento.
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 sm:gap-6">
+              {featuredCards.map((card) => (
+                <div
+                  key={card.id}
+                  onClick={() => setActiveCardModal(card)}
+                  className="group relative rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-blue-500/50 p-3 sm:p-4 flex flex-col justify-between cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/20"
+                >
+                  <div className="relative aspect-[2.5/3.5] w-full rounded-xl overflow-hidden bg-slate-950 mb-3">
+                    <img
+                      src={card.image_url}
+                      alt={card.name}
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                      loading="lazy"
+                    />
+                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md border border-white/10 text-[10px] font-bold text-amber-300">
+                      ${card.price.toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="font-bold text-xs sm:text-sm text-white truncate group-hover:text-blue-400 transition-colors">
+                      {card.name}
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] text-slate-400">
+                      <span className="truncate">{card.expansion}</span>
+                      <span className="text-[10px] text-emerald-400 font-semibold">
+                        Stock: {card.stock}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* SECCIÓN PREVIEW: DECKS DE LA COMUNIDAD */}
+      {featuredDecks.length > 0 && (
+        <section className="py-12 border-t border-white/[0.06] bg-[#060913]">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 text-xs font-bold text-blue-400 uppercase tracking-wider mb-1">
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Metagame & Comunidad</span>
+                </div>
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                  Decks Destacados de Jugadores
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-400">
+                  Explorá listas compartidas por la comunidad y clonálas a tu cuenta.
+                </p>
+              </div>
+
+              <Link
+                href="/decks?tab=community"
+                className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors group"
+              >
+                <span>Ver todos los Decks</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+              {featuredDecks.map((deck) => (
+                <Link
+                  key={deck.id}
+                  href={`/deck-builder/${deck.id}`}
+                  className="group rounded-2xl bg-[#0a0f20]/80 border border-slate-800 hover:border-blue-500/50 p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/20"
+                >
+                  <div className="space-y-3">
+                    <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center border border-white/5">
+                      {deck.cover_card_image ? (
+                        <img
+                          src={deck.cover_card_image}
+                          alt={deck.name}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <Layers className="w-8 h-8 text-slate-600" />
+                      )}
+                      <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md border border-white/10 text-[10px] font-bold text-blue-300">
+                        {deck.total_cards || 60} Cartas
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-sm text-white group-hover:text-blue-400 transition-colors truncate">
+                        {deck.name}
+                      </h4>
+                      <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
+                        <div className="w-4 h-4 rounded-full overflow-hidden bg-slate-800">
+                          <img
+                            src={deck.author_avatar || getDefaultAvatar(deck.author_name || 'User')}
+                            alt={deck.author_name}
+                            className="w-full h-full object-contain"
+                          />
+                        </div>
+                        <span className="truncate">{deck.author_name || 'Comunidad'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-3 mt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                    <span className="text-emerald-400 font-semibold">Formato Estándar</span>
+                    <span className="group-hover:text-blue-400 transition-colors font-semibold flex items-center gap-1">
+                      Ver mazo <ChevronRight className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                </Link>
+              ))}
             </div>
           </div>
         </section>
+      )}
 
-        {/* Filters Toolbar */}
-        <FiltersBar
-          search={search}
-          setSearch={setSearch}
-          selectedExpansion={selectedExpansion}
-          setSelectedExpansion={setSelectedExpansion}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          selectedTrainerType={selectedTrainerType}
-          setSelectedTrainerType={setSelectedTrainerType}
-          selectedVersion={selectedVersion}
-          setSelectedVersion={setSelectedVersion}
-          selectedLanguage={selectedLanguage}
-          setSelectedLanguage={setSelectedLanguage}
-          sort={sort}
-          setSort={setSort}
-          inStockOnly={inStockOnly}
-          setInStockOnly={setInStockOnly}
-          expansions={metadata.expansions}
-          versions={metadata.versions}
-          languages={metadata.languages}
-          onReset={handleResetFilters}
-          hasActiveFilters={hasActiveFilters}
-        />
-
-        {/* Catalog Results Header */}
-        <div className="flex items-center justify-between text-xs sm:text-sm text-slate-400 px-1">
-          <p>
-            Mostrando <strong className="text-white font-bold">{cards.length}</strong>{' '}
-            {cards.length === 1 ? 'carta disponible' : 'cartas encontradas'}
-          </p>
-
-          <button
-            onClick={() => {
-              fetchCards();
-              fetchMetadata();
-            }}
-            className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors"
-            title="Refrescar catálogo"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-blue-400' : ''}`} />
-            <span className="hidden sm:inline">Actualizar</span>
-          </button>
-        </div>
-
-        {/* Cards Grid */}
-        {loading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6">
-            {[...Array(8)].map((_, i) => (
-              <div
-                key={i}
-                className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 aspect-[2.5/4] animate-pulse flex flex-col justify-between"
-              >
-                <div className="w-full aspect-[2.5/3.5] bg-slate-800/50 rounded-xl" />
-                <div className="space-y-2 mt-4">
-                  <div className="h-4 bg-slate-800 rounded w-3/4" />
-                  <div className="h-3 bg-slate-800/60 rounded w-1/2" />
-                </div>
-              </div>
-            ))}
+      {/* BANNER SEGUIMIENTO DE PEDIDOS */}
+      <section className="py-14 border-t border-white/[0.06] bg-gradient-to-b from-[#0a1024] to-[#060913]">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-6">
+          <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center mx-auto text-amber-400">
+            <Clock className="w-6 h-6" />
           </div>
-        ) : cards.length === 0 ? (
-          <div className="bg-[#0c1424] border border-slate-800/80 rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto my-8">
-            <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-500">
-              <AlertCircle className="w-8 h-8" />
-            </div>
-            <h3 className="text-lg font-bold text-white">No se encontraron cartas</h3>
-            <p className="text-xs sm:text-sm text-slate-400">
-              No hay cartas que coincidan con los filtros seleccionados o el stock se encuentra agotado.
+
+          <div className="space-y-2">
+            <h3 className="text-2xl sm:text-3xl font-black text-white">
+              ¿Ya hiciste una compra en la Tienda?
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto">
+              Ingresa el código único de tu pedido (ej: <strong className="text-amber-400 font-mono">EAM-12345</strong>) para consultar el estado en tiempo real.
             </p>
-            {hasActiveFilters && (
-              <button
-                onClick={handleResetFilters}
-                className="px-5 py-2.5 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-lg transition-colors"
-              >
-                Quitar filtros
-              </button>
-            )}
           </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6">
-            {cards.map((card) => (
-              <CardItem
-                key={card.id}
-                card={card}
-                onOpenModal={(c) => setActiveCardModal(c)}
+
+          <form onSubmit={handleTrackingSubmit} className="max-w-md mx-auto flex items-center gap-2">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="EAM-XXXXX"
+                value={trackingCode}
+                onChange={(e) => setTrackingCode(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-900/90 border border-slate-700 text-white placeholder-slate-500 text-xs sm:text-sm font-mono focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
               />
-            ))}
-          </div>
-        )}
-      </main>
+            </div>
+            <button
+              type="submit"
+              className="px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-amber-950/40 transition-all hover:scale-105 active:scale-95"
+            >
+              Rastrear
+            </button>
+          </form>
+        </div>
+      </section>
 
       {/* Footer */}
-      <footer className="w-full border-t border-slate-800/80 bg-[#050811] py-8 text-center text-xs text-slate-500 mt-16">
-        <div className="max-w-7xl mx-auto px-4 space-y-2">
-          <p className="font-semibold text-slate-400">
-            El Alto Mando TCG © {new Date().getFullYear()} — Coleccionismo & Juego Competitivo
-          </p>
-          <p className="text-[11px]">
-            Pokémon y sus respectivas marcas son marcas registradas de Nintendo, Game Freak y Creatures Inc.
-          </p>
+      <footer className="w-full border-t border-slate-800/80 bg-[#04060d] py-12 text-xs text-slate-500">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="font-black text-base text-white">EL ALTO MANDO</span>
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-600/20 text-blue-400">
+                  TCG
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Comunidad competitiva y coleccionismo de Pokémon TCG en Argentina y Latinoamérica.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <h5 className="font-bold text-slate-300 uppercase tracking-wider text-[11px]">
+                Bloque Mazos
+              </h5>
+              <ul className="space-y-1.5 text-[11px]">
+                <li>
+                  <Link href="/deck-builder" className="hover:text-white transition-colors">
+                    Deck Builder Oficial
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/decks?tab=community" className="hover:text-white transition-colors">
+                    Decks de la Comunidad
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/decks?tab=my" className="hover:text-white transition-colors">
+                    Mis Mazos Guardados
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <h5 className="font-bold text-slate-300 uppercase tracking-wider text-[11px]">
+                Bloque Tienda
+              </h5>
+              <ul className="space-y-1.5 text-[11px]">
+                <li>
+                  <Link href="/tienda" className="hover:text-white transition-colors">
+                    Catálogo de Singles
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/pedidos" className="hover:text-white transition-colors">
+                    Seguimiento de Pedidos
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/tienda" className="hover:text-white transition-colors">
+                    Stock en Tiempo Real
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div className="space-y-2">
+              <h5 className="font-bold text-slate-300 uppercase tracking-wider text-[11px]">
+                Bloque Mi Cuenta
+              </h5>
+              <ul className="space-y-1.5 text-[11px]">
+                <li>
+                  <Link href="/perfil" className="hover:text-white transition-colors">
+                    Mi Perfil de Entrenador
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/login" className="hover:text-white transition-colors">
+                    Iniciar Sesión
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/register" className="hover:text-white transition-colors">
+                    Crear Cuenta de Jugador
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-8 border-t border-slate-900 text-center space-y-2 text-[11px]">
+            <p className="font-semibold text-slate-400">
+              El Alto Mando TCG © {new Date().getFullYear()} — Diseñado para la comunidad de Pokémon TCG
+            </p>
+            <p className="text-slate-600">
+              Pokémon y sus marcas son propiedad registrada de Nintendo, Creatures Inc. y Game Freak. Este es un sitio comunitario sin afiliación oficial con Nintendo ni The Pokémon Company.
+            </p>
+          </div>
         </div>
       </footer>
 
-      {/* Cart Drawer */}
+      {/* Cart Drawer & Card Modal */}
       <CartDrawer />
-
-      {/* Card Detail Modal */}
-      <CardDetailModal
-        card={activeCardModal}
-        onClose={() => setActiveCardModal(null)}
-      />
+      <CardDetailModal card={activeCardModal} onClose={() => setActiveCardModal(null)} />
     </div>
   );
 }

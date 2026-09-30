@@ -97,7 +97,11 @@ export async function GET(request: Request) {
       orderBy = 'ORDER BY stock DESC, id DESC';
     }
 
-    const query = `SELECT * FROM cards ${whereClause} ${orderBy}`;
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : null;
+    let query = `SELECT * FROM cards ${whereClause} ${orderBy}`;
+    if (limit && !isNaN(limit) && limit > 0) {
+      query += ` LIMIT ${limit}`;
+    }
     const cards = await db.all(query, params);
 
     return NextResponse.json({
