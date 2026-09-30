@@ -29,7 +29,7 @@ import {
   BarChart3,
   Filter,
 } from 'lucide-react';
-import { parsePtcglDeck } from '@/lib/deckParser';
+import { parsePtcglDeck, getGenericEnergyImage } from '@/lib/deckParser';
 
 export default function DecksPage() {
   const router = useRouter();
@@ -646,13 +646,18 @@ export default function DecksPage() {
                       {/* Card Thumbnail */}
                       <div className="relative w-16 h-24 flex-shrink-0 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 flex items-center justify-center p-1 group-hover:scale-105 transition-transform">
                         <img
-                          src={card.image_url || '/placeholder-card.svg'}
+                          src={card.image_url || getGenericEnergyImage(card.card_name) || '/placeholder-card.svg'}
                           alt={card.card_name}
                           loading="lazy"
                           className="w-full h-full object-contain"
                           onError={(e) => {
                             const target = e.target as HTMLImageElement;
-                            target.src = '/placeholder-card.svg';
+                            const generic = getGenericEnergyImage(card.card_name);
+                            if (generic && !target.src.includes(generic)) {
+                              target.src = generic;
+                            } else {
+                              target.src = '/placeholder-card.svg';
+                            }
                           }}
                         />
                       </div>

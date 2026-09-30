@@ -34,7 +34,7 @@ import {
   Globe,
   Lock,
 } from 'lucide-react';
-import { parsePtcglDeck, exportToPtcgl, isBasicEnergy, getBasicEnergyTypeNumber } from '@/lib/deckParser';
+import { parsePtcglDeck, exportToPtcgl, isBasicEnergy, getBasicEnergyTypeNumber, getGenericEnergyImage } from '@/lib/deckParser';
 import DeckImageModal from '@/components/DeckImageModal';
 
 export interface DeckCardItem {
@@ -110,7 +110,11 @@ function DeckBuilderContent() {
     card: { imageUrl: string; name: string; expansion?: string; number?: string },
     e: React.MouseEvent
   ) => {
-    if (!card.imageUrl || card.imageUrl.includes('placeholder')) return;
+    let finalImageUrl = card.imageUrl;
+    if ((!finalImageUrl || finalImageUrl.includes('placeholder')) && isBasicEnergy({ card_name: card.name, expansion: card.expansion })) {
+      finalImageUrl = getGenericEnergyImage(card.name) || finalImageUrl;
+    }
+    if (!finalImageUrl || finalImageUrl.includes('placeholder')) return;
     const previewWidth = 260;
     const previewHeight = 364;
 
@@ -229,7 +233,16 @@ function DeckBuilderContent() {
         setFormat(data.deck.format);
         setDescription(data.deck.description || '');
         setIsPublic(data.deck.is_public === 1 || data.deck.is_public === true || data.deck.is_public === undefined);
-        setCards(data.cards || data.deck?.cards || []);
+        const rawList = data.cards || data.deck?.cards || [];
+        setCards(
+          rawList.map((c: any) => {
+            let img = c.image_url;
+            if ((!img || img.includes('placeholder')) && isBasicEnergy(c)) {
+              img = getGenericEnergyImage(c.card_name) || img;
+            }
+            return { ...c, image_url: img };
+          })
+        );
       }
     } catch (e) {
       console.error(e);
@@ -465,10 +478,10 @@ function DeckBuilderContent() {
     }
 
     let cardImage = tcgCard.image || '/placeholder-card.svg';
-    if (category === 'energy' && isBasicEnergy({ card_name: tcgCard.name }) && (!cardImage || cardImage.includes('placeholder'))) {
-      const typeNum = getBasicEnergyTypeNumber(tcgCard.name);
-      if (typeNum) {
-        cardImage = 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_00' + typeNum + '_R_EN_SM.png';
+    if (category === 'energy' && isBasicEnergy({ card_name: tcgCard.name })) {
+      const generic = getGenericEnergyImage(tcgCard.name);
+      if (generic && (!cardImage || cardImage.includes('placeholder'))) {
+        cardImage = generic;
       }
     }
 
@@ -599,10 +612,7 @@ function DeckBuilderContent() {
           }
           let imageUrl = c.image_url || c.image || '/placeholder-card.svg';
           if (isBasicEnergy({ card_name: cardName, expansion }) && (!imageUrl || imageUrl.includes('placeholder'))) {
-            const typeNum = getBasicEnergyTypeNumber(cardName);
-            if (typeNum) {
-              imageUrl = 'https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_00' + typeNum + '_R_EN_SM.png';
-            }
+            imageUrl = getGenericEnergyImage(cardName) || imageUrl;
           }
           return {
             card_name: cardName,
@@ -1472,6 +1482,8 @@ function CardThumbnail({
     else if (setUpper === 'PR-SM' || setUpper === 'SMP') lSet = 'SMP';
     else if (setUpper === 'PR-XY' || setUpper === 'XYP') lSet = 'XYP';
     else if (setUpper === 'PR-BW' || setUpper === 'BWP') lSet = 'BWP';
+    else if (setUpper === 'SVE' || setUpper.includes('SCARLET & VIOLET ENERGY') || setUpper.includes('SCARLET AND VIOLET ENERGY')) lSet = 'SVE';
+    else if (setUpper === 'MEE' || setUpper.includes('MEGA EVOLUTION ENERGY')) lSet = 'MEE';
 
     if (lSet === 'SP') {
       list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SP/SP_${cleanNum}_R_EN_SM.png`);
@@ -1483,9 +1495,22 @@ function CardThumbnail({
     }
 
     // 2. Specific energy variations (MEE & SVE)
-    if (setUpper === 'MEE' || setUpper === 'SVE') {
+    if (setUpper === 'MEE' || setUpper === 'SVE' || lSet === 'MEE' || lSet === 'SVE') {
       list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEE/MEE_${paddedNum}_R_EN_SM.png`);
       list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_${paddedNum}_R_EN_SM.png`);
+    }
+
+    // 2.5. Basic energy generic local fallback
+    if (isBasicEnergy({ card_name: item.card_name, category: item.category })) {
+      const genericImg = getGenericEnergyImage(item.card_name);
+      if (genericImg) {
+        list.push(genericImg);
+      }
+      const typeNum = getBasicEnergyTypeNumber(item.card_name);
+      if (typeNum) {
+        list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_00${typeNum}_R_EN_SM.png`);
+        list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEE/MEE_00${typeNum}_R_EN_SM.png`);
+      }
     }
 
     // 3. Provided item.image_url if not a placeholder

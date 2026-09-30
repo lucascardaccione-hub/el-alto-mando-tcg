@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { ShoppingBag, Check, Sparkles, User, Tag } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { LanguageBadge } from './FlagIcon';
+import { isBasicEnergy, getGenericEnergyImage } from '@/lib/deckParser';
 
 export interface CardData {
   id: number;
@@ -36,11 +37,20 @@ interface CardItemProps {
 export default function CardItem({ card, onOpenModal }: CardItemProps) {
   const { addToCart } = useCart();
   const [justAdded, setJustAdded] = useState(false);
-  const [imgSrc, setImgSrc] = useState(card.image_url || '/placeholder-card.svg');
+
+  const getInitialImg = () => {
+    if (card.image_url && !card.image_url.includes('placeholder')) return card.image_url;
+    if (isBasicEnergy({ name: card.name, expansion: card.expansion })) {
+      return getGenericEnergyImage(card.name) || '/placeholder-card.svg';
+    }
+    return card.image_url || '/placeholder-card.svg';
+  };
+
+  const [imgSrc, setImgSrc] = useState(getInitialImg);
 
   React.useEffect(() => {
-    setImgSrc(card.image_url || '/placeholder-card.svg');
-  }, [card.image_url]);
+    setImgSrc(getInitialImg());
+  }, [card.image_url, card.name]);
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -99,7 +109,14 @@ export default function CardItem({ card, onOpenModal }: CardItemProps) {
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             className="object-contain drop-shadow-md rounded-lg"
             priority={false}
-            onError={() => setImgSrc('/placeholder-card.svg')}
+            onError={() => {
+              const generic = isBasicEnergy({ name: card.name, expansion: card.expansion }) ? getGenericEnergyImage(card.name) : null;
+              if (generic && imgSrc !== generic) {
+                setImgSrc(generic);
+              } else {
+                setImgSrc('/placeholder-card.svg');
+              }
+            }}
           />
         </div>
 

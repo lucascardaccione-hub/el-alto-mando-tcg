@@ -7,6 +7,7 @@ import { CardData } from './CardItem';
 import { useCart } from '@/context/CartContext';
 import Card3DViewer from './Card3DViewer';
 import { LanguageBadge, FlagES, FlagUS } from './FlagIcon';
+import { isBasicEnergy, getGenericEnergyImage } from '@/lib/deckParser';
 
 interface CardDetailModalProps {
   card: CardData | null;
@@ -17,11 +18,20 @@ export default function CardDetailModal({ card, onClose }: CardDetailModalProps)
   const { addToCart } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
-  const [imgSrc, setImgSrc] = useState(card?.image_url || '/placeholder-card.svg');
+
+  const getInitialImg = () => {
+    if (card?.image_url && !card.image_url.includes('placeholder')) return card.image_url;
+    if (card && isBasicEnergy({ name: card.name, expansion: card.expansion })) {
+      return getGenericEnergyImage(card.name) || '/placeholder-card.svg';
+    }
+    return card?.image_url || '/placeholder-card.svg';
+  };
+
+  const [imgSrc, setImgSrc] = useState(getInitialImg);
 
   React.useEffect(() => {
     if (card) {
-      setImgSrc(card.image_url || '/placeholder-card.svg');
+      setImgSrc(getInitialImg());
     }
   }, [card]);
 

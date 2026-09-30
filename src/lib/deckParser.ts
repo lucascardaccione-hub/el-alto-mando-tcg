@@ -222,6 +222,19 @@ export function getBasicEnergyTypeNumber(name: string): number | null {
   return null;
 }
 
+export function getGenericEnergyImage(name: string): string | null {
+  const n = (name || '').toLowerCase();
+  if (n.includes('grass') || n.includes('planta') || n.includes('{g}')) return '/images/energies/grass.png';
+  if (n.includes('fire') || n.includes('fuego') || n.includes('{r}')) return '/images/energies/fire.png';
+  if (n.includes('water') || n.includes('agua') || n.includes('{w}')) return '/images/energies/water.png';
+  if (n.includes('lightning') || n.includes('rayo') || n.includes('eléctrica') || n.includes('electrica') || n.includes('{l}')) return '/images/energies/lightning.png';
+  if (n.includes('psychic') || n.includes('psíquica') || n.includes('psiquica') || n.includes('{p}')) return '/images/energies/psychic.png';
+  if (n.includes('fighting') || n.includes('lucha') || n.includes('{f}')) return '/images/energies/fighting.png';
+  if (n.includes('darkness') || n.includes('oscura') || n.includes('siniestra') || n.includes('{d}')) return '/images/energies/darkness.png';
+  if (n.includes('metal') || n.includes('metálica') || n.includes('metalica') || n.includes('acero') || n.includes('{m}')) return '/images/energies/metal.png';
+  return null;
+}
+
 /**
  * Parses PTCGL / Limitless standard deck export format (English & Spanish):
  * Pokémon: 8
@@ -299,10 +312,7 @@ export function parsePtcglDeck(text: string): ParsedDeck {
 
       let image = getQuickCardImage(set, number);
       if (!image && isBasicEnergy({ card_name: name, expansion: set })) {
-        const typeNum = getBasicEnergyTypeNumber(name);
-        if (typeNum) {
-          image = `https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_00${typeNum}_R_EN_SM.png`;
-        }
+        image = getGenericEnergyImage(name) || undefined;
       }
 
       cards.push({
@@ -332,10 +342,7 @@ export function parsePtcglDeck(text: string): ParsedDeck {
         }
         let image: string | undefined = undefined;
         if (isBasicEnergy({ card_name: name })) {
-          const typeNum = getBasicEnergyTypeNumber(name);
-          if (typeNum) {
-            image = `https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_00${typeNum}_R_EN_SM.png`;
-          }
+          image = getGenericEnergyImage(name) || undefined;
         }
         cards.push({
           count: parseInt(simpleMatch[1], 10) || 1,

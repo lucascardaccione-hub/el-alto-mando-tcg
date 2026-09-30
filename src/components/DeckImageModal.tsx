@@ -13,7 +13,7 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { toPng, toBlob } from 'html-to-image';
-import { exportToPtcgl, isBasicEnergy, getBasicEnergyTypeNumber } from '@/lib/deckParser';
+import { exportToPtcgl, isBasicEnergy, getBasicEnergyTypeNumber, getGenericEnergyImage } from '@/lib/deckParser';
 import { DeckCardItem } from '@/app/deck-builder/page';
 
 interface DeckImageModalProps {
@@ -36,6 +36,8 @@ function ModalCardThumbnail({ card }: { card: DeckCardItem }) {
   else if (setUpper === 'PR-SM' || setUpper === 'SMP') lSet = 'SMP';
   else if (setUpper === 'PR-XY' || setUpper === 'XYP') lSet = 'XYP';
   else if (setUpper === 'PR-BW' || setUpper === 'BWP') lSet = 'BWP';
+  else if (setUpper === 'SVE' || setUpper.includes('SCARLET & VIOLET ENERGY') || setUpper.includes('SCARLET AND VIOLET ENERGY')) lSet = 'SVE';
+  else if (setUpper === 'MEE' || setUpper.includes('MEGA EVOLUTION ENERGY')) lSet = 'MEE';
 
   const candidateUrls = useMemo(() => {
     const list: string[] = [];
@@ -55,13 +57,17 @@ function ModalCardThumbnail({ card }: { card: DeckCardItem }) {
       list.push(`https://limitless3.nyc3.cdn.digitaloceanspaces.com/tpci/${lSet}/${lSet}_${paddedNum}_R_EN_SM.png`);
     }
 
-    if (setUpper === 'MEE' || setUpper === 'SVE') {
+    if (setUpper === 'MEE' || setUpper === 'SVE' || lSet === 'MEE' || lSet === 'SVE') {
       list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/MEE/MEE_${paddedNum}_R_EN_SM.png`);
       list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_${paddedNum}_R_EN_SM.png`);
     }
 
-    // 3. Basic Energy fallbacks
+    // 3. Basic Energy generic fallback (Local crisp standard images)
     if (isBasicEnergy(card)) {
+      const genericImg = getGenericEnergyImage(card.card_name);
+      if (genericImg) {
+        list.push(genericImg);
+      }
       const typeNum = getBasicEnergyTypeNumber(card.card_name);
       if (typeNum) {
         list.push(`https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_00${typeNum}_R_EN_SM.png`);

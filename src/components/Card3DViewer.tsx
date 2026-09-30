@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { RotateCcw, Sparkles, FlipHorizontal } from 'lucide-react';
+import { isBasicEnergy, getGenericEnergyImage } from '@/lib/deckParser';
 
 interface Card3DViewerProps {
   frontImage: string;
@@ -11,6 +12,18 @@ interface Card3DViewerProps {
 
 export default function Card3DViewer({ frontImage, cardName, isHolo = true }: Card3DViewerProps) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const getInitialImg = () => {
+    if (frontImage && !frontImage.includes('placeholder')) return frontImage;
+    if (isBasicEnergy({ name: cardName })) {
+      return getGenericEnergyImage(cardName) || '/placeholder-card.svg';
+    }
+    return frontImage || '/placeholder-card.svg';
+  };
+  const [currentImg, setCurrentImg] = useState(getInitialImg);
+
+  useEffect(() => {
+    setCurrentImg(getInitialImg());
+  }, [frontImage, cardName]);
   const [rotateX, setRotateX] = useState(0);
   const [rotateY, setRotateY] = useState(0);
   const [glarePos, setGlarePos] = useState({ x: 50, y: 50, opacity: 0 });
@@ -151,12 +164,17 @@ export default function Card3DViewer({ frontImage, cardName, isHolo = true }: Ca
           >
             {/* Base Card Image */}
             <img
-              src={frontImage}
+              src={currentImg}
               alt={cardName}
               draggable={false}
               className="w-full h-full object-contain pointer-events-none"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = '/placeholder-card.svg';
+              onError={() => {
+                const generic = isBasicEnergy({ name: cardName }) ? getGenericEnergyImage(cardName) : null;
+                if (generic && currentImg !== generic) {
+                  setCurrentImg(generic);
+                } else {
+                  setCurrentImg('/placeholder-card.svg');
+                }
               }}
             />
 

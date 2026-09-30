@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { PTCGL_SET_MAP, getQuickCardImage, isBasicEnergy, getBasicEnergyTypeNumber } from '@/lib/deckParser';
+import { PTCGL_SET_MAP, getQuickCardImage, isBasicEnergy, getBasicEnergyTypeNumber, getGenericEnergyImage } from '@/lib/deckParser';
 import { resolveLimitlessCardImage, getLimitlessCardImageSync } from '@/lib/limitlessResolver';
 
 export const dynamic = 'force-dynamic';
@@ -102,14 +102,14 @@ export async function POST(request: Request) {
           }
         }
 
-        // 6. Basic Energy fallback (Guarantees authentic SVE image)
+        // 6. Basic Energy fallback (Guarantees authentic generic image)
         let category = c.category;
         if (isBasicEnergy({ card_name: cardName, expansion: set })) {
           category = 'energy';
           if (!imageUrl || imageUrl.includes('placeholder')) {
-            const typeNum = getBasicEnergyTypeNumber(cardName);
-            if (typeNum) {
-              imageUrl = `https://limitlesstcg.nyc3.cdn.digitaloceanspaces.com/tpci/SVE/SVE_00${typeNum}_R_EN_SM.png`;
+            const genericImg = getGenericEnergyImage(cardName);
+            if (genericImg) {
+              imageUrl = genericImg;
             }
           }
         }

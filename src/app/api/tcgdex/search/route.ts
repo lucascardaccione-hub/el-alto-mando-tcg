@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { isBasicEnergy, getGenericEnergyImage } from '@/lib/deckParser';
 
 export const dynamic = 'force-dynamic';
 
@@ -228,6 +229,9 @@ export async function GET(request: Request) {
     const resolveCardImage = (c: any) => {
       if (c.image) {
         return `${c.image}/high.webp`;
+      }
+      if (isBasicEnergy({ name: c.name, set: c.id ? c.id.split('-')[0] : '' })) {
+        return getGenericEnergyImage(c.name);
       }
       return null;
     };
