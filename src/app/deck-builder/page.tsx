@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { parsePtcglDeck, exportToPtcgl, isBasicEnergy, getBasicEnergyTypeNumber, getGenericEnergyImage } from '@/lib/deckParser';
 import DeckImageModal from '@/components/DeckImageModal';
+import { DeckSocialSection } from '@/components/DeckSocialSection';
 
 export interface DeckCardItem {
   id?: number;
@@ -1357,6 +1358,13 @@ function DeckBuilderContent() {
           </div>
         </div>
       </main>
+
+      {/* Social Section: Comments, Ratings, Likes */}
+      {deckId && (
+        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+          <DeckSocialSection deckId={deckId} deckName={name} />
+        </section>
+      )}
 
       {/* Export Modal */}
       {exportModalOpen && (

@@ -64,6 +64,22 @@ export async function GET(
       : false;
     const canEdit = isOwner || isLuca;
 
+    // Social metrics
+    const likesCountResult = await db.get(`SELECT COUNT(*) as count FROM deck_likes WHERE deck_id = ?`, [deckId]) as any;
+    const commentsStatsResult = await db.get(`
+      SELECT 
+        COUNT(*) as comments_count, 
+        AVG(rating) as average_rating 
+      FROM deck_comments 
+      WHERE deck_id = ?
+    `, [deckId]) as any;
+    
+    let userLiked = false;
+    if (user) {
+      const userLikeResult = await db.get(`SELECT id FROM deck_likes WHERE deck_id = ? AND user_id = ?`, [deckId, user.id]);
+      if (userLikeResult) userLiked = true;
+    }
+
     return NextResponse.json({
       deck: {
         ...deck,
@@ -72,6 +88,10 @@ export async function GET(
         total_cards: totalCards,
         owned_cards: ownedCards,
         missing_cards: missingCards,
+        likes_count: likesCountResult?.count || 0,
+        user_liked: userLiked,
+        comments_count: commentsStatsResult?.comments_count || 0,
+        average_rating: commentsStatsResult?.average_rating || null,
       },
       cards: cardsWithStoreStatus,
     });

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { AnimatedHeroTitle } from '@/components/AnimatedHeroTitle';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
@@ -95,12 +96,7 @@ export default function HomePage() {
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black tracking-tight text-white leading-tight">
-              EL ALTO MANDO{' '}
-              <span className="bg-gradient-to-r from-blue-400 via-indigo-300 to-amber-300 bg-clip-text text-transparent">
-                TCG
-              </span>
-            </h1>
+            <AnimatedHeroTitle />
 
             {/* Subtitle */}
             <p className="text-base sm:text-lg lg:text-xl text-slate-300 font-normal leading-relaxed max-w-2xl">
