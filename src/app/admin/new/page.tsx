@@ -17,6 +17,8 @@ import {
   Globe,
   User,
   Phone,
+  Package,
+  X,
 } from 'lucide-react';
 import { FlagUS, FlagES, LanguageBadge } from '@/components/FlagIcon';
 
@@ -183,6 +185,50 @@ export default function NewCardPage() {
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
+  // Duplicate detection & resolution modal
+  const [duplicateModalData, setDuplicateModalData] = useState<{
+    existing_card: any;
+    stock_to_add: number;
+    entered_price: number;
+    message?: string;
+  } | null>(null);
+  const [resolvingDuplicate, setResolvingDuplicate] = useState(false);
+  const [liveExisting, setLiveExisting] = useState<any | null>(null);
+
+  // Live duplicate check on form field changes
+  useEffect(() => {
+    if (!name.trim() || !expansion.trim() || !number.trim()) {
+      setLiveExisting(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const finalVersion = selectedRarity === 'Otro (Custom)'
+          ? (customRarityText.trim() || 'Custom')
+          : selectedRarity;
+        const params = new URLSearchParams({
+          checkDuplicate: 'true',
+          name: name.trim(),
+          expansion: expansion.trim(),
+          number: number.trim(),
+          version: finalVersion,
+          language: language.trim(),
+          is_foil: isFoil ? '1' : '0',
+          is_league: isLeague ? '1' : '0',
+          seller_id: selectedSellerId ? String(selectedSellerId) : '',
+        });
+        const res = await fetch(`/api/cards?${params.toString()}`);
+        if (res.ok) {
+          const data = await res.json();
+          setLiveExisting(data.existing || null);
+        }
+      } catch {
+        // silent fail
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [name, expansion, number, selectedRarity, customRarityText, language, isFoil, isLeague, selectedSellerId]);
+
   // Handle Search TCGdex
   const handleSearchTcgdex = async (query: string, lang = searchLang) => {
     if (!query || query.trim().length < 2) {
@@ -267,6 +313,24 @@ export default function NewCardPage() {
     }
   };
 
+  const resetForm = () => {
+    setName('');
+    setExpansion('');
+    setNumber('');
+    setArtist('');
+    setPrice('');
+    setStock(1);
+    setImageUrl('');
+    setSelectedRarity('Common');
+    setCustomRarityText('');
+    setIsFoil(false);
+    setIsLeague(false);
+    setCategory('Pokemon');
+    setTrainerType('');
+    setSelectedTcgdexCard(null);
+    setLiveExisting(null);
+  };
+
   // Submit Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -323,30 +387,77 @@ export default function NewCardPage() {
         return;
       }
 
-      setSuccessMsg(`¡"${name}" (${language}) agregada con éxito al catálogo con ${stock} unidad(es)!`);
+      // Check if duplicate detected and prompt user
+      if (data.duplicate_detected) {
+        setDuplicateModalData(data);
+        setLoading(false);
+        return;
+      }
 
-      // Reset form fields
-      setName('');
-      setExpansion('');
-      setNumber('');
-      setArtist('');
-      setPrice('');
-      setStock(1);
-      setImageUrl('');
-      setSelectedRarity('Common');
-      setCustomRarityText('');
-      setIsFoil(false);
-      setIsLeague(false);
-      setCategory('Pokemon');
-      setTrainerType('');
-      setSelectedTcgdexCard(null);
-
-      // Scroll to top
+      setSuccessMsg(data.message || `¡"${name}" (${language}) agregada con éxito al catálogo con ${stock} unidad(es)!`);
+      resetForm();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (e) {
       setErrorMsg('Error de conexión al guardar.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Resolve duplicate modal decision
+  const handleDuplicateDecision = async (action: 'merge_keep_price' | 'merge_update_price' | 'create_new') => {
+    if (!duplicateModalData) return;
+    setResolvingDuplicate(true);
+    setErrorMsg('');
+
+    const finalVersion = selectedRarity === 'Otro (Custom)'
+      ? (customRarityText.trim() || 'Custom')
+      : selectedRarity;
+
+    try {
+      const res = await fetch('/api/cards', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          expansion,
+          number,
+          version: finalVersion,
+          language,
+          artist: artist || 'Desconocido',
+          price: Number(price),
+          stock: Number(stock),
+          image_url: imageUrl || '/placeholder-card.png',
+          rarity: finalVersion,
+          notes,
+          category,
+          trainer_type: trainerType,
+          seller_id: selectedSellerId,
+          seller_name: selectedSellerName,
+          seller_phone: selectedSellerPhone,
+          is_foil: isFoil ? 1 : 0,
+          is_league: isLeague ? 1 : 0,
+          action,
+          target_card_id: duplicateModalData.existing_card?.id,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setErrorMsg(data.error || 'Error al procesar la publicación');
+        setResolvingDuplicate(false);
+        return;
+      }
+
+      setDuplicateModalData(null);
+      setSuccessMsg(data.message || `Operación completada con éxito para "${name}".`);
+      resetForm();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (e) {
+      setErrorMsg('Error de conexión al procesar la publicación.');
+    } finally {
+      setResolvingDuplicate(false);
     }
   };
 
@@ -918,6 +1029,18 @@ export default function NewCardPage() {
               </div>
             </div>
 
+            {/* Live Existing Duplicate Notice */}
+            {liveExisting && (
+              <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-600/50 text-amber-200 text-xs flex items-center justify-between gap-3 shadow-md animate-in fade-in duration-150">
+                <div className="flex items-center gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                  <span>
+                    Ya tienes publicado este artículo con <strong>{liveExisting.stock} u.</strong> a <strong>${Number(liveExisting.price).toLocaleString('es-AR')}</strong>. Al guardar podrás sumar stock o crear otra publicación.
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Save Button */}
             <button
               type="submit"
@@ -939,6 +1062,175 @@ export default function NewCardPage() {
           </div>
         </div>
       </form>
+
+      {/* Duplicate Card Detected Resolution Modal */}
+      {duplicateModalData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div
+            className="relative w-full max-w-xl bg-[#0a0f1d] border border-amber-500/40 rounded-3xl shadow-2xl shadow-amber-950/50 p-6 sm:p-7 space-y-6 text-slate-200 max-h-[92vh] overflow-y-auto"
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between gap-3 border-b border-slate-800/80 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400 flex-shrink-0 shadow-inner">
+                  <Package className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-white">
+                    Artículo ya publicado en tu catálogo
+                  </h3>
+                  <p className="text-xs text-amber-300/90 font-medium">
+                    Ya tienes <strong className="text-white">{duplicateModalData.existing_card.stock} unidad(es)</strong> de este artículo a <strong className="text-white">${duplicateModalData.existing_card.price.toLocaleString('es-AR')}</strong>.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDuplicateModalData(null)}
+                disabled={resolvingDuplicate}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800/80 transition-colors"
+                title="Cerrar"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Comparison preview banner */}
+            <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex items-center gap-4">
+              <div className="w-16 h-22 rounded-xl bg-slate-950/80 p-1 flex items-center justify-center overflow-hidden flex-shrink-0 border border-slate-800">
+                <img
+                  src={duplicateModalData.existing_card.image_url || imageUrl || '/placeholder-card.svg'}
+                  alt={name}
+                  className="w-full h-full object-contain"
+                />
+              </div>
+              <div className="flex-1 min-w-0 space-y-1.5">
+                <h4 className="font-bold text-sm text-white truncate">
+                  {name}
+                </h4>
+                <p className="text-xs text-slate-400 truncate">
+                  {expansion} · #{number} · {selectedRarity} · {language}
+                </p>
+                <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
+                  <div className="bg-slate-950/80 rounded-lg px-2.5 py-1.5 border border-slate-800/80">
+                    <span className="text-[10px] text-slate-400 block">Stock actual:</span>
+                    <span className="font-bold text-slate-200">{duplicateModalData.existing_card.stock} u.</span>
+                    <span className="text-[10px] text-emerald-400 font-bold ml-1">+{stock} u. nueva(s)</span>
+                  </div>
+                  <div className="bg-slate-950/80 rounded-lg px-2.5 py-1.5 border border-slate-800/80">
+                    <span className="text-[10px] text-slate-400 block">Precio publicado:</span>
+                    <span className="font-bold text-slate-200">${duplicateModalData.existing_card.price.toLocaleString('es-AR')}</span>
+                    {duplicateModalData.existing_card.price !== Number(price) && (
+                      <span className="text-[10px] text-amber-300 font-bold block">
+                        Ingresado: ${Number(price).toLocaleString('es-AR')}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Prompt explanation */}
+            <div className="space-y-3">
+              <p className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                ¿Deseas sumar al stock al precio publicado (${duplicateModalData.existing_card.price.toLocaleString('es-AR')}) o elegir otra opción?
+              </p>
+
+              {/* Opción 1: Sumar al stock y mantener el precio */}
+              <button
+                type="button"
+                disabled={resolvingDuplicate}
+                onClick={() => handleDuplicateDecision('merge_keep_price')}
+                className="w-full text-left p-4 rounded-2xl border border-emerald-500/40 bg-emerald-950/25 hover:bg-emerald-900/40 hover:border-emerald-400 transition-all group flex items-start gap-3.5 cursor-pointer shadow-lg shadow-emerald-950/30"
+              >
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/20 text-emerald-300 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform">
+                  <Check className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-sm text-emerald-200 group-hover:text-emerald-100">
+                      Sumar al stock y mantener el precio
+                    </span>
+                    <span className="text-xs font-mono font-bold text-emerald-300 px-2 py-0.5 rounded bg-emerald-950/80 border border-emerald-500/30">
+                      ${duplicateModalData.existing_card.price.toLocaleString('es-AR')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                    Suma <strong className="text-white">+{stock} u.</strong> a la publicación existente. Tendrás un total de <strong className="text-white">{duplicateModalData.existing_card.stock + Number(stock)} unidades</strong> al precio publicado de <strong className="text-white">${duplicateModalData.existing_card.price.toLocaleString('es-AR')}</strong>.
+                  </p>
+                </div>
+              </button>
+
+              {/* Opción 2: Sumar al stock y actualizar precio */}
+              <button
+                type="button"
+                disabled={resolvingDuplicate}
+                onClick={() => handleDuplicateDecision('merge_update_price')}
+                className="w-full text-left p-4 rounded-2xl border border-amber-500/40 bg-amber-950/25 hover:bg-amber-900/40 hover:border-amber-400 transition-all group flex items-start gap-3.5 cursor-pointer shadow-lg shadow-amber-950/30"
+              >
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-300 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform">
+                  <RefreshCw className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-sm text-amber-200 group-hover:text-amber-100">
+                      Sumar al stock y actualizar precio
+                    </span>
+                    <span className="text-xs font-mono font-bold text-amber-300 px-2 py-0.5 rounded bg-amber-950/80 border border-amber-500/30">
+                      ${Number(price).toLocaleString('es-AR')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                    Suma <strong className="text-white">+{stock} u.</strong> y actualiza <strong className="text-white">todas las {duplicateModalData.existing_card.stock + Number(stock)} unidades</strong> al nuevo precio ingresado de <strong className="text-white">${Number(price).toLocaleString('es-AR')}</strong>.
+                  </p>
+                </div>
+              </button>
+
+              {/* Opción 3: Crear una nueva publicación */}
+              <button
+                type="button"
+                disabled={resolvingDuplicate}
+                onClick={() => handleDuplicateDecision('create_new')}
+                className="w-full text-left p-4 rounded-2xl border border-blue-500/40 bg-blue-950/25 hover:bg-blue-900/40 hover:border-blue-400 transition-all group flex items-start gap-3.5 cursor-pointer shadow-lg shadow-blue-950/30"
+              >
+                <div className="w-9 h-9 rounded-xl bg-blue-500/20 text-blue-300 flex items-center justify-center flex-shrink-0 mt-0.5 group-hover:scale-110 transition-transform">
+                  <PlusCircle className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-sm text-blue-200 group-hover:text-blue-100">
+                      Crear una nueva publicación (Es otra carta u otra versión)
+                    </span>
+                    <span className="text-xs font-semibold text-blue-300 px-2 py-0.5 rounded bg-blue-950/80 border border-blue-500/30">
+                      Independiente
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                    Crea una publicación separada en el catálogo con <strong className="text-white">{stock} u. a ${Number(price).toLocaleString('es-AR')}</strong> (ej: para otra condición, versión o lote).
+                  </p>
+                </div>
+              </button>
+            </div>
+
+            {/* Actions footer */}
+            <div className="pt-2 flex items-center justify-between border-t border-slate-800/80">
+              <span className="text-[11px] text-slate-500">
+                {resolvingDuplicate ? 'Procesando actualización...' : 'Selecciona una de las 3 opciones para continuar'}
+              </span>
+              <button
+                type="button"
+                disabled={resolvingDuplicate}
+                onClick={() => setDuplicateModalData(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-700 transition-colors cursor-pointer"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

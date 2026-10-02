@@ -17,8 +17,48 @@ export async function GET(request: Request) {
     const minPrice = searchParams.get('minPrice') ? parseFloat(searchParams.get('minPrice')!) : null;
     const maxPrice = searchParams.get('maxPrice') ? parseFloat(searchParams.get('maxPrice')!) : null;
     const inStockOnly = searchParams.get('inStockOnly') === 'true';
-    const sort = searchParams.get('sort') || 'newest';
+    if (searchParams.get('checkDuplicate') === 'true') {
+      const cardName = searchParams.get('name') || '';
+      const cardExp = searchParams.get('expansion') || '';
+      const cardNum = searchParams.get('number') || '';
+      const cardVer = searchParams.get('version') || '';
+      const cardLang = searchParams.get('language') || '';
+      const cardSellerId = searchParams.get('seller_id') ? Number(searchParams.get('seller_id')) : null;
+      const isFoil = searchParams.get('is_foil') === '1' ? 1 : 0;
+      const isLeague = searchParams.get('is_league') === '1' ? 1 : 0;
 
+      if (!cardName.trim() || !cardExp.trim() || !cardNum.trim()) {
+        return NextResponse.json({ existing: null });
+      }
+
+      const existingCard = await db.get(`
+        SELECT * FROM cards
+        WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+          AND LOWER(TRIM(expansion)) = LOWER(TRIM(?))
+          AND LOWER(TRIM(number)) = LOWER(TRIM(?))
+          AND LOWER(TRIM(COALESCE(version, ''))) = LOWER(TRIM(?))
+          AND LOWER(TRIM(COALESCE(language, ''))) = LOWER(TRIM(?))
+          AND COALESCE(is_foil, 0) = ?
+          AND COALESCE(is_league, 0) = ?
+          AND (? IS NULL OR seller_id = ?)
+        ORDER BY id DESC
+        LIMIT 1
+      `, [
+        cardName.trim(),
+        cardExp.trim(),
+        cardNum.trim(),
+        cardVer.trim(),
+        cardLang.trim(),
+        isFoil,
+        isLeague,
+        cardSellerId,
+        cardSellerId
+      ]);
+
+      return NextResponse.json({ existing: existingCard || null });
+    }
+
+    const sort = searchParams.get('sort') || 'newest';
     const conditions: string[] = [];
     const params: any[] = [];
 
@@ -153,6 +193,8 @@ export async function POST(request: Request) {
       seller_phone,
       is_foil = 0,
       is_league = 0,
+      action, // 'check' | 'merge_keep_price' | 'merge_update_price' | 'create_new'
+      target_card_id,
     } = body;
 
     if (!name || !expansion || !number) {
@@ -180,6 +222,86 @@ export async function POST(request: Request) {
         finalSellerPhone = sellerUser.phone || '';
         if (!finalSellerName) finalSellerName = sellerUser.username;
       }
+    }
+
+    const stockToAdd = Math.max(1, parseInt(stock, 10) || 1);
+    const enteredPrice = Number(price) || 0;
+
+    // Check if an existing publication exists for this seller with matching card specs:
+    const existingCard = await db.get(`
+      SELECT * FROM cards
+      WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
+        AND LOWER(TRIM(expansion)) = LOWER(TRIM(?))
+        AND LOWER(TRIM(number)) = LOWER(TRIM(?))
+        AND LOWER(TRIM(COALESCE(version, ''))) = LOWER(TRIM(?))
+        AND LOWER(TRIM(COALESCE(language, ''))) = LOWER(TRIM(?))
+        AND COALESCE(is_foil, 0) = ?
+        AND COALESCE(is_league, 0) = ?
+        AND (seller_id = ? OR (seller_id IS NULL AND LOWER(seller_name) = LOWER(?)))
+      ORDER BY id DESC
+      LIMIT 1
+    `, [
+      name.trim(),
+      expansion.trim(),
+      number.trim(),
+      version.trim(),
+      language.trim(),
+      is_foil ? 1 : 0,
+      is_league ? 1 : 0,
+      finalSellerId,
+      finalSellerName
+    ]);
+
+    // Handle existing publication when user has not explicitly requested 'create_new'
+    if (existingCard && action !== 'create_new') {
+      const targetId = target_card_id ? Number(target_card_id) : existingCard.id;
+
+      if (action === 'merge_keep_price') {
+        const newStock = existingCard.stock + stockToAdd;
+        const now = new Date().toISOString();
+        await db.run('UPDATE cards SET stock = ?, updated_at = ? WHERE id = ?', [
+          newStock,
+          now,
+          targetId
+        ]);
+        const updatedCard = await db.get('SELECT * FROM cards WHERE id = ?', [targetId]);
+        return NextResponse.json({
+          success: true,
+          merged: true,
+          action_taken: 'merge_keep_price',
+          card: updatedCard,
+          message: `¡Stock actualizado! Se sumaron +${stockToAdd} u. al stock de "${existingCard.name}". Stock total: ${newStock} u. manteniendo el precio de $${existingCard.price.toLocaleString('es-AR')}.`
+        });
+      }
+
+      if (action === 'merge_update_price') {
+        const newStock = existingCard.stock + stockToAdd;
+        const newPrice = enteredPrice > 0 ? enteredPrice : existingCard.price;
+        const now = new Date().toISOString();
+        await db.run('UPDATE cards SET stock = ?, price = ?, updated_at = ? WHERE id = ?', [
+          newStock,
+          newPrice,
+          now,
+          targetId
+        ]);
+        const updatedCard = await db.get('SELECT * FROM cards WHERE id = ?', [targetId]);
+        return NextResponse.json({
+          success: true,
+          merged: true,
+          action_taken: 'merge_update_price',
+          card: updatedCard,
+          message: `¡Stock y precio actualizados! Se sumaron +${stockToAdd} u. a "${existingCard.name}". Stock total: ${newStock} u. con nuevo precio de $${newPrice.toLocaleString('es-AR')}.`
+        });
+      }
+
+      // If action is not specified, return duplicate detected response for user consultation
+      return NextResponse.json({
+        duplicate_detected: true,
+        existing_card: existingCard,
+        stock_to_add: stockToAdd,
+        entered_price: enteredPrice,
+        message: `Ya tienes ${existingCard.stock} unidad(es) publicada(s) de este artículo a $${existingCard.price.toLocaleString('es-AR')}.`
+      });
     }
 
     const now = new Date().toISOString();
@@ -216,6 +338,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       card: newCard,
+      message: `¡"${name}" agregada con éxito al catálogo con ${stock} unidad(es)!`
     });
   } catch (error: any) {
     console.error('Create card error:', error);
