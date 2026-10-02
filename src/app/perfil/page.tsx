@@ -24,6 +24,7 @@ import {
 import { AVATAR_PRESETS, getDefaultAvatar } from '@/lib/avatars';
 import { getRoleBadge } from '@/lib/roles';
 import { RewardsOverview } from '@/components/RewardsOverview';
+import { TrainerCard } from '@/components/TrainerCard';
 
 interface UserData {
   id: number;
@@ -49,6 +50,7 @@ export default function ProfilePage() {
   // Avatar & Profile state
   const [selectedAvatar, setSelectedAvatar] = useState('');
   const [customAvatarUrl, setCustomAvatarUrl] = useState('');
+  const [avatarCategory, setAvatarCategory] = useState<'all' | 'pokemon-sprite' | 'trainer-sprite' | 'pokemon-artwork' | 'legendary'>('all');
   const [phone, setPhone] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
 
@@ -243,86 +245,35 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Profile Header Card */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0d1629] via-[#09101f] to-[#060a14] border border-white/10 p-6 sm:p-8 shadow-2xl">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-80 h-80 bg-purple-600/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Ficha de Entrenador (Trainer Card) */}
+      <TrainerCard
+        username={user.username}
+        avatarUrl={currentAvatarDisplay}
+        roleInfo={roleInfo}
+        isVerified={user.is_verified === 1}
+        memberDate={user.created_at ? new Date(user.created_at).toLocaleDateString('es-AR', { year: 'numeric', month: 'long' }) : null}
+        phone={user.phone}
+        publicDecksCount={myDecks.length}
+        levelInfo={rewardsData?.levelInfo}
+      >
+        <div className="flex flex-col sm:flex-row md:flex-col gap-2">
+          <button
+            onClick={() => setActiveTab('profile')}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-lg shadow-blue-900/40 transition-all hover:scale-105 active:scale-95"
+          >
+            <Camera className="w-3.5 h-3.5" />
+            <span>Editar Sprite</span>
+          </button>
 
-        <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
-          {/* Avatar with glow */}
-          <div className="relative group">
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-slate-900 border-2 border-white/20 shadow-2xl flex items-center justify-center p-1.5 transition-transform group-hover:scale-105">
-              <img
-                src={currentAvatarDisplay}
-                alt={user.username}
-                className="w-full h-full object-contain"
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src = getDefaultAvatar(user.username);
-                }}
-              />
-            </div>
-            <button
-              onClick={() => setActiveTab('profile')}
-              className="absolute -bottom-2 -right-2 p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/50 transition-transform hover:scale-110"
-              title="Cambiar avatar"
-            >
-              <Camera className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* User Details */}
-          <div className="space-y-2 flex-1">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">{user.username}</h1>
-              <div className="flex items-center justify-center sm:justify-start gap-1.5">
-                <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold border ${roleInfo.badgeClass}`}>
-                  <span>{roleInfo.icon}</span>
-                  <span>{roleInfo.label}</span>
-                </span>
-                {user.is_verified === 1 && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-500/30">
-                    ✓ Verificado
-                  </span>
-                )}
-              </div>
-            </div>
-
-            <p className="text-xs sm:text-sm text-slate-400">
-              {roleInfo.description}
-            </p>
-
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 pt-2 text-xs text-slate-400">
-              {user.email && (
-                <div className="flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-blue-400" />
-                  <span>{user.email}</span>
-                </div>
-              )}
-              {user.phone && (
-                <div className="flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>WhatsApp: +{user.phone}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-purple-400" />
-                <span>{myDecks.length} {myDecks.length === 1 ? 'Mazo creado' : 'Mazos creados'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Public Profile Link */}
-          <div className="sm:self-center">
-            <Link
-              href={`/perfil/${user.id}`}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 transition-all hover:scale-105"
-            >
-              <span>Ver Perfil Público</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </Link>
-          </div>
+          <Link
+            href={`/perfil/${user.id}`}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-300 hover:text-white bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 transition-all hover:scale-105 active:scale-95"
+          >
+            <span>Ver Ficha Pública</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </Link>
         </div>
-      </div>
+      </TrainerCard>
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
@@ -384,16 +335,77 @@ export default function ProfilePage() {
               <div>
                 <h3 className="text-base font-extrabold text-white flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span>Elige tu Foto de Avatar</span>
+                  <span>Elige tu Foto de Avatar / Sprite</span>
                 </h3>
                 <p className="text-xs text-slate-400 mt-1">
-                  Selecciona tu Pokémon o Entrenador favorito para mostrar en tus mazos y en la comunidad.
+                  Selecciona tu Sprite o Artwork favorito para lucirlo en tu Ficha de Entrenador y en la comunidad.
                 </p>
               </div>
 
+              {/* Categorías de Avatares */}
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                <button
+                  type="button"
+                  onClick={() => setAvatarCategory('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${
+                    avatarCategory === 'all'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  Todos ({AVATAR_PRESETS.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAvatarCategory('pokemon-sprite')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${
+                    avatarCategory === 'pokemon-sprite'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  🎮 Sprites Pokémon
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAvatarCategory('trainer-sprite')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${
+                    avatarCategory === 'trainer-sprite'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  🧢 Entrenadores & Campeones
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAvatarCategory('pokemon-artwork')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${
+                    avatarCategory === 'pokemon-artwork'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  🎨 Artwork Oficial
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAvatarCategory('legendary')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${
+                    avatarCategory === 'legendary'
+                      ? 'bg-amber-600 text-white'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  ⭐ Legendarios
+                </button>
+              </div>
+
               {/* Grid of Presets */}
-              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
-                {AVATAR_PRESETS.map((preset) => {
+              <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3 max-h-[380px] overflow-y-auto pr-1">
+                {AVATAR_PRESETS.filter(
+                  (p) => avatarCategory === 'all' || p.category === avatarCategory
+                ).map((preset) => {
                   const isSelected = selectedAvatar === preset.url && !customAvatarUrl.trim();
                   return (
                     <button
@@ -403,22 +415,22 @@ export default function ProfilePage() {
                         setSelectedAvatar(preset.url);
                         setCustomAvatarUrl('');
                       }}
-                      className={`relative flex flex-col items-center p-2 rounded-2xl transition-all ${
+                      className={`relative flex flex-col items-center justify-between p-2 rounded-2xl transition-all aspect-square ${
                         isSelected
                           ? 'bg-blue-600/30 border-2 border-blue-400 scale-105 shadow-lg shadow-blue-900/50'
                           : 'bg-slate-900/80 border border-slate-800 hover:border-slate-600 hover:scale-105'
                       }`}
                       title={preset.name}
                     >
-                      <div className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center">
+                      <div className="w-full flex-1 flex items-center justify-center p-1">
                         <img
                           src={preset.url}
                           alt={preset.name}
-                          className="w-full h-full object-contain drop-shadow"
+                          className="w-full h-full object-contain filter drop-shadow"
                         />
                       </div>
-                      <span className="text-[10px] text-slate-300 font-medium truncate w-full text-center mt-1">
-                        {preset.name.split(' ')[0]}
+                      <span className="text-[10px] text-slate-300 font-medium truncate w-full text-center mt-0.5">
+                        {preset.name.replace(' Sprite', '').split(' ')[0]}
                       </span>
                     </button>
                   );

@@ -18,6 +18,7 @@ import {
 import { getDefaultAvatar } from '@/lib/avatars';
 import { getRoleBadge } from '@/lib/roles';
 import { RewardsOverview } from '@/components/RewardsOverview';
+import { TrainerCard } from '@/components/TrainerCard';
 
 interface PublicUserProfile {
   id: number;
@@ -134,69 +135,29 @@ export default function PublicProfilePage() {
         </Link>
       </div>
 
-      {/* User Header Profile Card */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0d1629] via-[#09101f] to-[#060a14] border border-white/10 p-6 sm:p-8 shadow-2xl">
-        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
-          {/* Avatar */}
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl overflow-hidden bg-slate-900 border-2 border-white/20 shadow-2xl flex items-center justify-center p-1.5 flex-shrink-0">
-            <img
-              src={avatarUrl}
-              alt={user.username}
-              className="w-full h-full object-contain"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = getDefaultAvatar(user.username);
-              }}
-            />
-          </div>
-
-          {/* Details */}
-          <div className="space-y-2 flex-1">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-              <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">{user.username}</h1>
-              <div>
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${roleInfo.badgeClass}`}>
-                  <span>{roleInfo.icon}</span>
-                  <span>{roleInfo.label}</span>
-                </span>
-              </div>
-            </div>
-
-            <p className="text-xs sm:text-sm text-slate-400">
-              {roleInfo.description}
-            </p>
-
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 pt-2 text-xs text-slate-400">
-              {memberDate && (
-                <div className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Miembro desde {memberDate}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-1.5">
-                <Layers className="w-3.5 h-3.5 text-purple-400" />
-                <span>{decks.length} {decks.length === 1 ? 'Mazo público' : 'Mazos públicos'}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* WhatsApp seller contact button */}
-          {user.phone && (
-            <div className="sm:self-center">
-              <a
-                href={`https://wa.me/${user.phone.replace(/[^\d]/g, '')}?text=${encodeURIComponent(`Hola ${user.username}, te escribo desde El Alto Mando TCG`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-950/50 transition-all hover:scale-105"
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span>Contactar por WhatsApp</span>
-              </a>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Ficha de Entrenador Oficial */}
+      <TrainerCard
+        username={user.username}
+        avatarUrl={avatarUrl}
+        roleInfo={roleInfo}
+        isVerified={user.role === 'admin' || user.username?.toLowerCase() === 'luca'}
+        memberDate={memberDate}
+        phone={user.phone}
+        publicDecksCount={decks.length}
+        levelInfo={rewardsData?.levelInfo}
+      >
+        {user.phone && (
+          <a
+            href={`https://wa.me/${user.phone.replace(/[^\d]/g, '')}?text=${encodeURIComponent(`Hola ${user.username}, te escribo desde El Alto Mando TCG`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-lg shadow-emerald-950/50 transition-all hover:scale-105 active:scale-95"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>Contactar por WhatsApp</span>
+          </a>
+        )}
+      </TrainerCard>
 
       {/* Rewards, Medallas y Nivel de Entrenador */}
       {rewardsData?.levelInfo && (
