@@ -24,6 +24,7 @@ import {
 import { useCart } from '@/context/CartContext';
 import { getRoleBadge, canAccessAdmin } from '@/lib/roles';
 import { getDefaultAvatar } from '@/lib/avatars';
+import { UltraBallIcon } from '@/components/UltraBallIcon';
 
 interface NavbarProps {
   totalCards?: number;
@@ -162,29 +163,22 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
     <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-[#060913]/95 border-b border-white/[0.08] transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         {/* Brand & Logo */}
-        <Link href="/" className="flex items-center gap-3.5 group flex-shrink-0">
-          <div className="relative w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-2xl overflow-hidden bg-white p-1 border border-white/20 shadow-md shadow-blue-500/15 group-hover:scale-105 transition-transform duration-300">
-            <Image
-              src="/logo.png"
-              alt="El Alto Mando TCG"
-              width={46}
-              height={46}
-              className="w-full h-full object-contain"
-              priority
-            />
+        <Link href="/" className="flex items-center gap-3 group flex-shrink-0">
+          <div className="relative w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-2xl overflow-hidden bg-slate-950 p-1 border border-amber-500/30 shadow-md shadow-amber-500/15 group-hover:scale-105 transition-transform duration-300">
+            <UltraBallIcon className="w-8 h-8 sm:w-9 sm:h-9" />
           </div>
           <div>
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="font-black text-lg sm:text-xl tracking-tight text-white group-hover:text-blue-400 transition-colors">
+              <span className="font-black text-lg sm:text-xl tracking-tight bg-gradient-to-b from-white via-slate-200 to-slate-400 bg-clip-text text-transparent group-hover:from-white group-hover:to-slate-200 transition-colors">
                 EL ALTO MANDO
               </span>
-              <span className="text-[10px] font-bold tracking-widest px-1.5 sm:px-2 py-0.5 rounded-md bg-blue-600/15 text-blue-400 border border-blue-500/25">
+              <span className="text-[10px] font-black tracking-widest px-1.5 sm:px-2 py-0.5 rounded-md bg-gradient-to-r from-amber-500 to-yellow-400 text-slate-950 border border-yellow-300 shadow-sm shadow-amber-500/40">
                 TCG
               </span>
             </div>
             <p className="text-[11px] text-slate-400 font-medium tracking-wide flex items-center gap-1.5 mt-0.5">
               <span className="text-slate-300 font-semibold">{sectionInfo.primary}</span>
-              <span className="inline-block w-1 h-1 rounded-full bg-blue-500"></span>
+              <span className="inline-block w-1 h-1 rounded-full bg-amber-400"></span>
               <span className="truncate max-w-[130px] sm:max-w-none">{sectionInfo.secondary}</span>
             </p>
           </div>

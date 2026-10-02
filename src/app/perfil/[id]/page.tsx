@@ -13,9 +13,11 @@ import {
   Loader2,
   Calendar,
   ExternalLink,
+  Award,
 } from 'lucide-react';
 import { getDefaultAvatar } from '@/lib/avatars';
 import { getRoleBadge } from '@/lib/roles';
+import { RewardsOverview } from '@/components/RewardsOverview';
 
 interface PublicUserProfile {
   id: number;
@@ -36,6 +38,7 @@ export default function PublicProfilePage() {
   const [loading, setLoading] = useState(true);
   const [cloningId, setCloningId] = useState<number | null>(null);
   const [error, setError] = useState('');
+  const [rewardsData, setRewardsData] = useState<any>(null);
 
   useEffect(() => {
     if (!userId) return;
@@ -56,6 +59,13 @@ export default function PublicProfilePage() {
       .finally(() => {
         setLoading(false);
       });
+
+    fetch(`/api/rewards?userId=${userId}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (d?.levelInfo) setRewardsData(d);
+      })
+      .catch(() => {});
   }, [userId]);
 
   const handleCloneDeck = async (deckId: number) => {
@@ -187,6 +197,17 @@ export default function PublicProfilePage() {
           )}
         </div>
       </div>
+
+      {/* Rewards, Medallas y Nivel de Entrenador */}
+      {rewardsData?.levelInfo && (
+        <div className="space-y-4">
+          <RewardsOverview
+            levelInfo={rewardsData.levelInfo}
+            stats={rewardsData.stats}
+            regions={rewardsData.regions}
+          />
+        </div>
+      )}
 
       {/* Public Decks List */}
       <div className="space-y-4">

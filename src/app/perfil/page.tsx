@@ -19,9 +19,11 @@ import {
   ExternalLink,
   Plus,
   ArrowRight,
+  Award,
 } from 'lucide-react';
 import { AVATAR_PRESETS, getDefaultAvatar } from '@/lib/avatars';
 import { getRoleBadge } from '@/lib/roles';
+import { RewardsOverview } from '@/components/RewardsOverview';
 
 interface UserData {
   id: number;
@@ -38,7 +40,11 @@ export default function ProfilePage() {
   const router = useRouter();
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'profile' | 'security' | 'decks'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'rewards' | 'security' | 'decks'>('profile');
+
+  // Rewards State
+  const [rewardsData, setRewardsData] = useState<any>(null);
+  const [loadingRewards, setLoadingRewards] = useState(false);
 
   // Avatar & Profile state
   const [selectedAvatar, setSelectedAvatar] = useState('');
@@ -67,7 +73,23 @@ export default function ProfilePage() {
   useEffect(() => {
     fetchProfile();
     fetchUserDecks();
+    fetchRewards();
   }, []);
+
+  const fetchRewards = async () => {
+    setLoadingRewards(true);
+    try {
+      const res = await fetch('/api/rewards');
+      if (res.ok) {
+        const data = await res.json();
+        setRewardsData(data);
+      }
+    } catch {
+      // ignore
+    } finally {
+      setLoadingRewards(false);
+    }
+  };
 
   const fetchProfile = async () => {
     setLoading(true);
@@ -303,10 +325,10 @@ export default function ProfilePage() {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
+      <div className="flex items-center gap-2 border-b border-slate-800 pb-2 overflow-x-auto">
         <button
           onClick={() => setActiveTab('profile')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex-shrink-0 ${
             activeTab === 'profile'
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
@@ -317,8 +339,20 @@ export default function ProfilePage() {
         </button>
 
         <button
+          onClick={() => setActiveTab('rewards')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex-shrink-0 ${
+            activeTab === 'rewards'
+              ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/40 font-black'
+              : 'text-amber-400/90 hover:text-amber-300 hover:bg-amber-950/40 border border-amber-500/30'
+          }`}
+        >
+          <Award className="w-4 h-4" />
+          <span>Medallas y Nivel {rewardsData?.levelInfo ? `(Nv. ${rewardsData.levelInfo.level})` : ''}</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('security')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex-shrink-0 ${
             activeTab === 'security'
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
@@ -330,7 +364,7 @@ export default function ProfilePage() {
 
         <button
           onClick={() => setActiveTab('decks')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all flex-shrink-0 ${
             activeTab === 'decks'
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40'
               : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
@@ -453,6 +487,28 @@ export default function ProfilePage() {
               )}
             </button>
           </form>
+        </div>
+      )}
+
+      {/* Tab: Rewards, Level & Badges */}
+      {activeTab === 'rewards' && (
+        <div className="space-y-6">
+          {loadingRewards ? (
+            <div className="p-12 flex flex-col items-center justify-center space-y-3 bg-[#0b1220]/80 border border-slate-800 rounded-3xl">
+              <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+              <p className="text-xs text-slate-400">Calculando tus medallas y nivel de entrenador...</p>
+            </div>
+          ) : rewardsData?.levelInfo ? (
+            <RewardsOverview
+              levelInfo={rewardsData.levelInfo}
+              stats={rewardsData.stats}
+              regions={rewardsData.regions}
+            />
+          ) : (
+            <div className="p-8 text-center bg-[#0b1220]/80 border border-slate-800 rounded-3xl">
+              <p className="text-slate-400 text-sm">No se pudo cargar la información de recompensas.</p>
+            </div>
+          )}
         </div>
       )}
 
