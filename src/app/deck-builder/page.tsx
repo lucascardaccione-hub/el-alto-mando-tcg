@@ -1355,16 +1355,16 @@ function DeckBuilderContent() {
                 </button>
               </div>
             </div>
+
+            {/* Social Section: Comments, Ratings, Likes right below Visual Decklist Preview */}
+            {deckId && (
+              <div className="pt-2">
+                <DeckSocialSection deckId={deckId} deckName={name} />
+              </div>
+            )}
           </div>
         </div>
       </main>
-
-      {/* Social Section: Comments, Ratings, Likes */}
-      {deckId && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-          <DeckSocialSection deckId={deckId} deckName={name} />
-        </section>
-      )}
 
       {/* Export Modal */}
       {exportModalOpen && (
