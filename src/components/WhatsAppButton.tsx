@@ -25,10 +25,6 @@ interface WhatsAppHeroButtonProps {
 }
 
 export function WhatsAppHeroButton({ className = '', showSubtitle = false }: WhatsAppHeroButtonProps) {
-  const [imgSrc, setImgSrc] = useState(
-    'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/25.gif'
-  );
-
   return (
     <a
       href={WHATSAPP_GROUP_URL}
@@ -37,24 +33,21 @@ export function WhatsAppHeroButton({ className = '', showSubtitle = false }: Wha
       className={`group relative inline-flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 hover:from-emerald-500 hover:via-green-500 hover:to-emerald-600 shadow-xl shadow-emerald-950/40 border border-emerald-400/50 hover:border-emerald-300 transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-[0_0_28px_rgba(16,185,129,0.45)] overflow-visible cursor-pointer ${className}`}
       title="Unirse al grupo oficial de WhatsApp de El Alto Mando TCG"
     >
-      {/* Pikachu Sprite with energetic hover animation */}
-      <div className="relative flex items-center justify-center -my-2 -ml-1">
+      {/* Pikachu Sprite matching Greninja, Alakazam & Lucario pixel sprite style */}
+      <div className="relative flex items-center justify-center">
         <img
-          src={imgSrc}
+          src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png"
           alt="Pikachu"
-          onError={() =>
-            setImgSrc('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png')
-          }
-          className="w-7 h-7 sm:w-8 sm:h-8 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] transition-all duration-300 transform group-hover:-translate-y-2 group-hover:scale-125 group-hover:animate-bounce pointer-events-none"
+          className="w-6 h-6 object-contain drop-shadow-md transition-all duration-300 transform group-hover:-translate-y-1.5 group-hover:scale-125 group-hover:rotate-6 group-hover:drop-shadow-[0_0_8px_rgba(250,204,21,0.8)] pointer-events-none"
         />
         {/* Electric spark on hover */}
-        <span className="absolute -top-2.5 -right-2 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none select-none drop-shadow-[0_0_8px_rgba(250,204,21,1)]">
+        <span className="absolute -top-2.5 -right-2 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none select-none drop-shadow-[0_0_6px_rgba(250,204,21,1)]">
           ⚡
         </span>
       </div>
 
       {/* WhatsApp Logo with gentle tilt on hover */}
-      <div className="w-5 h-5 rounded-full bg-white text-[#25D366] flex items-center justify-center p-0.5 shadow-md shadow-emerald-950/30 transition-transform duration-300 group-hover:scale-115 group-hover:-rotate-12 flex-shrink-0">
+      <div className="w-5 h-5 rounded-full bg-white text-[#25D366] flex items-center justify-center p-0.5 shadow-md shadow-emerald-950/30 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12 flex-shrink-0">
         <WhatsAppSvgIcon className="w-3.5 h-3.5 fill-[#25D366]" />
       </div>
 
@@ -77,28 +70,21 @@ export function WhatsAppHeroButton({ className = '', showSubtitle = false }: Wha
 }
 
 export function WhatsAppFloatingButton() {
-  const [imgSrc, setImgSrc] = useState(
-    'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/25.gif'
-  );
-
   return (
     <aside aria-label="Comunidad WhatsApp" className="fixed bottom-6 right-6 z-40">
       <a
         href={WHATSAPP_GROUP_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className="group relative flex items-center gap-2.5 pl-2.5 pr-4 py-2.5 rounded-full bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 text-white shadow-2xl shadow-emerald-950/60 border border-emerald-400/50 hover:border-emerald-300 transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] cursor-pointer"
+        className="group relative flex items-center gap-2.5 pl-3 pr-4 py-2.5 rounded-full bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 text-white shadow-2xl shadow-emerald-950/60 border border-emerald-400/50 hover:border-emerald-300 transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] cursor-pointer"
         title="¡Unite al grupo de WhatsApp de la comunidad!"
       >
-        {/* Pikachu with hover bounce */}
-        <div className="relative flex items-center justify-center -my-2">
+        {/* Pikachu with hover bounce & electric spark */}
+        <div className="relative flex items-center justify-center">
           <img
-            src={imgSrc}
+            src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png"
             alt="Pikachu"
-            onError={() =>
-              setImgSrc('https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png')
-            }
-            className="w-8 h-8 object-contain drop-shadow-[0_2px_8px_rgba(0,0,0,0.7)] transition-all duration-300 transform group-hover:-translate-y-2 group-hover:scale-125 group-hover:animate-bounce pointer-events-none"
+            className="w-6 h-6 object-contain drop-shadow-md transition-all duration-300 transform group-hover:-translate-y-1.5 group-hover:scale-125 group-hover:rotate-6 pointer-events-none"
           />
           <span className="absolute -top-2 -right-1 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-300 select-none">
             ⚡
@@ -106,8 +92,8 @@ export function WhatsAppFloatingButton() {
         </div>
 
         {/* WhatsApp Icon */}
-        <div className="w-6 h-6 rounded-full bg-white text-[#25D366] flex items-center justify-center p-1 shadow-sm transition-transform duration-300 group-hover:scale-115 group-hover:-rotate-12">
-          <WhatsAppSvgIcon className="w-4 h-4 fill-[#25D366]" />
+        <div className="w-5 h-5 rounded-full bg-white text-[#25D366] flex items-center justify-center p-0.5 shadow-sm transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12">
+          <WhatsAppSvgIcon className="w-3.5 h-3.5 fill-[#25D366]" />
         </div>
 
         <div className="hidden sm:flex flex-col text-left leading-tight">
