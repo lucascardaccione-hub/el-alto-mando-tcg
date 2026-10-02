@@ -33,10 +33,12 @@ import {
   Maximize2,
   Globe,
   Lock,
+  Shuffle,
 } from 'lucide-react';
 import { parsePtcglDeck, exportToPtcgl, isBasicEnergy, getBasicEnergyTypeNumber, getGenericEnergyImage } from '@/lib/deckParser';
 import DeckImageModal from '@/components/DeckImageModal';
 import { DeckSocialSection } from '@/components/DeckSocialSection';
+import { OpeningHandSimulatorModal } from '@/components/OpeningHandSimulatorModal';
 
 export interface DeckCardItem {
   id?: number;
@@ -91,6 +93,7 @@ function DeckBuilderContent() {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [copiedExport, setCopiedExport] = useState(false);
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [handSimulatorOpen, setHandSimulatorOpen] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const [importInput, setImportInput] = useState('');
   const [importAsOwned, setImportAsOwned] = useState<boolean>(false);
@@ -1332,6 +1335,18 @@ function DeckBuilderContent() {
 
                 <button
                   type="button"
+                  onClick={() => setHandSimulatorOpen(true)}
+                  disabled={cards.length === 0}
+                  className="w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black text-slate-950 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 shadow-md shadow-amber-950/40 border border-yellow-300 transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
+                  title="Simular paneo, mezcla del mazo y robo de las 7 cartas de tu primera mano"
+                >
+                  <Shuffle className="w-4 h-4 text-slate-950 stroke-[2.5]" />
+                  <span>Simular Primera Mano</span>
+                  <Sparkles className="w-3.5 h-3.5 ml-auto text-amber-800" />
+                </button>
+
+                <button
+                  type="button"
                   onClick={handleExportPtcgl}
                   disabled={cards.length === 0}
                   className={`w-full inline-flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl text-xs font-bold transition-all border shadow-sm active:scale-95 disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${
@@ -1525,6 +1540,14 @@ function DeckBuilderContent() {
         onClose={() => setImageModalOpen(false)}
         deckName={name}
         format={format}
+        cards={cards}
+      />
+
+      {/* Opening Hand Simulator Modal */}
+      <OpeningHandSimulatorModal
+        isOpen={handSimulatorOpen}
+        onClose={() => setHandSimulatorOpen(false)}
+        deckName={name}
         cards={cards}
       />
 
