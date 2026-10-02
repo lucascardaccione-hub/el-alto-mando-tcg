@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import CartDrawer from '@/components/CartDrawer';
 import CardDetailModal from '@/components/CardDetailModal';
+import { WhatsAppHeroButton, WhatsAppFloatingButton, WHATSAPP_GROUP_URL, WhatsAppSvgIcon } from '@/components/WhatsAppButton';
 import { CardData } from '@/components/CardItem';
 import {
   Sparkles,
@@ -134,6 +135,9 @@ export default function HomePage() {
                 <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/448.png" alt="Lucario" className="w-6 h-6 object-contain drop-shadow-md" />
                 <span>Mi Cuenta</span>
               </Link>
+
+              {/* WhatsApp Community CTA — Pikachu */}
+              <WhatsAppHeroButton />
             </div>
 
             {/* Fast Stats Bar */}
@@ -616,6 +620,18 @@ export default function HomePage() {
               <p className="text-[11px] text-slate-400 leading-relaxed">
                 Comunidad competitiva y coleccionismo de Pokémon TCG en Argentina y Latinoamérica.
               </p>
+              <div className="pt-1">
+                <a
+                  href={WHATSAPP_GROUP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-600/40 text-emerald-300 hover:text-emerald-200 font-semibold text-[11px] transition-all hover:scale-105"
+                >
+                  <WhatsAppSvgIcon className="w-3.5 h-3.5 fill-[#25D366]" />
+                  <span>Grupo de WhatsApp</span>
+                  <ExternalLink className="w-3 h-3 text-emerald-400" />
+                </a>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -698,6 +714,9 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
+      {/* Floating WhatsApp Community Badge */}
+      <WhatsAppFloatingButton />
 
       {/* Cart Drawer & Card Modal */}
       <CartDrawer />
