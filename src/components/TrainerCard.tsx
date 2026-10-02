@@ -1,5 +1,5 @@
 import React from 'react';
-import { UltraBallIcon } from '@/components/UltraBallIcon';
+import Image from 'next/image';
 import { BadgeDisplay } from '@/components/BadgeDisplay';
 import { UserLevelInfo } from '@/lib/rewards';
 import { RoleInfo } from '@/lib/roles';
@@ -64,7 +64,15 @@ export function TrainerCard({
       {/* Decorative Trainer Card Header Band */}
       <div className="relative z-10 flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4 mb-6">
         <div className="flex items-center gap-2.5">
-          <UltraBallIcon className="w-6 h-6" />
+          <div className="w-6 h-6 rounded-lg bg-white p-0.5 flex items-center justify-center overflow-hidden border border-white/20">
+            <Image
+              src="/logo.png"
+              alt="Logo Oficial"
+              width={22}
+              height={22}
+              className="w-full h-full object-contain"
+            />
+          </div>
           <span className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-300">
             Ficha de Entrenador Oficial
           </span>

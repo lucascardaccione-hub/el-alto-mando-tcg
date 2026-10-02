@@ -24,7 +24,6 @@ import {
 import { useCart } from '@/context/CartContext';
 import { getRoleBadge, canAccessAdmin } from '@/lib/roles';
 import { getDefaultAvatar } from '@/lib/avatars';
-import { UltraBallIcon } from '@/components/UltraBallIcon';
 
 interface NavbarProps {
   totalCards?: number;
@@ -163,9 +162,16 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
     <header className="sticky top-0 z-40 w-full backdrop-blur-xl bg-[#060913]/95 border-b border-white/[0.08] transition-all">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         {/* Brand & Logo */}
-        <Link href="/" className="flex items-center gap-3 group flex-shrink-0">
-          <div className="relative w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-2xl overflow-hidden bg-slate-950 p-1 border border-amber-500/30 shadow-md shadow-amber-500/15 group-hover:scale-105 transition-transform duration-300">
-            <UltraBallIcon className="w-8 h-8 sm:w-9 sm:h-9" />
+        <Link href="/" className="flex items-center gap-3.5 group flex-shrink-0">
+          <div className="relative w-11 h-11 sm:w-12 sm:h-12 flex-shrink-0 flex items-center justify-center rounded-2xl overflow-hidden bg-white p-1 border border-white/20 shadow-md shadow-blue-500/15 group-hover:scale-105 transition-transform duration-300">
+            <Image
+              src="/logo.png"
+              alt="El Alto Mando TCG"
+              width={46}
+              height={46}
+              className="w-full h-full object-contain"
+              priority
+            />
           </div>
           <div>
             <div className="flex items-center gap-1.5 sm:gap-2">
