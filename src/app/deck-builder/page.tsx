@@ -1792,9 +1792,9 @@ function DeckCategorySection({
                     item={item}
                     className={`w-full h-full object-contain transition-all duration-300 ${
                       isMissing
-                        ? 'filter grayscale contrast-75 opacity-50 group-hover/img:opacity-75'
+                        ? 'filter grayscale-[50%] contrast-90 opacity-65 group-hover/img:opacity-90'
                         : isPartial
-                        ? 'filter grayscale-[35%] opacity-85 group-hover/img:opacity-100'
+                        ? 'filter grayscale-[25%] opacity-85 group-hover/img:opacity-100'
                         : 'filter grayscale-0 opacity-100 ring-2 ring-emerald-500/70 shadow-md shadow-emerald-500/20 group-hover/img:scale-105'
                     }`}
                     onMouseEnter={(src, e) => onHoverCard?.({ imageUrl: src, name: item.card_name, expansion: item.expansion, number: item.number }, e)}
@@ -2000,9 +2000,9 @@ function DeckCategorySection({
                     item={item}
                     className={`w-full h-full object-contain transition-all duration-300 ${
                       isMissing
-                        ? 'filter grayscale contrast-75 opacity-50 group-hover:opacity-75'
+                        ? 'filter grayscale-[50%] contrast-90 opacity-65 group-hover:opacity-90'
                         : isPartial
-                        ? 'filter grayscale-[35%] opacity-85 group-hover:opacity-100'
+                        ? 'filter grayscale-[25%] opacity-85 group-hover:opacity-100'
                         : 'filter grayscale-0 opacity-100 group-hover:scale-105'
                     }`}
                     onMouseEnter={(src, e) => onHoverCard?.({ imageUrl: src, name: item.card_name, expansion: item.expansion, number: item.number }, e)}
