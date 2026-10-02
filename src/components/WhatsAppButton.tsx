@@ -21,50 +21,29 @@ export function WhatsAppSvgIcon({ className = 'w-4 h-4' }: { className?: string 
 
 interface WhatsAppHeroButtonProps {
   className?: string;
-  showSubtitle?: boolean;
 }
 
-export function WhatsAppHeroButton({ className = '', showSubtitle = false }: WhatsAppHeroButtonProps) {
+export function WhatsAppHeroButton({ className = '' }: WhatsAppHeroButtonProps) {
   return (
     <a
       href={WHATSAPP_GROUP_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className={`group relative inline-flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-white bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 hover:from-emerald-500 hover:via-green-500 hover:to-emerald-600 shadow-xl shadow-emerald-950/40 border border-emerald-400/50 hover:border-emerald-300 transition-all duration-300 hover:scale-105 active:scale-95 hover:shadow-[0_0_28px_rgba(16,185,129,0.45)] overflow-visible cursor-pointer ${className}`}
+      className={`group flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-emerald-200 hover:text-white bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-600/40 hover:border-emerald-500 shadow-lg shadow-emerald-950/30 transition-all hover:scale-105 active:scale-95 ${className}`}
       title="Unirse al grupo oficial de WhatsApp de El Alto Mando TCG"
     >
-      {/* Pikachu Sprite matching Greninja, Alakazam & Lucario pixel sprite style */}
       <div className="relative flex items-center justify-center">
         <img
           src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png"
           alt="Pikachu"
-          className="w-6 h-6 object-contain drop-shadow-md transition-all duration-300 transform group-hover:-translate-y-1.5 group-hover:scale-125 group-hover:rotate-6 group-hover:drop-shadow-[0_0_8px_rgba(250,204,21,0.8)] pointer-events-none"
+          className="w-6 h-6 object-contain drop-shadow-md transition-transform duration-300 group-hover:-translate-y-1 group-hover:scale-125 group-hover:rotate-6"
         />
-        {/* Electric spark on hover */}
-        <span className="absolute -top-2.5 -right-2 text-[11px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none select-none drop-shadow-[0_0_6px_rgba(250,204,21,1)]">
+        <span className="absolute -top-2.5 -right-1 text-[10px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none select-none">
           ⚡
         </span>
       </div>
-
-      {/* WhatsApp Logo with gentle tilt on hover */}
-      <div className="w-5 h-5 rounded-full bg-white text-[#25D366] flex items-center justify-center p-0.5 shadow-md shadow-emerald-950/30 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-12 flex-shrink-0">
-        <WhatsAppSvgIcon className="w-3.5 h-3.5 fill-[#25D366]" />
-      </div>
-
-      {/* Button Text */}
-      <div className="flex flex-col text-left leading-none">
-        {showSubtitle && (
-          <span className="text-[9px] uppercase tracking-wider text-emerald-200 font-semibold mb-0.5">
-            Comunidad
-          </span>
-        )}
-        <span className="whitespace-nowrap tracking-wide group-hover:text-emerald-100 transition-colors">
-          Grupo WhatsApp
-        </span>
-      </div>
-
-      {/* External indicator icon */}
-      <ArrowUpRight className="w-3.5 h-3.5 text-emerald-200 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-white flex-shrink-0" />
+      <span>WhatsApp</span>
+      <WhatsAppSvgIcon className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400 group-hover:text-[#25D366] group-hover:fill-[#25D366] transition-all duration-300 group-hover:rotate-12 group-hover:scale-110" />
     </a>
   );
 }
