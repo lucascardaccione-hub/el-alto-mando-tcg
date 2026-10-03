@@ -59,6 +59,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'El nombre del mazo es obligatorio.' }, { status: 400 });
     }
 
+    const totalCards = Array.isArray(cards)
+      ? cards.reduce((sum: number, c: any) => sum + (Math.max(1, parseInt(c.count, 10) || 1)), 0)
+      : 0;
+
+    const requestedPublic = is_public !== undefined ? (is_public ? 1 : 0) : 0;
+
+    // A deck cannot be published publicly if it has less than 60 cards
+    if (requestedPublic === 1 && totalCards < 60) {
+      return NextResponse.json({
+        error: `No se puede publicar un mazo con menos de 60 cartas en la comunidad (actualmente tiene ${totalCards}/60). Puedes guardarlo en privado como borrador hasta completarlo.`,
+      }, { status: 400 });
+    }
+
+    const finalIsPublic = totalCards >= 60 ? requestedPublic : 0;
+
     const now = new Date().toISOString();
 
     const deckResult = await db.run(`
@@ -69,7 +84,7 @@ export async function POST(request: Request) {
       cleanName,
       format || 'Standard',
       description || '',
-      is_public !== undefined ? (is_public ? 1 : 0) : 1,
+      finalIsPublic,
       cover_card_image || '',
       now,
       now

@@ -107,7 +107,14 @@ export default function DecksPage() {
 
   const handleToggleDeckVisibility = async (deckId: number, currentPublic: number, e: React.MouseEvent) => {
     e.stopPropagation();
+    const targetDeck = myDecks.find((d) => d.id === deckId);
     const nextPublic = currentPublic === 1 ? 0 : 1;
+
+    if (nextPublic === 1 && targetDeck && (targetDeck.total_cards || 0) < 60) {
+      alert(`No se puede publicar en la comunidad un mazo con menos de 60 cartas reglamentarias (actualmente tiene ${targetDeck.total_cards || 0}/60 cartas). Completa el mazo para poder compartirlo.`);
+      return;
+    }
+
     setTogglingId(deckId);
     try {
       const res = await fetch(`/api/decks/${deckId}`, {
@@ -115,6 +122,7 @@ export default function DecksPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_public: nextPublic }),
       });
+      const data = await res.json();
       if (res.ok) {
         setMyDecks((prev) =>
           prev.map((d) => (d.id === deckId ? { ...d, is_public: nextPublic } : d))
@@ -125,6 +133,8 @@ export default function DecksPage() {
           const dataPub = await resPub.json();
           setCommunityDecks(dataPub.decks || []);
         }
+      } else {
+        alert(data.error || 'Error al cambiar la visibilidad del mazo.');
       }
     } catch (err) {
       console.error('Error toggling deck visibility:', err);
@@ -398,8 +408,8 @@ export default function DecksPage() {
                         <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-950 text-blue-300 border border-blue-800/40">
                           {deck.format}
                         </span>
-                        <span className="text-[10px] text-emerald-400 font-semibold">
-                          {deck.total_cards || 60}/60 cartas
+                        <span className={`text-[10px] font-semibold ${(deck.total_cards || 0) === 60 ? 'text-emerald-400' : 'text-amber-400'}`}>
+                          {deck.total_cards || 0}/60 cartas
                         </span>
 
                         {/* Visibility Pill with 1-click toggle */}
@@ -409,11 +419,15 @@ export default function DecksPage() {
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-extrabold transition-all border cursor-pointer ${
                             deck.is_public === 1
                               ? 'bg-blue-950/90 text-blue-300 border-blue-700 hover:bg-blue-900'
+                              : (deck.total_cards || 0) < 60
+                              ? 'bg-slate-900 text-amber-400 border-amber-500/40 hover:bg-slate-800'
                               : 'bg-amber-950/90 text-amber-300 border-amber-600 hover:bg-amber-900'
                           }`}
                           title={
                             deck.is_public === 1
                               ? 'Público en Decks de la Comunidad (Haz clic para mantenerlo privado)'
+                              : (deck.total_cards || 0) < 60
+                              ? `Borrador Privado (${deck.total_cards || 0}/60 cartas). Completa 60 cartas para publicarlo.`
                               : 'Privado en tu cuenta (Haz clic para hacerlo público)'
                           }
                         >
@@ -425,7 +439,7 @@ export default function DecksPage() {
                           ) : (
                             <>
                               <Lock className="w-2.5 h-2.5 text-amber-400" />
-                              <span>Privado</span>
+                              <span>{(deck.total_cards || 0) < 60 ? 'Borrador' : 'Privado'}</span>
                             </>
                           )}
                         </button>

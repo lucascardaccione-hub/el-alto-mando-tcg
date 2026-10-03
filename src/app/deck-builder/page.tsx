@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, Suspense } from 'react';
+import React, { useState, useEffect, useMemo, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, useSearchParams, useParams } from 'next/navigation';
@@ -77,6 +77,34 @@ function DeckBuilderContent() {
   const [isOwner, setIsOwner] = useState<boolean>(true);
   const [authorName, setAuthorName] = useState<string>('');
   const [cloning, setCloning] = useState<boolean>(false);
+
+  // User session
+  const [currentUser, setCurrentUser] = useState<any>(null);
+
+  // Auto-save draft states
+  const [isAutoSaving, setIsAutoSaving] = useState(false);
+  const [lastAutoSavedTime, setLastAutoSavedTime] = useState<string | null>(null);
+
+  // Ref flags to prevent auto-saving during initial load or while unauthenticated
+  const isInitialLoadedRef = useRef(false);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isSavingRef = useRef(false);
+
+  // Keep latest refs for async operations
+  const deckIdRef = useRef(deckId);
+  deckIdRef.current = deckId;
+  const canEditRef = useRef(canEdit);
+  canEditRef.current = canEdit;
+  const cardsRef = useRef(cards);
+  cardsRef.current = cards;
+  const nameRef = useRef(name);
+  nameRef.current = name;
+  const formatRef = useRef(format);
+  formatRef.current = format;
+  const descriptionRef = useRef(description);
+  descriptionRef.current = description;
+  const isPublicRef = useRef(isPublic);
+  isPublicRef.current = isPublic;
 
   // View mode: 'detailed' (app list with full controls) or 'visual' (PTCGL / Limitless gallery board)
   const [viewMode, setViewMode] = useState<'detailed' | 'visual'>('detailed');
@@ -179,6 +207,18 @@ function DeckBuilderContent() {
     loadStore();
   }, []);
 
+  // 1. Load current user session
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.authenticated && data?.user) {
+          setCurrentUser(data.user);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // 2. Load existing deck or imported deck from session
   useEffect(() => {
     const imported = sessionStorage.getItem('importedDeck');
@@ -222,12 +262,21 @@ function DeckBuilderContent() {
                 );
               }
             })
-            .catch(() => {});
+            .catch(() => {})
+            .finally(() => {
+              isInitialLoadedRef.current = true;
+            });
+        } else {
+          isInitialLoadedRef.current = true;
         }
         sessionStorage.removeItem('importedDeck');
-      } catch (e) {}
+      } catch (e) {
+        isInitialLoadedRef.current = true;
+      }
     } else if (deckId) {
       fetchDeck(deckId);
+    } else {
+      isInitialLoadedRef.current = true;
     }
   }, [deckId]);
 
@@ -240,7 +289,10 @@ function DeckBuilderContent() {
         setName(data.deck.name);
         setFormat(data.deck.format);
         setDescription(data.deck.description || '');
-        setIsPublic(data.deck.is_public === 1 || data.deck.is_public === true || data.deck.is_public === undefined);
+        const cardsCount = (data.cards || []).reduce((acc: number, c: any) => acc + (parseInt(c.count, 10) || 1), 0);
+        // Only allow public if it has 60 cards
+        const shouldBePublic = cardsCount === 60 && (data.deck.is_public === 1 || data.deck.is_public === true);
+        setIsPublic(shouldBePublic);
         setCanEdit(data.deck.can_edit !== undefined ? Boolean(data.deck.can_edit) : true);
         setIsOwner(data.deck.is_owner !== undefined ? Boolean(data.deck.is_owner) : true);
         setAuthorName(data.deck.author_name || '');
@@ -259,6 +311,7 @@ function DeckBuilderContent() {
       console.error(e);
     } finally {
       setLoading(false);
+      isInitialLoadedRef.current = true;
     }
   };
 
@@ -301,6 +354,93 @@ function DeckBuilderContent() {
   const pokemonCount = useMemo(() => pokemonCards.reduce((acc, c) => acc + c.count, 0), [pokemonCards]);
   const trainerCount = useMemo(() => trainerCards.reduce((acc, c) => acc + c.count, 0), [trainerCards]);
   const energyCount = useMemo(() => energyCards.reduce((acc, c) => acc + c.count, 0), [energyCards]);
+
+  // Keep refs updated on each render
+  deckIdRef.current = deckId;
+  canEditRef.current = canEdit;
+  cardsRef.current = cards;
+  nameRef.current = name;
+  formatRef.current = format;
+  descriptionRef.current = description;
+  isPublicRef.current = isPublic;
+
+  // Automatically demote to private draft if cards < 60
+  useEffect(() => {
+    if (totalCount < 60 && isPublic) {
+      setIsPublic(false);
+    }
+  }, [totalCount, isPublic]);
+
+  // Debounced Auto-Save Draft
+  useEffect(() => {
+    if (!isInitialLoadedRef.current) return;
+    if (!currentUser) return;
+    if (deckIdRef.current && !canEditRef.current) return;
+    if (cards.length === 0 && name === 'Nuevo Mazo') return;
+
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = setTimeout(async () => {
+      if (isSavingRef.current) return;
+
+      const currentTotal = cardsRef.current.reduce((acc, c) => acc + c.count, 0);
+      // Incomplete deck (< 60 cards) MUST always save as private draft (is_public: 0)
+      const currentPublic = currentTotal === 60 ? (isPublicRef.current ? 1 : 0) : 0;
+      const coverImage = cardsRef.current.length > 0 ? cardsRef.current[0].image_url : '';
+      const currentName = nameRef.current.trim() || 'Nuevo Mazo (Borrador)';
+
+      const payload = {
+        name: currentName,
+        format: formatRef.current,
+        description: descriptionRef.current,
+        is_public: currentPublic,
+        cover_card_image: coverImage,
+        cards: cardsRef.current,
+      };
+
+      try {
+        isSavingRef.current = true;
+        setIsAutoSaving(true);
+
+        const targetDeckId = deckIdRef.current;
+        const url = targetDeckId ? `/api/decks/${targetDeckId}` : '/api/decks';
+        const method = targetDeckId ? 'PUT' : 'POST';
+
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data.deckId && !targetDeckId) {
+            setDeckId(data.deckId);
+            deckIdRef.current = data.deckId;
+            setCanEdit(true);
+            setIsOwner(true);
+            if (typeof window !== 'undefined') {
+              window.history.replaceState(null, '', `/deck-builder?id=${data.deckId}`);
+            }
+          }
+          setLastAutoSavedTime(new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }));
+        }
+      } catch (err) {
+        console.error('Error auto-saving draft:', err);
+      } finally {
+        setIsAutoSaving(false);
+        isSavingRef.current = false;
+      }
+    }, 2200);
+
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, [cards, name, format, description, isPublic, currentUser, totalCount]);
 
   // Limitless-style sorted cards for the preview widget
   const sortedPreviewCards = useMemo(() => {
@@ -562,24 +702,38 @@ function DeckBuilderContent() {
 
   // Save Deck (or Save as Copy if viewing community deck)
   const handleSaveDeck = async () => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
     if (!name.trim()) {
       showNotification('error', 'Por favor ingresa un nombre para el mazo.');
       return;
     }
 
+    const isSavingAsCopy = Boolean(deckId && !canEdit);
+
+    // If deck has < 60 cards, it cannot be made public
+    if (!isSavingAsCopy && isPublic && totalCount < 60) {
+      showNotification('error', `No se puede publicar en la comunidad un mazo con menos de 60 cartas (${totalCount}/60). Se guardará como borrador privado.`);
+      setIsPublic(false);
+    }
+
     setSaving(true);
+    isSavingRef.current = true;
     try {
       const coverImage = cards.length > 0 ? cards[0].image_url : '';
-      const isSavingAsCopy = Boolean(deckId && !canEdit);
       const saveName = isSavingAsCopy
         ? (name.toLowerCase().startsWith('copia de') ? name : `Copia de ${name}`)
         : name.trim();
+
+      const finalPublic = (!isSavingAsCopy && totalCount === 60 && isPublic) ? 1 : 0;
 
       const payload = {
         name: saveName,
         format,
         description,
-        is_public: isPublic ? 1 : 0,
+        is_public: finalPublic,
         cover_card_image: coverImage,
         cards,
       };
@@ -598,13 +752,19 @@ function DeckBuilderContent() {
       if (res.ok) {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 2500);
+        setLastAutoSavedTime(new Date().toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }));
         if (isSavingAsCopy) {
           showNotification('success', '¡Copia guardada con éxito en Mis Mazos!');
+        } else if (totalCount < 60) {
+          showNotification('success', `¡Borrador privado guardado (${totalCount}/60 cartas)! Podrás publicarlo al completar las 60 cartas.`);
+        } else if (finalPublic === 1) {
+          showNotification('success', '¡Mazo publicado con éxito en Decks de la Comunidad!');
         } else {
-          showNotification('success', '¡Mazo guardado correctamente!');
+          showNotification('success', '¡Mazo privado guardado correctamente!');
         }
         if (data.deckId) {
           setDeckId(data.deckId);
+          deckIdRef.current = data.deckId;
           setCanEdit(true);
           setIsOwner(true);
           setName(saveName);
@@ -622,6 +782,7 @@ function DeckBuilderContent() {
       showNotification('error', 'Error de conexión al guardar.');
     } finally {
       setSaving(false);
+      isSavingRef.current = false;
     }
   };
 
@@ -806,19 +967,61 @@ function DeckBuilderContent() {
               </button>
             )}
 
+            {/* Auto-save status in toolbar */}
+            {currentUser && canEdit && (
+              <div className="hidden sm:flex items-center text-xs">
+                {isAutoSaving ? (
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-950/60 border border-amber-500/40 text-amber-300 font-semibold animate-pulse shadow-sm">
+                    <Loader2 className="w-3.5 h-3.5 animate-spin text-amber-400" />
+                    <span>Guardando borrador...</span>
+                  </span>
+                ) : lastAutoSavedTime ? (
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-emerald-500/30 text-emerald-300 font-medium">
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Borrador guardado {lastAutoSavedTime}</span>
+                  </span>
+                ) : (
+                  totalCount < 60 && (
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900/80 border border-slate-700/60 text-slate-400 text-[11px]">
+                      <Lock className="w-3 h-3 text-amber-400" />
+                      <span>Borrador privado auto</span>
+                    </span>
+                  )
+                )}
+              </div>
+            )}
+
             <button
               onClick={handleSaveDeck}
               disabled={saving}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black text-white bg-gradient-to-r from-red-600 via-rose-600 to-red-600 hover:from-red-500 hover:to-rose-500 shadow-lg shadow-red-950/60 border border-red-500/50 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 ring-2 ring-red-500/30"
+              className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black text-white shadow-lg transition-all hover:scale-105 active:scale-95 disabled:opacity-50 ring-2 ${
+                deckId && !canEdit
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-950/60 border border-emerald-500/50 ring-emerald-500/30'
+                  : totalCount === 60
+                  ? isPublic
+                    ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 hover:from-blue-500 hover:to-indigo-500 shadow-blue-950/60 border border-blue-500/50 ring-blue-500/30'
+                    : 'bg-gradient-to-r from-slate-700 via-slate-800 to-slate-700 hover:from-slate-600 hover:to-slate-700 shadow-slate-950/60 border border-slate-600/50 ring-slate-500/30'
+                  : 'bg-gradient-to-r from-amber-600 via-orange-600 to-amber-600 hover:from-amber-500 hover:to-orange-500 shadow-amber-950/60 border border-amber-500/50 ring-amber-500/30'
+              }`}
             >
               {saving ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : deckId && !canEdit ? (
                 <Copy className="w-3.5 h-3.5 text-white" />
+              ) : totalCount === 60 ? (
+                isPublic ? <Globe className="w-3.5 h-3.5 text-blue-200" /> : <Lock className="w-3.5 h-3.5 text-amber-200" />
               ) : (
                 <Save className="w-3.5 h-3.5 text-white" />
               )}
-              <span>{deckId ? (canEdit ? 'Guardar Cambios' : 'Guardar como Copia') : 'Guardar Mazo'}</span>
+              <span>
+                {deckId && !canEdit
+                  ? 'Guardar como Copia'
+                  : totalCount === 60
+                  ? isPublic
+                    ? 'Guardar y Publicar en Comunidad'
+                    : 'Guardar Mazo Privado'
+                  : `Guardar Borrador Privado (${totalCount}/60)`}
+              </span>
             </button>
           </div>
         </div>
@@ -896,34 +1099,82 @@ function DeckBuilderContent() {
 
             {/* Options: Visibility (Público / Privado) & Format */}
             <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              {/* Visibility Selector */}
-              <div className="flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-2xl p-1 shadow-inner">
-                <button
-                  type="button"
-                  onClick={() => setIsPublic(true)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    isPublic
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
-                  title="Hacer público el deck: visible para toda la comunidad en 'Decks de la Comunidad'"
-                >
-                  <Globe className="w-3.5 h-3.5 text-blue-200" />
-                  <span>1. Hacer público el deck</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsPublic(false)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    !isPublic
-                      ? 'bg-amber-950/90 text-amber-300 border border-amber-500/40 shadow-md shadow-amber-950/40'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
-                  title="Mantenerlo privado en mi cuenta: solo tú podrás ver este mazo"
-                >
-                  <Lock className="w-3.5 h-3.5 text-amber-400" />
-                  <span>2. Mantenerlo privado en mi cuenta</span>
-                </button>
+              {/* Visibility Selector with 60-card Draft Rules */}
+              <div className="flex flex-col gap-1.5">
+                <div className="flex items-center gap-1 bg-slate-900 border border-slate-700/80 rounded-2xl p-1 shadow-inner">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (totalCount < 60) {
+                        showNotification('error', `Para compartir con la comunidad, el mazo debe tener 60 cartas reglamentarias (${totalCount}/60). Actualmente se mantiene como borrador privado.`);
+                        return;
+                      }
+                      if (totalCount > 60) {
+                        showNotification('error', `El mazo excede las 60 cartas reglamentarias (${totalCount}/60). Ajusta la cantidad a 60 cartas exactas para compartir.`);
+                        return;
+                      }
+                      setIsPublic(true);
+                    }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      totalCount !== 60
+                        ? 'opacity-40 cursor-not-allowed text-slate-500'
+                        : isPublic
+                        ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                    }`}
+                    title={
+                      totalCount === 60
+                        ? "Compartir con la comunidad: visible para toda la comunidad en 'Decks de la Comunidad'"
+                        : `Requiere 60 cartas reglamentarias (${totalCount}/60) para compartir con la comunidad`
+                    }
+                  >
+                    <Globe className="w-3.5 h-3.5 text-blue-200" />
+                    <span>Compartir con la comunidad</span>
+                    {totalCount !== 60 && (
+                      <span className="text-[10px] bg-slate-800 text-amber-300 px-1.5 py-0.5 rounded font-semibold border border-amber-500/30">
+                        Req. 60
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsPublic(false)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                      !isPublic || totalCount !== 60
+                        ? 'bg-amber-950/90 text-amber-300 border border-amber-500/40 shadow-md shadow-amber-950/40'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                    }`}
+                    title="Mantenerlo privado en mi cuenta: solo tú podrás ver este mazo"
+                  >
+                    <Lock className="w-3.5 h-3.5 text-amber-400" />
+                    <span>
+                      {totalCount < 60 ? 'Borrador privado en mi cuenta' : 'Mantener privado en mi cuenta'}
+                    </span>
+                  </button>
+                </div>
+
+                {totalCount < 60 ? (
+                  <p className="text-[11px] text-amber-400/90 flex items-center gap-1 px-1">
+                    <Lock className="w-3 h-3 text-amber-400 flex-shrink-0" />
+                    <span>
+                      Borrador privado ({totalCount}/60). Se guarda automáticamente. Al llegar a 60 cartas podrás compartirlo.
+                    </span>
+                  </p>
+                ) : totalCount === 60 ? (
+                  <p className="text-[11px] text-emerald-400 flex items-center gap-1 px-1">
+                    <Check className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                    <span>
+                      ¡60 cartas reglamentarias! Puedes mantenerlo privado o compartirlo con la comunidad cuando quieras.
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-rose-400 flex items-center gap-1 px-1">
+                    <AlertCircle className="w-3 h-3 text-rose-400 flex-shrink-0" />
+                    <span>
+                      Excede 60 cartas ({totalCount}/60). Remueve {totalCount - 60} carta(s) para poder compartirlo.
+                    </span>
+                  </p>
+                )}
               </div>
 
               {/* Format selection */}

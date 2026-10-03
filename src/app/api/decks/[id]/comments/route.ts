@@ -111,6 +111,51 @@ export async function POST(
       WHERE c.id = ?
     `, [newCommentId]);
 
+    // Send notifications to deck owner and parent comment author
+    try {
+      const { createNotification } = await import('@/lib/notifications');
+      const deck = await db.get(`SELECT user_id, name FROM decks WHERE id = ?`, [deckId]) as any;
+
+      if (deck && deck.user_id) {
+        // If parent_id is present, it's a reply
+        if (parent_id) {
+          const parentComment = await db.get(`SELECT user_id FROM deck_comments WHERE id = ?`, [parent_id]) as any;
+          if (parentComment && parentComment.user_id && parentComment.user_id !== user.id) {
+            await createNotification({
+              userId: parentComment.user_id,
+              actorId: user.id,
+              actorName: user.username,
+              type: 'deck_comment',
+              title: 'Nueva respuesta a tu comentario',
+              message: `@${user.username} respondió a tu comentario en "${deck.name}": "${content.slice(0, 75)}${content.length > 75 ? '...' : ''}"`,
+              linkUrl: `/deck-builder/${deckId}`,
+            });
+          }
+        }
+
+        // Notify deck owner if not commenting on their own deck
+        if (deck.user_id !== user.id) {
+          const notifType = rating ? 'deck_rating' : 'deck_comment';
+          const notifTitle = rating ? '¡Nueva calificación en tu mazo!' : 'Nuevo comentario en tu mazo';
+          const notifMsg = rating
+            ? `@${user.username} calificó tu mazo "${deck.name}" con ${rating} estrellas ⭐.`
+            : `@${user.username} comentó en tu mazo "${deck.name}": "${content.slice(0, 75)}${content.length > 75 ? '...' : ''}"`;
+
+          await createNotification({
+            userId: deck.user_id,
+            actorId: user.id,
+            actorName: user.username,
+            type: notifType,
+            title: notifTitle,
+            message: notifMsg,
+            linkUrl: `/deck-builder/${deckId}`,
+          });
+        }
+      }
+    } catch (notifErr) {
+      console.error('Error sending comment notification:', notifErr);
+    }
+
     return NextResponse.json({ comment: newComment }, { status: 201 });
   } catch (error: any) {
     console.error('Error creating comment:', error);

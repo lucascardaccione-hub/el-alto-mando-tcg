@@ -20,7 +20,9 @@ import {
   Globe,
   LayoutDashboard,
   ExternalLink,
+  Bell,
 } from 'lucide-react';
+import NotificationDropdown from '@/components/NotificationDropdown';
 import { useCart } from '@/context/CartContext';
 import { getRoleBadge, canAccessAdmin } from '@/lib/roles';
 import { getDefaultAvatar } from '@/lib/avatars';
@@ -335,6 +337,9 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
             </Link>
           )}
 
+          {/* Notification Center */}
+          <NotificationDropdown />
+
           {/* BLOQUE 3: MI CUENTA (Dropdown) */}
           <div className="relative" ref={cuentaRef}>
             {user ? (
@@ -411,6 +416,14 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
                 >
                   <User className="w-4 h-4 text-blue-400" />
                   <span className="text-xs font-semibold">Mi Perfil & Contraseña</span>
+                </Link>
+
+                <Link
+                  href="/notificaciones"
+                  className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-200 hover:text-white hover:bg-purple-950/40 transition-colors"
+                >
+                  <Bell className="w-4 h-4 text-purple-400" />
+                  <span className="text-xs font-semibold">Notificaciones</span>
                 </Link>
 
                 <Link
@@ -578,6 +591,14 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
                 >
                   <User className="w-4 h-4 text-blue-400" />
                   <span>Mi Perfil de Entrenador</span>
+                </Link>
+
+                <Link
+                  href="/notificaciones"
+                  className="flex items-center gap-2 p-2 rounded-xl hover:bg-slate-800 text-slate-200"
+                >
+                  <Bell className="w-4 h-4 text-purple-400" />
+                  <span>Centro de Notificaciones</span>
                 </Link>
 
                 {canAccessAdmin(user) && (

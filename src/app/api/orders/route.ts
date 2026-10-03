@@ -164,6 +164,34 @@ export async function POST(request: Request) {
     const createdOrder = await db.get('SELECT * FROM orders WHERE id = ?', [orderId]);
     const createdItems = await db.all('SELECT * FROM order_items WHERE order_id = ?', [orderId]);
 
+    // Send notifications to buyer and seller
+    try {
+      const { createNotification } = await import('@/lib/notifications');
+      // Buyer notification
+      await createNotification({
+        userId: user.id,
+        type: 'order_created',
+        title: '¡Pedido registrado con éxito!',
+        message: `Tu pedido #${orderNumber} (${totalItems} cartas, $${totalPrice.toLocaleString('es-AR')}) fue enviado a ${seller_name.trim()}.`,
+        linkUrl: `/pedidos?code=${orderNumber}`,
+      });
+
+      // Seller notification
+      if (seller_id) {
+        await createNotification({
+          userId: Number(seller_id),
+          actorId: user.id,
+          actorName: user.username,
+          type: 'order_sale',
+          title: '¡Nueva venta en Tienda!',
+          message: `@${finalBuyerName} ordenó ${totalItems} carta(s) por $${totalPrice.toLocaleString('es-AR')} en el pedido #${orderNumber}.`,
+          linkUrl: `/admin/orders`,
+        });
+      }
+    } catch (notifErr) {
+      console.error('Error sending order notification:', notifErr);
+    }
+
     return NextResponse.json({
       success: true,
       order: createdOrder,
@@ -285,6 +313,33 @@ export async function PATCH(request: Request) {
     }
 
     const updated = await db.get('SELECT * FROM orders WHERE id = ?', [id]);
+
+    // Send notification to buyer on status update
+    try {
+      if (order.buyer_user_id && status && status !== order.status) {
+        const { createNotification } = await import('@/lib/notifications');
+        const statusMap: Record<string, string> = {
+          solicitado: 'Solicitado',
+          en_preparacion: 'En Preparación',
+          preparado: 'Preparado para Entrega',
+          entregado: 'Entregado / Completado',
+          cancelado: 'Cancelado',
+        };
+        const statusText = statusMap[status] || status;
+        await createNotification({
+          userId: order.buyer_user_id,
+          actorId: user.id,
+          actorName: user.username,
+          type: 'order_status',
+          title: `Actualización de tu pedido #${order.order_number}`,
+          message: `El estado de tu pedido #${order.order_number} ahora es: "${statusText}".`,
+          linkUrl: `/pedidos?code=${order.order_number}`,
+        });
+      }
+    } catch (notifErr) {
+      console.error('Error sending order status notification:', notifErr);
+    }
+
     return NextResponse.json({ success: true, order: updated });
   } catch (error: any) {
     console.error('Update order status error:', error);

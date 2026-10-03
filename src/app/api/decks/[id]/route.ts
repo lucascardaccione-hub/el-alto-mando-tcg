@@ -136,6 +136,30 @@ export async function PUT(
 
     const { name, format, description, is_public, cover_card_image, cards } = await request.json();
 
+    let totalCards = 0;
+    if (Array.isArray(cards)) {
+      totalCards = cards.reduce((sum: number, c: any) => sum + (Math.max(1, parseInt(c.count, 10) || 1)), 0);
+    } else {
+      const row = await db.get(`SELECT SUM(count) as total FROM deck_cards WHERE deck_id = ?`, [deckId]) as any;
+      totalCards = Number(row?.total || 0);
+    }
+
+    let finalIsPublic: number | null = null;
+    if (is_public !== undefined) {
+      const requestedPublic = is_public ? 1 : 0;
+      if (requestedPublic === 1 && totalCards < 60) {
+        return NextResponse.json({
+          error: `No se puede publicar un mazo con menos de 60 cartas reglamentarias en la comunidad (actualmente tiene ${totalCards}/60). Debe guardarse como borrador privado hasta completarlo.`,
+        }, { status: 400 });
+      }
+      finalIsPublic = totalCards >= 60 ? requestedPublic : 0;
+    } else {
+      // If cards are reduced below 60 and deck was public, auto-demote to private draft
+      if (totalCards < 60 && deck.is_public === 1) {
+        finalIsPublic = 0;
+      }
+    }
+
     const now = new Date().toISOString();
 
     await db.run(`
@@ -147,7 +171,7 @@ export async function PUT(
           cover_card_image = COALESCE(?, cover_card_image),
           updated_at = ?
       WHERE id = ?
-    `, [name, format, description, is_public !== undefined ? (is_public ? 1 : 0) : null, cover_card_image, now, deckId]);
+    `, [name, format, description, finalIsPublic, cover_card_image, now, deckId]);
 
     // If new cards list provided, replace deck cards
     if (Array.isArray(cards)) {

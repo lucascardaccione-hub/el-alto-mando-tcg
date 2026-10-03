@@ -66,6 +66,25 @@ export async function POST(
         INSERT INTO deck_likes (deck_id, user_id, created_at)
         VALUES (?, ?, ?)
       `, [deckId, user.id, now]);
+
+      // Notify deck owner
+      try {
+        const deck = await db.get(`SELECT user_id, name FROM decks WHERE id = ?`, [deckId]) as any;
+        if (deck && deck.user_id) {
+          const { createNotification } = await import('@/lib/notifications');
+          await createNotification({
+            userId: deck.user_id,
+            actorId: user.id,
+            actorName: user.username,
+            type: 'deck_like',
+            title: '¡A alguien le gustó tu mazo!',
+            message: `@${user.username} le dio me gusta a tu mazo "${deck.name}".`,
+            linkUrl: `/deck-builder/${deckId}`,
+          });
+        }
+      } catch (notifErr) {
+        console.error('Error sending like notification:', notifErr);
+      }
     }
 
     const newLikesCountResult = await db.get(`
