@@ -143,8 +143,8 @@ function DeckBuilderContent() {
     const deltaX = e.changedTouches[0].clientX - touchStartX;
     const deltaY = e.changedTouches[0].clientY - touchStartY;
 
-    // Minimum horizontal swipe distance of 50px, predominantly horizontal
-    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+    // Minimum horizontal swipe distance of 70px, strictly horizontal (at least 2x vertical movement)
+    if (Math.abs(deltaX) > 70 && Math.abs(deltaX) > Math.abs(deltaY) * 2) {
       if (deltaX < 0) {
         handleNextCategory();
       } else {
@@ -1422,7 +1422,7 @@ function DeckBuilderContent() {
                         }`}
                       >
                         <span>Todos</span>
-                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-slate-900/90 text-slate-300 border border-slate-700/60">
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-900/90 text-slate-300 border border-slate-700/60">
                           {totalCount}
                         </span>
                       </button>
@@ -1437,7 +1437,7 @@ function DeckBuilderContent() {
                       >
                         <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
                         <span>Pokémon</span>
-                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-blue-950 text-blue-300 border border-blue-800/60">
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-950 text-blue-300 border border-blue-800/60">
                           {pokemonCount}
                         </span>
                       </button>
@@ -1452,7 +1452,7 @@ function DeckBuilderContent() {
                       >
                         <span className="w-2 h-2 rounded-full bg-purple-400 inline-block" />
                         <span>Entrenadores</span>
-                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-purple-950 text-purple-300 border border-purple-800/60">
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-purple-950 text-purple-300 border border-purple-800/60">
                           {trainerCount}
                         </span>
                       </button>
@@ -1467,7 +1467,7 @@ function DeckBuilderContent() {
                       >
                         <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
                         <span>Energías</span>
-                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-amber-950 text-amber-300 border border-amber-800/60">
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-950 text-amber-300 border border-amber-800/60">
                           {energyCount}
                         </span>
                       </button>
