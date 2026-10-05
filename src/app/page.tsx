@@ -36,7 +36,6 @@ export default function HomePage() {
   const [loadingCards, setLoadingCards] = useState(true);
   const [loadingDecks, setLoadingDecks] = useState(true);
   const [stats, setStats] = useState({ totalCards: 0, totalStock: 0, totalExpansions: 0 });
-  const [trackingCode, setTrackingCode] = useState('');
   const [activeCardModal, setActiveCardModal] = useState<CardData | null>(null);
 
   useEffect(() => {
@@ -67,15 +66,6 @@ export default function HomePage() {
       .catch(() => {})
       .finally(() => setLoadingDecks(false));
   }, []);
-
-  const handleTrackingSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (trackingCode.trim()) {
-      router.push(`/pedidos?code=${encodeURIComponent(trackingCode.trim())}`);
-    } else {
-      router.push('/pedidos');
-    }
-  };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#060913] text-slate-100 selection:bg-blue-600 selection:text-white">
@@ -581,28 +571,19 @@ export default function HomePage() {
               ¿Ya hiciste una compra en la Tienda?
             </h3>
             <p className="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto">
-              Ingresa el código único de tu pedido (ej: <strong className="text-amber-400 font-mono">EAM-12345</strong>) para consultar el estado en tiempo real.
+              Consulta el estado de tu pedido en tiempo real ingresando a la sección de seguimiento.
             </p>
           </div>
 
-          <form onSubmit={handleTrackingSubmit} className="max-w-md mx-auto flex items-center gap-2">
-            <div className="relative flex-1">
-              <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="EAM-XXXXX"
-                value={trackingCode}
-                onChange={(e) => setTrackingCode(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-900/90 border border-slate-700 text-white placeholder-slate-500 text-xs sm:text-sm font-mono focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
-              />
-            </div>
-            <button
-              type="submit"
-              className="px-5 py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-amber-950/40 transition-all hover:scale-105 active:scale-95"
+          <div className="pt-2 flex justify-center">
+            <Link
+              href="/pedidos"
+              className="inline-flex items-center gap-2.5 px-6 py-3.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-black text-sm sm:text-base shadow-xl shadow-amber-950/40 transition-all hover:scale-105 active:scale-95"
             >
-              Rastrear
-            </button>
-          </form>
+              <Search className="w-5 h-5 stroke-[2.5]" />
+              <span>Rastrear</span>
+            </Link>
+          </div>
         </div>
       </section>
 
