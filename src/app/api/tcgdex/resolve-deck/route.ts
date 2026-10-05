@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { PTCGL_SET_MAP, getQuickCardImage, isBasicEnergy, getBasicEnergyTypeNumber, getGenericEnergyImage } from '@/lib/deckParser';
+import { PTCGL_SET_MAP, getQuickCardImage, isBasicEnergy, getBasicEnergyTypeNumber, getGenericEnergyImage, isKnownEnergyTrainer, isSpecialEnergy } from '@/lib/deckParser';
 import { resolveLimitlessCardImage, getLimitlessCardImageSync } from '@/lib/limitlessResolver';
 
 export const dynamic = 'force-dynamic';
@@ -102,9 +102,11 @@ export async function POST(request: Request) {
           }
         }
 
-        // 6. Basic Energy fallback (Guarantees authentic generic image)
+        // 6. Basic Energy and Trainer disambiguation
         let category = c.category;
-        if (isBasicEnergy({ card_name: cardName, expansion: set })) {
+        if (isKnownEnergyTrainer(cardName)) {
+          category = 'trainer';
+        } else if (isBasicEnergy({ card_name: cardName, expansion: set }) || isSpecialEnergy(cardName)) {
           category = 'energy';
           if (!imageUrl || imageUrl.includes('placeholder')) {
             const genericImg = getGenericEnergyImage(cardName);

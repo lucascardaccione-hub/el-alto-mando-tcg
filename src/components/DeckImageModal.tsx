@@ -10,10 +10,12 @@ import {
   Loader2,
   Sparkles,
   Maximize2,
+  ZoomIn,
+  ZoomOut,
   Image as ImageIcon,
 } from 'lucide-react';
 import { toPng, toBlob } from 'html-to-image';
-import { exportToPtcgl, isBasicEnergy, getBasicEnergyTypeNumber, getGenericEnergyImage } from '@/lib/deckParser';
+import { exportToPtcgl, isBasicEnergy, getBasicEnergyTypeNumber, getGenericEnergyImage, isKnownEnergyTrainer } from '@/lib/deckParser';
 import { DeckCardItem } from '@/app/deck-builder/page';
 
 interface DeckImageModalProps {
@@ -118,19 +120,65 @@ export default function DeckImageModal({
   format,
   cards,
 }: DeckImageModalProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const [generating, setGenerating] = useState(false);
   const [copiedImage, setCopiedImage] = useState(false);
   const [copiedList, setCopiedList] = useState(false);
+
+  // Responsive mobile scaling state
+  const [fitMode, setFitMode] = useState<'fit' | 'full'>('fit');
+  const [scale, setScale] = useState(1);
+  const [boardHeight, setBoardHeight] = useState(0);
+
+  // Measure container and update scale
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const measureAndScale = () => {
+      if (!scrollContainerRef.current) return;
+      const containerWidth = scrollContainerRef.current.clientWidth;
+      const padding = window.innerWidth < 640 ? 16 : 32;
+      const availableWidth = Math.max(280, containerWidth - padding);
+      const computedScale = Math.min(1, availableWidth / 1040);
+      setScale(computedScale);
+
+      if (boardRef.current) {
+        setBoardHeight(boardRef.current.scrollHeight || boardRef.current.offsetHeight);
+      }
+    };
+
+    measureAndScale();
+    const timer = setTimeout(measureAndScale, 200);
+    window.addEventListener('resize', measureAndScale);
+    return () => {
+      window.removeEventListener('resize', measureAndScale);
+      clearTimeout(timer);
+    };
+  }, [isOpen, cards]);
+
+  // Track board height dynamically when cards or images load
+  React.useEffect(() => {
+    if (!isOpen || !boardRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === boardRef.current) {
+          setBoardHeight(entry.target.scrollHeight || entry.contentRect.height);
+        }
+      }
+    });
+    observer.observe(boardRef.current);
+    return () => observer.disconnect();
+  }, [isOpen]);
 
   // Sort cards into standard Limitless competitive order:
   // 1. Pokémon
   // 2. Trainers (Supporters -> Items -> Tools -> Stadiums)
   // 3. Energies (Special -> Basic)
   const sortedCards = useMemo(() => {
-    const pokemons = cards.filter((c) => c.category === 'pokemon');
-    const trainers = cards.filter((c) => c.category === 'trainer');
-    const energies = cards.filter((c) => c.category === 'energy');
+    const pokemons = cards.filter((c) => c.category === 'pokemon' && !isKnownEnergyTrainer(c.card_name));
+    const trainers = cards.filter((c) => c.category === 'trainer' || isKnownEnergyTrainer(c.card_name));
+    const energies = cards.filter((c) => c.category === 'energy' && !isKnownEnergyTrainer(c.card_name));
 
     // Sub-sort trainers
     const supporters = trainers.filter((c) => {
@@ -176,6 +224,11 @@ export default function DeckImageModal({
   const handleDownload = async () => {
     if (!boardRef.current) return;
     setGenerating(true);
+    const prevTransform = boardRef.current.style.transform;
+    const prevOrigin = boardRef.current.style.transformOrigin;
+    boardRef.current.style.transform = 'none';
+    boardRef.current.style.transformOrigin = 'top left';
+
     try {
       // Use pixelRatio: 2 for sharp 2x retina export, includeQueryParams: true to preserve distinct card URLs
       const dataUrl = await toPng(boardRef.current, {
@@ -183,6 +236,9 @@ export default function DeckImageModal({
         includeQueryParams: true,
         pixelRatio: 2,
         backgroundColor: '#070b14',
+        style: {
+          transform: 'none',
+        },
       });
 
       const safeName = (deckName || 'Mazo').replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -193,6 +249,10 @@ export default function DeckImageModal({
     } catch (err) {
       console.error('Error generating deck image:', err);
     } finally {
+      if (boardRef.current) {
+        boardRef.current.style.transform = prevTransform;
+        boardRef.current.style.transformOrigin = prevOrigin;
+      }
       setGenerating(false);
     }
   };
@@ -201,12 +261,20 @@ export default function DeckImageModal({
   const handleCopyImage = async () => {
     if (!boardRef.current) return;
     setGenerating(true);
+    const prevTransform = boardRef.current.style.transform;
+    const prevOrigin = boardRef.current.style.transformOrigin;
+    boardRef.current.style.transform = 'none';
+    boardRef.current.style.transformOrigin = 'top left';
+
     try {
       const blob = await toBlob(boardRef.current, {
         cacheBust: false,
         includeQueryParams: true,
         pixelRatio: 2,
         backgroundColor: '#070b14',
+        style: {
+          transform: 'none',
+        },
       });
 
       if (blob && navigator.clipboard && (window as any).ClipboardItem) {
@@ -224,6 +292,10 @@ export default function DeckImageModal({
       // Fallback to download
       handleDownload();
     } finally {
+      if (boardRef.current) {
+        boardRef.current.style.transform = prevTransform;
+        boardRef.current.style.transformOrigin = prevOrigin;
+      }
       setGenerating(false);
     }
   };
@@ -236,7 +308,7 @@ export default function DeckImageModal({
     setTimeout(() => setCopiedList(false), 2000);
   };
 
-  if (!isOpen) return null;
+  const isScaled = fitMode === 'fit' && scale < 1;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -246,55 +318,92 @@ export default function DeckImageModal({
         className="fixed inset-0 bg-black/85 backdrop-blur-md transition-opacity"
       />
 
-      <div className="min-h-full flex items-center justify-center p-3 sm:p-6">
+      <div className="min-h-full flex items-center justify-center p-2 sm:p-4 md:p-6">
         <div
           onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-6xl bg-[#090e1a] border border-slate-700/80 rounded-3xl shadow-2xl overflow-hidden flex flex-col space-y-4 p-4 sm:p-6"
+          className="relative w-full max-w-6xl bg-[#090e1a] border border-slate-700/80 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col space-y-3 sm:space-y-4 p-3 sm:p-6"
         >
           {/* Modal Header & Action Toolbar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 border-b border-slate-800 pb-3 sm:pb-4">
             <div className="flex items-center gap-2.5">
-              <span className="p-2 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30">
+              <span className="p-2 rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30 shrink-0">
                 <ImageIcon className="w-5 h-5" />
               </span>
               <div>
-                <h3 className="font-extrabold text-base sm:text-lg text-white flex items-center gap-2">
+                <h3 className="font-extrabold text-sm sm:text-base md:text-lg text-white flex items-center gap-2 flex-wrap">
                   <span>Lista de Mazo en Imagen</span>
-                  <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-800/50 font-bold">
+                  <span className="text-[10px] sm:text-[11px] px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-800/50 font-bold">
                     Visualizador TCG Pro
                   </span>
+                  {isScaled && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950/80 text-emerald-300 border border-emerald-800/50 font-semibold">
+                      Ajustado ({Math.round(scale * 100)}%)
+                    </span>
+                  )}
                 </h3>
-                <p className="text-xs text-slate-400">
-                  Visualización completa y compacta de las 60 cartas en alta definición.
+                <p className="text-[11px] sm:text-xs text-slate-400">
+                  Visualización completa de las 60 cartas en alta definición adaptada a tu pantalla.
                 </p>
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2 flex-wrap">
+            {/* Actions & View Controls */}
+            <div className="flex items-center gap-2 flex-wrap justify-between sm:justify-end">
+              {/* Fit / Zoom Mode Toggle on screens < 1040px */}
+              {scale < 0.98 && (
+                <div className="inline-flex items-center p-0.5 bg-slate-900 border border-slate-800 rounded-xl">
+                  <button
+                    onClick={() => setFitMode('fit')}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      fitMode === 'fit'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                    title="Ajustar imagen completa al ancho de la pantalla"
+                  >
+                    <Maximize2 className="w-3 h-3" />
+                    <span>Ajustar</span>
+                  </button>
+                  <button
+                    onClick={() => setFitMode('full')}
+                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      fitMode === 'full'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                    title="Ver en resolución 100% con desplazamiento horizontal"
+                  >
+                    <ZoomIn className="w-3 h-3" />
+                    <span>100%</span>
+                  </button>
+                </div>
+              )}
+
               <button
                 onClick={handleCopyText}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all active:scale-95"
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700 transition-all active:scale-95"
                 title="Copiar texto en formato PTCGL"
               >
                 {copiedList ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <FileText className="w-3.5 h-3.5 text-blue-400" />}
-                <span>{copiedList ? '¡Copiado!' : 'Copiar Texto'}</span>
+                <span className="hidden xs:inline">{copiedList ? '¡Copiado!' : 'Copiar Texto'}</span>
+                <span className="xs:hidden">Texto</span>
               </button>
 
               <button
                 onClick={handleCopyImage}
                 disabled={generating}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 shadow-sm transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white border border-slate-600 shadow-sm transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
                 title="Copiar imagen directamente al portapapeles"
               >
                 {copiedImage ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-blue-400" />}
-                <span>{copiedImage ? '¡Imagen Copiada!' : 'Copiar Imagen'}</span>
+                <span className="hidden xs:inline">{copiedImage ? '¡Imagen Copiada!' : 'Copiar Imagen'}</span>
+                <span className="xs:hidden">Copiar</span>
               </button>
 
               <button
                 onClick={handleDownload}
                 disabled={generating}
-                className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-extrabold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-md shadow-blue-950/40 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-xl text-xs font-extrabold text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 shadow-md shadow-blue-950/40 transition-all hover:scale-105 active:scale-95 disabled:opacity-50"
                 title="Descargar imagen PNG en alta resolución"
               >
                 {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
@@ -303,7 +412,7 @@ export default function DeckImageModal({
 
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors ml-1"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors ml-0.5"
                 title="Cerrar"
               >
                 <X className="w-5 h-5" />
@@ -311,18 +420,34 @@ export default function DeckImageModal({
             </div>
           </div>
 
-          {/* Scrollable Container with centered capture board */}
-          <div className="overflow-x-auto overflow-y-auto max-h-[75vh] rounded-2xl bg-black/50 p-2 sm:p-4 flex justify-center">
-            {/* THE CAPTURE BOARD (Converted to PNG) */}
+          {/* Scrollable Container with responsive auto-fitted capture board */}
+          <div
+            ref={scrollContainerRef}
+            className={`w-full ${
+              fitMode === 'full' ? 'overflow-x-auto' : 'overflow-x-hidden'
+            } overflow-y-auto max-h-[78vh] rounded-2xl bg-black/50 p-1 sm:p-3 flex justify-center`}
+          >
+            {/* Wrapper that bounds layout height when scaled */}
             <div
-              ref={boardRef}
               style={{
-                width: '1040px',
-                minWidth: '1040px',
-                backgroundImage: 'radial-gradient(circle at 50% 0%, #111a33 0%, #070b14 75%)',
+                width: isScaled ? `${Math.ceil(1040 * scale)}px` : '1040px',
+                height: isScaled && boardHeight > 0 ? `${Math.ceil(boardHeight * scale)}px` : 'auto',
+                position: 'relative',
+                flexShrink: 0,
               }}
-              className="p-6 rounded-2xl border border-slate-800/90 shadow-2xl flex flex-col space-y-5 text-white select-none relative"
             >
+              {/* THE CAPTURE BOARD (Converted to PNG) */}
+              <div
+                ref={boardRef}
+                style={{
+                  width: '1040px',
+                  minWidth: '1040px',
+                  transform: isScaled ? `scale(${scale})` : 'none',
+                  transformOrigin: 'top left',
+                  backgroundImage: 'radial-gradient(circle at 50% 0%, #111a33 0%, #070b14 75%)',
+                }}
+                className="p-4 sm:p-6 rounded-2xl border border-slate-800/90 shadow-2xl flex flex-col space-y-5 text-white select-none relative"
+              >
               {/* Subtle Limitless-like Diamond Lattice Overlay */}
               <div
                 className="absolute inset-0 opacity-[0.035] pointer-events-none rounded-2xl"
@@ -403,5 +528,6 @@ export default function DeckImageModal({
         </div>
       </div>
     </div>
-  );
+  </div>
+);
 }

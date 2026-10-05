@@ -34,8 +34,11 @@ import {
   Globe,
   Lock,
   Shuffle,
+  ChevronLeft,
+  ChevronRight,
+  SlidersHorizontal,
 } from 'lucide-react';
-import { parsePtcglDeck, exportToPtcgl, isBasicEnergy, getBasicEnergyTypeNumber, getGenericEnergyImage } from '@/lib/deckParser';
+import { parsePtcglDeck, exportToPtcgl, isBasicEnergy, getBasicEnergyTypeNumber, getGenericEnergyImage, isKnownEnergyTrainer, isSpecialEnergy } from '@/lib/deckParser';
 import DeckImageModal from '@/components/DeckImageModal';
 import { DeckSocialSection } from '@/components/DeckSocialSection';
 import { OpeningHandSimulatorModal } from '@/components/OpeningHandSimulatorModal';
@@ -108,6 +111,50 @@ function DeckBuilderContent() {
 
   // View mode: 'detailed' (app list with full controls) or 'visual' (PTCGL / Limitless gallery board)
   const [viewMode, setViewMode] = useState<'detailed' | 'visual'>('detailed');
+
+  // Category navigation & swipe tab state for mobile/responsive UX
+  const [activeSectionTab, setActiveSectionTab] = useState<'all' | 'pokemon' | 'trainer' | 'energy'>('all');
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchStartY, setTouchStartY] = useState<number | null>(null);
+
+  const categoryTabsList: ('all' | 'pokemon' | 'trainer' | 'energy')[] = ['all', 'pokemon', 'trainer', 'energy'];
+
+  const handlePrevCategory = () => {
+    const currentIndex = categoryTabsList.indexOf(activeSectionTab);
+    const prevIndex = (currentIndex - 1 + categoryTabsList.length) % categoryTabsList.length;
+    setActiveSectionTab(categoryTabsList[prevIndex]);
+  };
+
+  const handleNextCategory = () => {
+    const currentIndex = categoryTabsList.indexOf(activeSectionTab);
+    const nextIndex = (currentIndex + 1) % categoryTabsList.length;
+    setActiveSectionTab(categoryTabsList[nextIndex]);
+  };
+
+  const handleDeckTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      setTouchStartX(e.touches[0].clientX);
+      setTouchStartY(e.touches[0].clientY);
+    }
+  };
+
+  const handleDeckTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX === null || touchStartY === null) return;
+    const deltaX = e.changedTouches[0].clientX - touchStartX;
+    const deltaY = e.changedTouches[0].clientY - touchStartY;
+
+    // Minimum horizontal swipe distance of 50px, predominantly horizontal
+    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > Math.abs(deltaY) * 1.3) {
+      if (deltaX < 0) {
+        handleNextCategory();
+      } else {
+        handlePrevCategory();
+      }
+    }
+
+    setTouchStartX(null);
+    setTouchStartY(null);
+  };
 
   // Search card state
   const [searchQuery, setSearchQuery] = useState('');
@@ -230,16 +277,25 @@ function DeckBuilderContent() {
         setDescription(parsed.description || '');
 
         if (Array.isArray(parsed.cards)) {
-          const formatted: DeckCardItem[] = parsed.cards.map((c: any) => ({
-            card_name: c.card_name || c.name,
-            expansion: c.expansion || c.set || 'PROMO',
-            number: c.number || '1',
-            category: c.category || 'pokemon',
-            trainer_type: c.trainer_type || c.trainerType || '',
-            count: c.count || 1,
-            owned_count: c.owned_count || 0,
-            image_url: c.image_url || c.image || '/placeholder-card.svg',
-          }));
+          const formatted: DeckCardItem[] = parsed.cards.map((c: any) => {
+            const cardName = c.card_name || c.name;
+            let cat = c.category || 'pokemon';
+            if (isKnownEnergyTrainer(cardName)) {
+              cat = 'trainer';
+            } else if (isBasicEnergy({ card_name: cardName, expansion: c.expansion || c.set }) || isSpecialEnergy(cardName)) {
+              cat = 'energy';
+            }
+            return {
+              card_name: cardName,
+              expansion: c.expansion || c.set || 'PROMO',
+              number: c.number || '1',
+              category: cat,
+              trainer_type: c.trainer_type || c.trainerType || '',
+              count: c.count || 1,
+              owned_count: c.owned_count || 0,
+              image_url: c.image_url || c.image || '/placeholder-card.svg',
+            };
+          });
           setCards(formatted);
 
           // Always enrich imported cards with Limitless verified CDN images
@@ -303,7 +359,13 @@ function DeckBuilderContent() {
             if ((!img || img.includes('placeholder')) && isBasicEnergy(c)) {
               img = getGenericEnergyImage(c.card_name) || img;
             }
-            return { ...c, image_url: img };
+            let cat = c.category;
+            if (isKnownEnergyTrainer(c.card_name)) {
+              cat = 'trainer';
+            } else if (isBasicEnergy(c) || isSpecialEnergy(c.card_name)) {
+              cat = 'energy';
+            }
+            return { ...c, category: cat, image_url: img };
           })
         );
       }
@@ -347,9 +409,9 @@ function DeckBuilderContent() {
 
   // Deck counts and breakdowns
   const totalCount = useMemo(() => cards.reduce((acc, c) => acc + c.count, 0), [cards]);
-  const pokemonCards = useMemo(() => cards.filter((c) => c.category === 'pokemon'), [cards]);
-  const trainerCards = useMemo(() => cards.filter((c) => c.category === 'trainer'), [cards]);
-  const energyCards = useMemo(() => cards.filter((c) => c.category === 'energy'), [cards]);
+  const pokemonCards = useMemo(() => cards.filter((c) => c.category === 'pokemon' && !isKnownEnergyTrainer(c.card_name)), [cards]);
+  const trainerCards = useMemo(() => cards.filter((c) => c.category === 'trainer' || isKnownEnergyTrainer(c.card_name)), [cards]);
+  const energyCards = useMemo(() => cards.filter((c) => c.category === 'energy' && !isKnownEnergyTrainer(c.card_name)), [cards]);
 
   const pokemonCount = useMemo(() => pokemonCards.reduce((acc, c) => acc + c.count, 0), [pokemonCards]);
   const trainerCount = useMemo(() => trainerCards.reduce((acc, c) => acc + c.count, 0), [trainerCards]);
@@ -444,9 +506,9 @@ function DeckBuilderContent() {
 
   // Limitless-style sorted cards for the preview widget
   const sortedPreviewCards = useMemo(() => {
-    const pokemons = cards.filter((c) => c.category === 'pokemon');
-    const trainers = cards.filter((c) => c.category === 'trainer');
-    const energies = cards.filter((c) => c.category === 'energy');
+    const pokemons = cards.filter((c) => c.category === 'pokemon' && !isKnownEnergyTrainer(c.card_name));
+    const trainers = cards.filter((c) => c.category === 'trainer' || isKnownEnergyTrainer(c.card_name));
+    const energies = cards.filter((c) => c.category === 'energy' && !isKnownEnergyTrainer(c.card_name));
 
     const supporters = trainers.filter((c) => {
       const type = (c.trainer_type || '').toLowerCase();
@@ -604,14 +666,18 @@ function DeckBuilderContent() {
     // Determine category based on card name
     let category: 'pokemon' | 'trainer' | 'energy' = 'pokemon';
     const nameLower = tcgCard.name.toLowerCase();
-    if (
-      nameLower.includes('energy') ||
-      nameLower.includes('energía') ||
-      nameLower.includes('energia') ||
-      isBasicEnergy({ card_name: tcgCard.name, expansion: tcgCard.setName })
+    const tcgCategory = (tcgCard.category || '').toLowerCase();
+
+    if (isKnownEnergyTrainer(tcgCard.name)) {
+      category = 'trainer';
+    } else if (
+      isBasicEnergy({ card_name: tcgCard.name, expansion: tcgCard.setName }) ||
+      isSpecialEnergy(tcgCard.name) ||
+      tcgCategory === 'energy'
     ) {
       category = 'energy';
     } else if (
+      tcgCategory === 'trainer' ||
       nameLower.includes('ball') ||
       nameLower.includes('candy') ||
       nameLower.includes('orders') ||
@@ -822,7 +888,9 @@ function DeckBuilderContent() {
           const cardName = c.card_name || c.name;
           const expansion = c.expansion || c.set || 'PROMO';
           let category = c.category || 'pokemon';
-          if (isBasicEnergy({ card_name: cardName, expansion })) {
+          if (isKnownEnergyTrainer(cardName)) {
+            category = 'trainer';
+          } else if (isBasicEnergy({ card_name: cardName, expansion }) || isSpecialEnergy(cardName)) {
             category = 'energy';
           }
           let imageUrl = c.image_url || c.image || '/placeholder-card.svg';
@@ -851,7 +919,7 @@ function DeckBuilderContent() {
           card_name: c.name,
           expansion: c.set,
           number: c.number,
-          category: c.category,
+          category: isKnownEnergyTrainer(c.name) ? 'trainer' : c.category,
           count: c.count,
           owned_count: importAsOwned ? c.count : 0,
           image_url: c.image || '/placeholder-card.svg',
@@ -1340,68 +1408,194 @@ function DeckBuilderContent() {
               </div>
             ) : (
               <>
-                {/* 1. Pokémon Section */}
-                {pokemonCards.length > 0 && (
-                  <DeckCategorySection
-                    title="Pokémon"
-                    count={pokemonCount}
-                    badgeClass="bg-blue-950 text-blue-300 border-blue-800/40"
-                    cards={cards}
-                    category="pokemon"
-                    storeCards={storeCards}
-                    viewMode={viewMode}
-                    onUpdateCount={handleUpdateCardCount}
-                    onUpdateOwned={handleUpdateOwnedCount}
-                    onToggleOwned={handleToggleCardOwned}
-                    onSetCategoryOwned={handleSetCategoryOwned}
-                    onAddToCart={(c, qty) => addToCart(c, qty)}
-                    onHoverCard={handleCardHover}
-                    onMoveCard={handleCardMove}
-                    onLeaveCard={handleCardLeave}
-                  />
-                )}
+                {/* Category Sliding Navigation (Mobile & Desktop) */}
+                <div className="bg-[#0b1220]/90 border border-slate-800 rounded-2xl p-2 sm:p-2.5 backdrop-blur-md shadow-lg space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    {/* Category Tab Pills */}
+                    <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar w-full sm:w-auto">
+                      <button
+                        onClick={() => setActiveSectionTab('all')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 ${
+                          activeSectionTab === 'all'
+                            ? 'bg-slate-700 text-white shadow-md'
+                            : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                        }`}
+                      >
+                        <span>Todos</span>
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-slate-900/90 text-slate-300 border border-slate-700/60">
+                          {totalCount}
+                        </span>
+                      </button>
 
-                {/* 2. Trainers Section */}
-                {trainerCards.length > 0 && (
-                  <DeckCategorySection
-                    title="Entrenadores"
-                    count={trainerCount}
-                    badgeClass="bg-purple-950 text-purple-300 border-purple-800/40"
-                    cards={cards}
-                    category="trainer"
-                    storeCards={storeCards}
-                    viewMode={viewMode}
-                    onUpdateCount={handleUpdateCardCount}
-                    onUpdateOwned={handleUpdateOwnedCount}
-                    onToggleOwned={handleToggleCardOwned}
-                    onSetCategoryOwned={handleSetCategoryOwned}
-                    onAddToCart={(c, qty) => addToCart(c, qty)}
-                    onHoverCard={handleCardHover}
-                    onMoveCard={handleCardMove}
-                    onLeaveCard={handleCardLeave}
-                  />
-                )}
+                      <button
+                        onClick={() => setActiveSectionTab('pokemon')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 ${
+                          activeSectionTab === 'pokemon'
+                            ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40'
+                            : 'text-slate-400 hover:text-blue-300 hover:bg-slate-800/60'
+                        }`}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-blue-400 inline-block" />
+                        <span>Pokémon</span>
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-blue-950 text-blue-300 border border-blue-800/60">
+                          {pokemonCount}
+                        </span>
+                      </button>
 
-                {/* 3. Energy Section */}
-                {energyCards.length > 0 && (
-                  <DeckCategorySection
-                    title="Energías"
-                    count={energyCount}
-                    badgeClass="bg-amber-950 text-amber-300 border-amber-800/40"
-                    cards={cards}
-                    category="energy"
-                    storeCards={storeCards}
-                    viewMode={viewMode}
-                    onUpdateCount={handleUpdateCardCount}
-                    onUpdateOwned={handleUpdateOwnedCount}
-                    onToggleOwned={handleToggleCardOwned}
-                    onSetCategoryOwned={handleSetCategoryOwned}
-                    onAddToCart={(c, qty) => addToCart(c, qty)}
-                    onHoverCard={handleCardHover}
-                    onMoveCard={handleCardMove}
-                    onLeaveCard={handleCardLeave}
-                  />
-                )}
+                      <button
+                        onClick={() => setActiveSectionTab('trainer')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 ${
+                          activeSectionTab === 'trainer'
+                            ? 'bg-purple-600 text-white shadow-md shadow-purple-900/40'
+                            : 'text-slate-400 hover:text-purple-300 hover:bg-slate-800/60'
+                        }`}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-purple-400 inline-block" />
+                        <span>Entrenadores</span>
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-purple-950 text-purple-300 border border-purple-800/60">
+                          {trainerCount}
+                        </span>
+                      </button>
+
+                      <button
+                        onClick={() => setActiveSectionTab('energy')}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap active:scale-95 ${
+                          activeSectionTab === 'energy'
+                            ? 'bg-amber-600 text-white shadow-md shadow-amber-900/40'
+                            : 'text-slate-400 hover:text-amber-300 hover:bg-slate-800/60'
+                        }`}
+                      >
+                        <span className="w-2 h-2 rounded-full bg-amber-400 inline-block" />
+                        <span>Energías</span>
+                        <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-amber-950 text-amber-300 border border-amber-800/60">
+                          {energyCount}
+                        </span>
+                      </button>
+                    </div>
+
+                    {/* Step arrows on mobile / touch */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={handlePrevCategory}
+                        className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-all active:scale-95"
+                        title="Categoría anterior (Deslizar)"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={handleNextCategory}
+                        className="p-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 transition-all active:scale-95"
+                        title="Siguiente categoría (Deslizar)"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Swipe gesture indicator */}
+                  <div className="flex items-center justify-between text-[11px] text-slate-500 pt-0.5 px-1 border-t border-slate-800/60">
+                    <span className="flex items-center gap-1.5">
+                      <SlidersHorizontal className="w-3 h-3 text-slate-400" />
+                      <span>Desliza con el dedo hacia los lados o usa los botones para navegar rápido</span>
+                    </span>
+                    {activeSectionTab !== 'all' && (
+                      <button
+                        onClick={() => setActiveSectionTab('all')}
+                        className="text-blue-400 hover:text-blue-300 font-semibold underline underline-offset-2 ml-2"
+                      >
+                        Ver todo
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Swipable Card Sections Area */}
+                <div
+                  onTouchStart={handleDeckTouchStart}
+                  onTouchEnd={handleDeckTouchEnd}
+                  className="space-y-6 touch-pan-y"
+                >
+                  {/* 1. Pokémon Section */}
+                  {(activeSectionTab === 'all' || activeSectionTab === 'pokemon') && pokemonCards.length > 0 && (
+                    <DeckCategorySection
+                      title="Pokémon"
+                      count={pokemonCount}
+                      badgeClass="bg-blue-950 text-blue-300 border-blue-800/40"
+                      cards={cards}
+                      category="pokemon"
+                      storeCards={storeCards}
+                      viewMode={viewMode}
+                      onUpdateCount={handleUpdateCardCount}
+                      onUpdateOwned={handleUpdateOwnedCount}
+                      onToggleOwned={handleToggleCardOwned}
+                      onSetCategoryOwned={handleSetCategoryOwned}
+                      onAddToCart={(c, qty) => addToCart(c, qty)}
+                      onHoverCard={handleCardHover}
+                      onMoveCard={handleCardMove}
+                      onLeaveCard={handleCardLeave}
+                    />
+                  )}
+                  {activeSectionTab === 'pokemon' && pokemonCards.length === 0 && (
+                    <div className="p-8 rounded-3xl bg-[#0b1220] border border-slate-800 text-center space-y-2">
+                      <p className="text-sm font-bold text-slate-300">No hay Pokémon en este mazo aún</p>
+                      <p className="text-xs text-slate-500">Busca y añade Pokémon desde el buscador lateral.</p>
+                    </div>
+                  )}
+
+                  {/* 2. Trainers Section */}
+                  {(activeSectionTab === 'all' || activeSectionTab === 'trainer') && trainerCards.length > 0 && (
+                    <DeckCategorySection
+                      title="Entrenadores"
+                      count={trainerCount}
+                      badgeClass="bg-purple-950 text-purple-300 border-purple-800/40"
+                      cards={cards}
+                      category="trainer"
+                      storeCards={storeCards}
+                      viewMode={viewMode}
+                      onUpdateCount={handleUpdateCardCount}
+                      onUpdateOwned={handleUpdateOwnedCount}
+                      onToggleOwned={handleToggleCardOwned}
+                      onSetCategoryOwned={handleSetCategoryOwned}
+                      onAddToCart={(c, qty) => addToCart(c, qty)}
+                      onHoverCard={handleCardHover}
+                      onMoveCard={handleCardMove}
+                      onLeaveCard={handleCardLeave}
+                    />
+                  )}
+                  {activeSectionTab === 'trainer' && trainerCards.length === 0 && (
+                    <div className="p-8 rounded-3xl bg-[#0b1220] border border-slate-800 text-center space-y-2">
+                      <p className="text-sm font-bold text-slate-300">No hay Entrenadores en este mazo aún</p>
+                      <p className="text-xs text-slate-500">Busca partidarios, objetos, herramientas y estadios.</p>
+                    </div>
+                  )}
+
+                  {/* 3. Energy Section */}
+                  {(activeSectionTab === 'all' || activeSectionTab === 'energy') && energyCards.length > 0 && (
+                    <DeckCategorySection
+                      title="Energías"
+                      count={energyCount}
+                      badgeClass="bg-amber-950 text-amber-300 border-amber-800/40"
+                      cards={cards}
+                      category="energy"
+                      storeCards={storeCards}
+                      viewMode={viewMode}
+                      onUpdateCount={handleUpdateCardCount}
+                      onUpdateOwned={handleUpdateOwnedCount}
+                      onToggleOwned={handleToggleCardOwned}
+                      onSetCategoryOwned={handleSetCategoryOwned}
+                      onAddToCart={(c, qty) => addToCart(c, qty)}
+                      onHoverCard={handleCardHover}
+                      onMoveCard={handleCardMove}
+                      onLeaveCard={handleCardLeave}
+                    />
+                  )}
+                  {activeSectionTab === 'energy' && energyCards.length === 0 && (
+                    <div className="p-8 rounded-3xl bg-[#0b1220] border border-slate-800 text-center space-y-2">
+                      <p className="text-sm font-bold text-slate-300">No hay Energías en este mazo aún</p>
+                      <p className="text-xs text-slate-500">Busca energías básicas o especiales en el buscador.</p>
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </div>
@@ -1978,7 +2172,16 @@ function DeckCategorySection({
 }) {
   const categoryCards = cards
     .map((c, originalIndex) => ({ ...c, originalIndex }))
-    .filter((c) => c.category === category);
+    .filter((c) => {
+      const isKnownTrn = isKnownEnergyTrainer(c.card_name);
+      if (category === 'trainer') {
+        return c.category === 'trainer' || isKnownTrn;
+      }
+      if (category === 'energy') {
+        return c.category === 'energy' && !isKnownTrn;
+      }
+      return c.category === category && !isKnownTrn;
+    });
 
   const categoryOwnedCount = categoryCards.reduce(
     (acc, c) => acc + Math.min(c.count, c.owned_count || 0),

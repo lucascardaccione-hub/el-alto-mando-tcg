@@ -137,6 +137,84 @@ export function getQuickCardImage(set: string, number: string): string | undefin
   return undefined;
 }
 
+export function isKnownEnergyTrainer(name: string): boolean {
+  const n = (name || '').toLowerCase().trim();
+  if (!n) return false;
+
+  const trainerPatterns: RegExp[] = [
+    /\b(retrieval|recuperaci[oó]n)\b/i,
+    /\b(search|b[uú]squeda)\b/i,
+    /\b(switch|cambio)\b/i,
+    /\b(recycler?|reciclador)\b/i,
+    /\bloto\b/i,
+    /\b(spinner|peonza)\b/i,
+    /\b(reset|reinicio)\b/i,
+    /\b(removal|eliminaci[oó]n|retirada)\b/i,
+    /\b(charge|carga)\b/i,
+    /\b(exchanger?)\b/i,
+    /\brestore\b/i,
+    /\breturn\b/i,
+    /\b(energy\s+ark|arca\s+de\s+energ[ií]a)\b/i,
+    /\b(energy\s+root|ra[ií]z\s+de\s+energ[ií]a)\b/i,
+    /\b(energy\s+powder|polvo\s+de\s+energ[ií]a)\b/i,
+    /\b(urn|urna)\b/i,
+    /\bcapsule\b/i,
+    /\b(potion|poci[oó]n)\b/i,
+    /\bdevice\b/i,
+    /\brelic\b/i,
+    /\bextraction\b/i,
+    /\bacceleration\b/i,
+    /\b(vessel|vasija)\b/i,
+    /\b(trumpet|trompeta)\b/i,
+    /\bpatch\b/i,
+    /\bsaucer\b/i,
+    /\bextractor\b/i,
+  ];
+
+  return trainerPatterns.some((regex) => regex.test(n));
+}
+
+export function isSpecialEnergy(name: string): boolean {
+  const n = (name || '').toLowerCase().trim();
+  if (isKnownEnergyTrainer(n)) return false;
+
+  // Ends with energy/energía/energia
+  if (n.endsWith('energy') || n.endsWith('energía') || n.endsWith('energia')) {
+    // If it mentions basic, it is handled by isBasicEnergy
+    if (!n.includes('basic') && !n.includes('básica') && !n.includes('basica')) {
+      return true;
+    }
+  }
+
+  // Spanish special energies: "energía turbo doble", "energía luminosa", etc.
+  if (
+    (n.startsWith('energía ') || n.startsWith('energia ')) &&
+    !n.includes('básica') &&
+    !n.includes('basica') &&
+    !n.includes('basic') &&
+    !n.includes('recuperaci') &&
+    !n.includes('búsqueda') &&
+    !n.includes('cambio')
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+export function isEnergyCard(card: {
+  card_name?: string;
+  name?: string;
+  category?: string;
+  expansion?: string;
+  set?: string;
+  number?: string;
+}): boolean {
+  const cardName = card.card_name || card.name || '';
+  if (isKnownEnergyTrainer(cardName)) return false;
+  return isBasicEnergy(card) || isSpecialEnergy(cardName);
+}
+
 export function isBasicEnergy(card: {
   card_name?: string;
   name?: string;
@@ -148,6 +226,11 @@ export function isBasicEnergy(card: {
   const cardName = (card.card_name || card.name || '').toLowerCase().trim();
   const category = (card.category || '').toLowerCase().trim();
   const setCode = (card.expansion || card.set || '').toUpperCase().trim();
+
+  // If it's a known trainer with "energy" in its name, it's NEVER basic energy
+  if (isKnownEnergyTrainer(cardName)) {
+    return false;
+  }
 
   // If set is SVE or MEE and it's an energy or mentions energy, it's definitely basic energy
   if (
@@ -301,13 +384,12 @@ export function parsePtcglDeck(text: string): ParsedDeck {
       }
 
       let category = currentCategory;
-      if (
-        name.toLowerCase().includes('energy') ||
-        name.toLowerCase().includes('energía') ||
-        name.toLowerCase().includes('energia') ||
-        isBasicEnergy({ card_name: name, expansion: set })
-      ) {
+      if (isKnownEnergyTrainer(name)) {
+        category = 'trainer';
+      } else if (isBasicEnergy({ card_name: name, expansion: set }) || isSpecialEnergy(name)) {
         category = 'energy';
+      } else if (currentCategory === 'energy' && !isEnergyCard({ card_name: name, expansion: set })) {
+        category = 'trainer';
       }
 
       let image = getQuickCardImage(set, number);
@@ -332,13 +414,12 @@ export function parsePtcglDeck(text: string): ParsedDeck {
           name = normalizeEnergyName(name);
         }
         let category = currentCategory;
-        if (
-          name.toLowerCase().includes('energy') ||
-          name.toLowerCase().includes('energía') ||
-          name.toLowerCase().includes('energia') ||
-          isBasicEnergy({ card_name: name })
-        ) {
+        if (isKnownEnergyTrainer(name)) {
+          category = 'trainer';
+        } else if (isBasicEnergy({ card_name: name }) || isSpecialEnergy(name)) {
           category = 'energy';
+        } else if (currentCategory === 'energy' && !isEnergyCard({ card_name: name })) {
+          category = 'trainer';
         }
         let image: string | undefined = undefined;
         if (isBasicEnergy({ card_name: name })) {
@@ -373,9 +454,9 @@ export function parsePtcglDeck(text: string): ParsedDeck {
  * Exports deck cards array into standard PTCGL / Limitless format text
  */
 export function exportToPtcgl(cards: Array<{ card_name: string; expansion: string; number: string; count: number; category: string }>): string {
-  const pokemons = cards.filter((c) => c.category === 'pokemon');
-  const trainers = cards.filter((c) => c.category === 'trainer');
-  const energies = cards.filter((c) => c.category === 'energy');
+  const pokemons = cards.filter((c) => c.category === 'pokemon' && !isKnownEnergyTrainer(c.card_name));
+  const trainers = cards.filter((c) => (c.category === 'trainer' || isKnownEnergyTrainer(c.card_name)) && !isEnergyCard({ card_name: c.card_name, set: c.expansion }));
+  const energies = cards.filter((c) => (c.category === 'energy' || isEnergyCard({ card_name: c.card_name, set: c.expansion })) && !isKnownEnergyTrainer(c.card_name));
 
   let output = '';
 
