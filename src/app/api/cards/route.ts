@@ -124,6 +124,23 @@ export async function GET(request: Request) {
       conditions.push('stock > 0');
     }
 
+    const sellerIdFilter = searchParams.get('seller_id') ? parseInt(searchParams.get('seller_id')!, 10) : null;
+    if (sellerIdFilter !== null && !isNaN(sellerIdFilter)) {
+      conditions.push('seller_id = ?');
+      params.push(sellerIdFilter);
+    }
+
+    const shouldMyListings = searchParams.get('myListings') === 'true';
+    if (shouldMyListings) {
+      const authUser = getCurrentUser();
+      if (authUser) {
+        conditions.push('(seller_id = ? OR LOWER(TRIM(seller_name)) = LOWER(TRIM(?)))');
+        params.push(authUser.id, authUser.username);
+      }
+    }
+
+    const shouldGroup = searchParams.get('group') === 'true' || searchParams.get('groupByVariant') === 'true';
+
     const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 
     let orderBy = 'ORDER BY id DESC';
@@ -139,10 +156,76 @@ export async function GET(request: Request) {
 
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : null;
     let query = `SELECT * FROM cards ${whereClause} ${orderBy}`;
-    if (limit && !isNaN(limit) && limit > 0) {
+    // Only apply SQL limit if not grouping, or apply reasonable limit
+    if (!shouldGroup && limit && !isNaN(limit) && limit > 0) {
       query += ` LIMIT ${limit}`;
     }
     const cards = await db.all(query, params);
+
+    if (shouldGroup) {
+      // Group publications with matching canonical card specs
+      const groupMap = new Map<string, any[]>();
+      for (const card of cards) {
+        const key = `${card.name.trim().toLowerCase()}###${card.expansion.trim().toLowerCase()}###${card.number.trim().toLowerCase()}###${(card.version || '').trim().toLowerCase()}###${(card.language || '').trim().toLowerCase()}###${card.is_foil ? 1 : 0}###${card.is_league ? 1 : 0}`;
+        if (!groupMap.has(key)) {
+          groupMap.set(key, []);
+        }
+        groupMap.get(key)!.push(card);
+      }
+
+      const groupedCards: any[] = [];
+      groupMap.forEach((groupList) => {
+        // Sort offers by price ascending (cheapest offer first)
+        groupList.sort((a, b) => a.price - b.price);
+        const bestOffer = groupList[0];
+        const minPrice = bestOffer.price;
+        const maxPrice = groupList[groupList.length - 1].price;
+        const totalStock = groupList.reduce((acc, c) => acc + (c.stock || 0), 0);
+
+        const offers = groupList.map((c) => ({
+          id: c.id,
+          seller_id: c.seller_id,
+          seller_name: c.seller_name || 'Luca',
+          seller_phone: c.seller_phone || '',
+          price: c.price,
+          stock: c.stock,
+          notes: c.notes,
+          is_foil: c.is_foil,
+          is_league: c.is_league,
+          created_at: c.created_at,
+          updated_at: c.updated_at,
+        }));
+
+        groupedCards.push({
+          ...bestOffer,
+          price: minPrice,
+          stock: totalStock,
+          min_price: minPrice,
+          max_price: maxPrice,
+          total_stock: totalStock,
+          offers,
+          offers_count: offers.length,
+        });
+      });
+
+      // If sort requested after grouping
+      if (sort === 'price_asc') {
+        groupedCards.sort((a, b) => a.price - b.price);
+      } else if (sort === 'price_desc') {
+        groupedCards.sort((a, b) => b.price - a.price);
+      } else if (sort === 'name_asc') {
+        groupedCards.sort((a, b) => a.name.localeCompare(b.name));
+      } else if (sort === 'stock_desc') {
+        groupedCards.sort((a, b) => b.stock - a.stock);
+      }
+
+      const finalCards = limit && limit > 0 ? groupedCards.slice(0, limit) : groupedCards;
+
+      return NextResponse.json({
+        cards: finalCards,
+        total: finalCards.length,
+      });
+    }
 
     return NextResponse.json({
       cards,

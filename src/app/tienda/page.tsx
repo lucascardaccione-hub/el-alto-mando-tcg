@@ -80,6 +80,7 @@ export default function TiendaPage() {
       if (selectedLanguage) params.append('language', selectedLanguage);
       if (inStockOnly) params.append('inStockOnly', 'true');
       if (sort) params.append('sort', sort);
+      params.append('group', 'true');
 
       const res = await fetch(`/api/cards?${params.toString()}`);
       if (res.ok) {
@@ -289,6 +290,12 @@ export default function TiendaPage() {
       <CardDetailModal
         card={activeCardModal}
         onClose={() => setActiveCardModal(null)}
+        onCardUpdated={(updated) => {
+          setCards((prev) =>
+            prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c))
+          );
+          fetchCards();
+        }}
       />
     </div>
   );

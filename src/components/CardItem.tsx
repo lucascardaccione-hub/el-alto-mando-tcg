@@ -2,10 +2,24 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { ShoppingBag, Check, Sparkles, User, Tag } from 'lucide-react';
+import { ShoppingBag, Check, Sparkles, User, Tag, SlidersHorizontal } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { LanguageBadge } from './FlagIcon';
 import { isBasicEnergy, getGenericEnergyImage } from '@/lib/deckParser';
+
+export interface CardSellerOffer {
+  id: number;
+  seller_id?: number;
+  seller_name: string;
+  seller_phone?: string;
+  price: number;
+  stock: number;
+  notes?: string;
+  is_foil?: number;
+  is_league?: number;
+  created_at?: string;
+  updated_at?: string;
+}
 
 export interface CardData {
   id: number;
@@ -27,6 +41,11 @@ export interface CardData {
   seller_phone?: string;
   is_foil?: number;
   is_league?: number;
+  offers?: CardSellerOffer[];
+  offers_count?: number;
+  min_price?: number;
+  max_price?: number;
+  total_stock?: number;
 }
 
 interface CardItemProps {
@@ -198,9 +217,19 @@ export default function CardItem({ card, onOpenModal }: CardItemProps) {
               <span className="truncate">{card.artist || 'Ilustrador oficial'}</span>
             </div>
             {/* Seller pill */}
-            <span className="flex-shrink-0 text-[10px] font-bold text-blue-300 bg-blue-950/70 px-2 py-0.5 rounded-md border border-blue-800/50">
-              Vendido por: {card.seller_name || 'Luca'}
-            </span>
+            {card.offers && card.offers.length > 1 ? (
+              <span
+                className="flex-shrink-0 text-[10px] font-black text-indigo-300 bg-indigo-950/80 px-2 py-0.5 rounded-md border border-indigo-700/60 shadow-sm flex items-center gap-1"
+                title={`${card.offers.length} vendedores ofrecen esta carta`}
+              >
+                <SlidersHorizontal className="w-2.5 h-2.5 text-indigo-400" />
+                <span>{card.offers.length} opciones</span>
+              </span>
+            ) : (
+              <span className="flex-shrink-0 text-[10px] font-bold text-blue-300 bg-blue-950/70 px-2 py-0.5 rounded-md border border-blue-800/50">
+                Vendido por: {card.seller_name || 'Luca'}
+              </span>
+            )}
           </div>
         </div>
 
@@ -208,36 +237,50 @@ export default function CardItem({ card, onOpenModal }: CardItemProps) {
         <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
           <div>
             <span className="text-[10px] text-slate-400 block font-medium uppercase tracking-wider">
-              Precio
+              {card.offers && card.offers.length > 1 ? 'Desde' : 'Precio'}
             </span>
             <span className="text-base sm:text-lg font-black tracking-tight text-white">
-              {formatPrice(card.price)}
+              {formatPrice(card.min_price || card.price)}
             </span>
           </div>
 
-          <button
-            onClick={handleAdd}
-            disabled={isOutOfStock}
-            className={`flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
-              isOutOfStock
-                ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'
-                : justAdded
-                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30'
-                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-900/30 hover:scale-105 active:scale-95'
-            }`}
-          >
-            {justAdded ? (
-              <>
-                <Check className="w-3.5 h-3.5" />
-                <span>Agregado</span>
-              </>
-            ) : (
-              <>
-                <ShoppingBag className="w-3.5 h-3.5" />
-                <span>{isOutOfStock ? 'Agotado' : 'Comprar'}</span>
-              </>
-            )}
-          </button>
+          {card.offers && card.offers.length > 1 ? (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenModal(card);
+              }}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-all duration-200 bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-950/40 hover:scale-105 active:scale-95"
+              title="Ver todas las publicaciones y opciones de vendedores"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Ver opciones</span>
+            </button>
+          ) : (
+            <button
+              onClick={handleAdd}
+              disabled={isOutOfStock}
+              className={`flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
+                isOutOfStock
+                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'
+                  : justAdded
+                  ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30'
+                  : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-900/30 hover:scale-105 active:scale-95'
+              }`}
+            >
+              {justAdded ? (
+                <>
+                  <Check className="w-3.5 h-3.5" />
+                  <span>Agregado</span>
+                </>
+              ) : (
+                <>
+                  <ShoppingBag className="w-3.5 h-3.5" />
+                  <span>{isOutOfStock ? 'Agotado' : 'Agregar al Carrito'}</span>
+                </>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>

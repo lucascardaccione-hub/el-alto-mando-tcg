@@ -49,7 +49,7 @@ export default function HomePage() {
       })
       .catch(() => {});
 
-    fetch('/api/cards?limit=8&inStockOnly=true')
+    fetch('/api/cards?limit=8&inStockOnly=true&group=true')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.cards) setFeaturedCards(data.cards);
@@ -701,7 +701,15 @@ export default function HomePage() {
 
       {/* Cart Drawer & Card Modal */}
       <CartDrawer />
-      <CardDetailModal card={activeCardModal} onClose={() => setActiveCardModal(null)} />
+      <CardDetailModal
+        card={activeCardModal}
+        onClose={() => setActiveCardModal(null)}
+        onCardUpdated={(updated) => {
+          setFeaturedCards((prev) =>
+            prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c))
+          );
+        }}
+      />
     </div>
   );
 }
