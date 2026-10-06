@@ -34,7 +34,7 @@ export default function InventoryPage() {
   const fetchInventory = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/cards');
+      const res = await fetch('/api/cards?include_out_of_stock=true');
       if (res.ok) {
         const data = await res.json();
         setCards(data.cards || []);

@@ -402,6 +402,16 @@ export default function AdminOrdersPage() {
                       <span className="text-base sm:text-lg font-black font-mono text-blue-400">
                         #{order.order_number}
                       </span>
+                      <a
+                        href={`/pedidos?numero=${order.order_number}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-400 hover:text-blue-300 bg-blue-950/60 hover:bg-blue-900/50 px-2.5 py-0.5 rounded-lg border border-blue-800/60 transition-colors"
+                        title="Ver seguimiento en vivo de este pedido"
+                      >
+                        <ExternalLink className="w-3 h-3" />
+                        <span>Ver Seguimiento</span>
+                      </a>
                       <span className="text-xs text-slate-400">
                         {new Date(order.created_at).toLocaleDateString('es-AR', {
                           day: '2-digit',

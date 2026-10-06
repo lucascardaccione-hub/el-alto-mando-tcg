@@ -120,7 +120,14 @@ export async function GET(request: Request) {
       params.push(maxPrice);
     }
 
-    if (inStockOnly) {
+    const shouldMyListings = searchParams.get('myListings') === 'true';
+    const includeOutOfStock =
+      searchParams.get('include_out_of_stock') === 'true' ||
+      searchParams.get('includeOutOfStock') === 'true';
+
+    // In the public store catalog, items with 0 stock leave the store!
+    // Out-of-stock cards are only shown in seller listings or when explicitly requested (admin views)
+    if (inStockOnly || (!shouldMyListings && !includeOutOfStock)) {
       conditions.push('stock > 0');
     }
 
@@ -130,7 +137,6 @@ export async function GET(request: Request) {
       params.push(sellerIdFilter);
     }
 
-    const shouldMyListings = searchParams.get('myListings') === 'true';
     if (shouldMyListings) {
       const authUser = getCurrentUser();
       if (authUser) {

@@ -25,7 +25,7 @@ export default function AdminDashboardPage() {
     async function loadData() {
       try {
         const [cardsRes, userRes] = await Promise.all([
-          fetch('/api/cards'),
+          fetch('/api/cards?include_out_of_stock=true'),
           fetch('/api/auth/me'),
         ]);
         if (cardsRes.ok) {

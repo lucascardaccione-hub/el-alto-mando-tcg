@@ -53,14 +53,33 @@ interface OrderData {
 
 function TrackingContent() {
   const searchParams = useSearchParams();
-  const initialNum = searchParams.get('numero') || searchParams.get('order_number') || '';
+  const initialNum =
+    searchParams.get('numero') ||
+    searchParams.get('order_number') ||
+    searchParams.get('code') ||
+    searchParams.get('nro') ||
+    searchParams.get('id') ||
+    '';
 
   const [inputNum, setInputNum] = useState(initialNum);
   const [order, setOrder] = useState<OrderData | null>(null);
   const [items, setItems] = useState<OrderItem[]>([]);
+  const [userOrders, setUserOrders] = useState<OrderData[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Fetch recent orders of logged-in user for quick access
+  useEffect(() => {
+    fetch('/api/orders')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.orders && Array.isArray(data.orders)) {
+          setUserOrders(data.orders);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const fetchOrder = async (numToFetch: string) => {
     if (!numToFetch.trim()) return;
@@ -70,7 +89,7 @@ function TrackingContent() {
       const cleanNum = numToFetch.trim().toUpperCase().replace('#', '');
       const res = await fetch(`/api/orders?order_number=${encodeURIComponent(cleanNum)}`);
       if (!res.ok) {
-        throw new Error('No encontramos ningún pedido con ese número. Verifica que esté bien escrito.');
+        throw new Error(`No encontramos ningún pedido con el número "${numToFetch.trim()}". Verifica que esté bien escrito.`);
       }
       const data = await res.json();
       setOrder(data.order);
@@ -144,7 +163,7 @@ function TrackingContent() {
           Seguimiento de tu Pedido
         </h1>
         <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto">
-          Ingresa tu número de pedido (ej: <strong className="text-blue-400 font-mono">EAM-12345</strong>) para consultar su estado en tiempo real.
+          Ingresa tu número de pedido (ej: <strong className="text-blue-400 font-mono">EAM-86345</strong>) para consultar su estado en tiempo real.
         </p>
 
         {/* Search Input */}
@@ -167,12 +186,56 @@ function TrackingContent() {
             {loading ? 'Buscando...' : 'Consultar'}
           </button>
         </form>
+
+        {/* Quick Recent Orders Chips for Logged-in Users */}
+        {userOrders.length > 0 && (
+          <div className="pt-2 flex flex-col items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-slate-400">
+              Tus pedidos recientes:
+            </span>
+            <div className="flex flex-wrap items-center justify-center gap-2 max-w-lg">
+              {userOrders.slice(0, 4).map((uo) => (
+                <button
+                  key={uo.id}
+                  type="button"
+                  onClick={() => {
+                    setInputNum(uo.order_number);
+                    fetchOrder(uo.order_number);
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold border transition-all ${
+                    order?.order_number === uo.order_number
+                      ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                      : 'bg-slate-900/80 text-blue-300 border-slate-700 hover:border-blue-500/50 hover:bg-slate-800'
+                  }`}
+                >
+                  #{uo.order_number} ({uo.status === 'preparado' ? '📦 Preparado' : uo.status === 'en_preparacion' ? '⏳ En prep.' : uo.status === 'solicitado' ? '🕒 Solicitado' : uo.status === 'entregado' ? '✅ Entregado' : uo.status})
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Error state */}
+      {/* Error state with smart suggestion */}
       {error && (
-        <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-center text-xs text-rose-300 max-w-md mx-auto">
-          {error}
+        <div className="p-4 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-center text-xs text-rose-300 max-w-md mx-auto space-y-2">
+          <p>{error}</p>
+          {userOrders.length > 0 && (
+            <div className="pt-2 border-t border-rose-900/50 text-[11px] text-slate-300 flex items-center justify-center gap-1.5 flex-wrap">
+              <span>¿Buscabas este pedido?</span>
+              <button
+                type="button"
+                onClick={() => {
+                  const targetNum = userOrders[0].order_number;
+                  setInputNum(targetNum);
+                  fetchOrder(targetNum);
+                }}
+                className="font-mono font-bold text-blue-400 hover:text-blue-300 underline"
+              >
+                #{userOrders[0].order_number} ({userOrders[0].status})
+              </button>
+            </div>
+          )}
         </div>
       )}
 

@@ -7,11 +7,28 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const orderNumber = searchParams.get('order_number');
+    const orderNumber =
+      searchParams.get('order_number') ||
+      searchParams.get('numero') ||
+      searchParams.get('code') ||
+      searchParams.get('nro') ||
+      searchParams.get('id');
 
-    // Public tracking by order number
+    // Public tracking by order number or ID
     if (orderNumber) {
-      const order = await db.get('SELECT * FROM orders WHERE order_number = ?', [orderNumber.trim()]);
+      const rawNum = orderNumber.trim();
+      const cleanInput = rawNum.toUpperCase().replace('#', '').replace(/\s+/g, '');
+      const digitsOnly = cleanInput.replace(/^EAM-?/, '');
+
+      const order = await db.get(
+        `SELECT * FROM orders 
+         WHERE UPPER(TRIM(order_number)) = ? 
+            OR UPPER(TRIM(order_number)) = ?
+            OR REPLACE(UPPER(TRIM(order_number)), 'EAM-', '') = ?
+            OR CAST(id AS TEXT) = ?`,
+        [cleanInput, `EAM-${digitsOnly}`, digitsOnly, digitsOnly]
+      );
+
       if (!order) {
         return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 });
       }
@@ -19,7 +36,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ order, items });
     }
 
-    // Admin / Seller orders list
+    // Admin / Seller / Buyer orders list
     const user = getCurrentUser();
     if (!user) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
@@ -30,8 +47,8 @@ export async function GET(request: Request) {
     let params: any[] = [];
 
     if (!isLuca) {
-      query = 'SELECT * FROM orders WHERE seller_id = ? OR LOWER(seller_name) = ? ORDER BY id DESC';
-      params = [user.id, user.username.toLowerCase()];
+      query = 'SELECT * FROM orders WHERE seller_id = ? OR LOWER(seller_name) = ? OR buyer_user_id = ? OR LOWER(buyer_name) = ? ORDER BY id DESC';
+      params = [user.id, user.username.toLowerCase(), user.id, user.username.toLowerCase()];
     }
 
     const orders = await db.all(query, params);
@@ -122,7 +139,7 @@ export async function POST(request: Request) {
     const orderResult = await db.run(`
       INSERT INTO orders (
         order_number, seller_id, seller_name, seller_phone, buyer_name, buyer_phone, total_price, total_items, status, created_at, updated_at, buyer_user_id, wa_notified, cancel_reason, is_read, stock_deducted
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'solicitado', ?, ?, ?, 0, '', 0, 0)
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'solicitado', ?, ?, ?, 0, '', 0, 1)
     `, [
       orderNumber,
       seller_id ? Number(seller_id) : null,
@@ -139,15 +156,18 @@ export async function POST(request: Request) {
 
     const orderId = orderResult.lastInsertRowid;
 
-    // Insert order items
+    // Insert order items AND immediately deduct stock from cards table
     for (const it of items) {
+      const cardId = it.id || it.card_id || 0;
+      const qty = Number(it.quantity) || 1;
+
       await db.run(`
         INSERT INTO order_items (
           order_id, card_id, name, expansion, number, version, is_foil, is_league, language, price, quantity, image_url
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         orderId,
-        it.id || it.card_id || 0,
+        cardId,
         it.name || 'Carta Pokémon',
         it.expansion || '',
         it.number || '',
@@ -156,9 +176,17 @@ export async function POST(request: Request) {
         it.is_league ? 1 : 0,
         it.language || 'Inglés',
         Number(it.price) || 0,
-        Number(it.quantity) || 1,
+        qty,
         it.image_url || '/placeholder-card.svg',
       ]);
+
+      // Deduct committed stock immediately upon order creation
+      if (cardId > 0) {
+        await db.run(
+          'UPDATE cards SET stock = MAX(0, stock - ?), updated_at = ? WHERE id = ?',
+          [qty, now, cardId]
+        );
+      }
     }
 
     const createdOrder = await db.get('SELECT * FROM orders WHERE id = ?', [orderId]);
@@ -173,7 +201,7 @@ export async function POST(request: Request) {
         type: 'order_created',
         title: '¡Pedido registrado con éxito!',
         message: `Tu pedido #${orderNumber} (${totalItems} cartas, $${totalPrice.toLocaleString('es-AR')}) fue enviado a ${seller_name.trim()}.`,
-        linkUrl: `/pedidos?code=${orderNumber}`,
+        linkUrl: `/pedidos?numero=${orderNumber}`,
       });
 
       // Seller notification
@@ -254,27 +282,8 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'Estado no válido' }, { status: 400 });
     }
 
-    // REQUIREMENT 5: If status is 'entregado', order closes and committed stock is deducted!
-    if (status === 'entregado') {
-      if (!order.stock_deducted || order.stock_deducted === 0) {
-        const items = await db.all('SELECT * FROM order_items WHERE order_id = ?', [id]);
-        for (const it of items) {
-          if (it.card_id && it.card_id > 0) {
-            await db.run(
-              'UPDATE cards SET stock = MAX(0, stock - ?), updated_at = ? WHERE id = ?',
-              [it.quantity || 1, now, it.card_id]
-            );
-          }
-        }
-      }
-
-      await db.run(
-        'UPDATE orders SET status = ?, stock_deducted = 1, updated_at = ? WHERE id = ?',
-        ['entregado', now, id]
-      );
-    } else if (status === 'cancelado') {
-      // REQUIREMENT 3: Cancel order with reason
-      // If stock was previously deducted upon 'entregado', restore it
+    if (status === 'cancelado') {
+      // If order had deducted stock, replenish / restore it to the store
       if (order.stock_deducted === 1) {
         const items = await db.all('SELECT * FROM order_items WHERE order_id = ?', [id]);
         for (const it of items) {
@@ -293,13 +302,13 @@ export async function PATCH(request: Request) {
         ['cancelado', finalReason, now, id]
       );
     } else if (status) {
-      // If reverting from 'entregado' back to 'preparado' / 'solicitado', restore deducted stock
-      if (order.status === 'entregado' && order.stock_deducted === 1) {
+      // If re-opening from cancelled, re-deduct the stock
+      if (order.status === 'cancelado' || !order.stock_deducted || order.stock_deducted === 0) {
         const items = await db.all('SELECT * FROM order_items WHERE order_id = ?', [id]);
         for (const it of items) {
           if (it.card_id && it.card_id > 0) {
             await db.run(
-              'UPDATE cards SET stock = stock + ?, updated_at = ? WHERE id = ?',
+              'UPDATE cards SET stock = MAX(0, stock - ?), updated_at = ? WHERE id = ?',
               [it.quantity || 1, now, it.card_id]
             );
           }
@@ -307,7 +316,7 @@ export async function PATCH(request: Request) {
       }
 
       await db.run(
-        'UPDATE orders SET status = ?, stock_deducted = 0, updated_at = ? WHERE id = ?',
+        'UPDATE orders SET status = ?, stock_deducted = 1, updated_at = ? WHERE id = ?',
         [status, now, id]
       );
     }
@@ -333,7 +342,7 @@ export async function PATCH(request: Request) {
           type: 'order_status',
           title: `Actualización de tu pedido #${order.order_number}`,
           message: `El estado de tu pedido #${order.order_number} ahora es: "${statusText}".`,
-          linkUrl: `/pedidos?code=${order.order_number}`,
+          linkUrl: `/pedidos?numero=${order.order_number}`,
         });
       }
     } catch (notifErr) {
