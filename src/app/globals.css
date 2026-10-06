@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Base Font Size + 1 point site-wide */
+html {
+  font-size: 17px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 :root {
   --background: #060913;
   --foreground: #f8fafc;
@@ -10,11 +17,11 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans), 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar - Dark */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -64,4 +71,130 @@ body {
 }
 .card-shine:hover::after {
   transform: translateY(50%) rotate(25deg);
+}
+
+/* =========================================================
+   LIGHT MODE OVERRIDES
+   Activates smoothly when html has class "light"
+   ========================================================= */
+html.light {
+  color-scheme: light;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+}
+
+html.light body {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+/* Scrollbar - Light */
+html.light ::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+html.light ::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+}
+html.light ::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* General containers & canvas */
+html.light [class*="bg-[#080c16]"],
+html.light [class*="bg-[#070b14]"],
+html.light [class*="bg-[#060913]"],
+html.light [class*="bg-[#050811]"],
+html.light [class*="bg-[#070c18]"] {
+  background-color: #f8fafc !important;
+}
+
+/* Navbar in light mode */
+html.light nav,
+html.light header,
+html.light [class*="bg-[#070b16]/90"] {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Cards, modals, drawers & panels */
+html.light [class*="bg-[#0b1220]"],
+html.light [class*="bg-[#0c1322]"],
+html.light [class*="bg-[#0c1424]"],
+html.light [class*="bg-[#0a0f1d]"],
+html.light [class*="bg-[#090e1c]"],
+html.light [class*="bg-[#0a1024]"],
+html.light [class*="bg-[#0d152c]"],
+html.light [class*="bg-[#131e36]"],
+html.light [class*="bg-slate-950"] {
+  background-color: #ffffff !important;
+}
+
+html.light [class*="bg-slate-900"] {
+  background-color: #f1f5f9 !important;
+}
+
+html.light [class*="bg-slate-800"] {
+  background-color: #e2e8f0 !important;
+}
+
+/* Borders */
+html.light [class*="border-slate-800"],
+html.light [class*="border-slate-700"] {
+  border-color: #e2e8f0 !important;
+}
+
+html.light [class*="border-white/"] {
+  border-color: #cbd5e1 !important;
+}
+
+/* Text adjustments for light mode */
+html.light [class*="text-slate-100"] {
+  color: #0f172a !important;
+}
+
+html.light [class*="text-slate-200"],
+html.light [class*="text-slate-300"] {
+  color: #1e293b !important;
+}
+
+html.light [class*="text-slate-400"] {
+  color: #475569 !important;
+}
+
+html.light [class*="text-slate-500"] {
+  color: #64748b !important;
+}
+
+/* Inputs, selects, and textareas */
+html.light input,
+html.light select,
+html.light textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Glass panel light mode */
+html.light .glass-panel {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Preserve bright buttons text color */
+html.light button.bg-blue-600,
+html.light a.bg-blue-600,
+html.light button.bg-indigo-600,
+html.light a.bg-indigo-600,
+html.light button.bg-emerald-600,
+html.light a.bg-emerald-600,
+html.light button.bg-purple-600,
+html.light a.bg-purple-600,
+html.light button.bg-rose-600,
+html.light a.bg-rose-600 {
+  color: #ffffff !important;
 }

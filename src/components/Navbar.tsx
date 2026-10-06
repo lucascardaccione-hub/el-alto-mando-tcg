@@ -21,9 +21,12 @@ import {
   LayoutDashboard,
   ExternalLink,
   Bell,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import NotificationDropdown from '@/components/NotificationDropdown';
 import { useCart } from '@/context/CartContext';
+import { useTheme } from '@/context/ThemeContext';
 import { getRoleBadge, canAccessAdmin } from '@/lib/roles';
 import { getDefaultAvatar } from '@/lib/avatars';
 
@@ -43,6 +46,7 @@ interface UserSession {
 
 export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) {
   const { totalCount, openCart } = useCart();
+  const { theme, toggleTheme } = useTheme();
   const [user, setUser] = useState<UserSession | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const pathname = usePathname() || '/';
@@ -467,6 +471,20 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
             )}
           </div>
 
+          {/* Dark / Light Mode Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="p-2 sm:p-2.5 rounded-xl text-slate-300 hover:text-white bg-slate-900/90 hover:bg-slate-800 border border-white/[0.08] hover:border-white/[0.18] transition-all flex items-center justify-center shadow-sm"
+            title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            aria-label="Alternar modo oscuro o claro"
+          >
+            {theme === 'dark' ? (
+              <Sun className="w-4 h-4 text-amber-400 hover:rotate-45 transition-transform" />
+            ) : (
+              <Moon className="w-4 h-4 text-indigo-400 hover:-rotate-12 transition-transform" />
+            )}
+          </button>
+
           {/* Cart Button */}
           <button
             onClick={openCart}
@@ -496,7 +514,7 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
       {/* Mobile Drawer Navigation (3 Blocks) */}
       {mobileMenuOpen && (
         <div className="lg:hidden bg-[#070c18] border-b border-white/[0.08] p-4 space-y-4 shadow-2xl animate-in slide-in-from-top duration-200">
-          {/* Quick Home link */}
+          {/* Quick Home link & Theme Toggle */}
           <div className="flex items-center justify-between border-b border-slate-800 pb-2">
             <Link
               href="/"
@@ -506,6 +524,23 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
             >
               <span>🏠 Inicio</span>
             </Link>
+
+            <button
+              onClick={toggleTheme}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-200"
+            >
+              {theme === 'dark' ? (
+                <>
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                  <span>Modo Claro</span>
+                </>
+              ) : (
+                <>
+                  <Moon className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Modo Oscuro</span>
+                </>
+              )}
+            </button>
           </div>
 
           {/* BLOQUE 1: MAZOS */}
