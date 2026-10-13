@@ -21,6 +21,7 @@ import Card3DViewer from './Card3DViewer';
 import { LanguageBadge, FlagES, FlagUS } from './FlagIcon';
 import { isBasicEnergy, getGenericEnergyImage } from '@/lib/deckParser';
 import EditCardModal from './EditCardModal';
+import { useStoreStatus } from '@/hooks/useStoreStatus';
 
 interface CardDetailModalProps {
   card: CardData | null;
@@ -34,6 +35,7 @@ export default function CardDetailModal({
   onCardUpdated,
 }: CardDetailModalProps) {
   const { addToCart } = useCart();
+  const { paused: storePaused } = useStoreStatus();
   const [quantity, setQuantity] = useState(1);
   const [justAdded, setJustAdded] = useState(false);
 
@@ -492,19 +494,21 @@ export default function CardDetailModal({
                   {/* Quantity selector & Add to cart */}
                   <div className="flex items-center gap-3">
                     {!isOutOfStock && (
-                      <div className="flex items-center gap-2 bg-slate-900 border border-slate-800 px-3 py-2.5 rounded-xl">
+                      <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 px-1 py-1 rounded-xl">
                         <button
                           onClick={() => setQuantity((q) => Math.max(1, q - 1))}
                           disabled={quantity <= 1}
-                          className="text-slate-400 hover:text-white disabled:opacity-30"
+                          className="w-9 h-9 flex items-center justify-center rounded-lg text-lg font-bold text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                          aria-label="Restar una unidad"
                         >
-                          -
+                          −
                         </button>
-                        <span className="text-sm font-bold text-white px-2">{quantity}</span>
+                        <span className="text-sm font-bold text-white min-w-[1.75rem] text-center">{quantity}</span>
                         <button
                           onClick={() => setQuantity((q) => Math.min(selectedOffer.stock, q + 1))}
                           disabled={quantity >= selectedOffer.stock}
-                          className="text-slate-400 hover:text-white disabled:opacity-30"
+                          className="w-9 h-9 flex items-center justify-center rounded-lg text-lg font-bold text-slate-300 hover:text-white hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+                          aria-label="Sumar una unidad"
                         >
                           +
                         </button>
@@ -535,6 +539,11 @@ export default function CardDetailModal({
                       )}
                     </button>
                   </div>
+                  {storePaused && (
+                    <p className="text-[11px] text-amber-300/90 leading-snug">
+                      ⏸ La tienda está en pausa: podés agregar al carrito, pero los pedidos se habilitan cuando se reanude.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

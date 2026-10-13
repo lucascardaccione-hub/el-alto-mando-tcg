@@ -24,9 +24,12 @@ import {
   LogIn,
   AlertCircle,
   MessageCircle,
+  PauseCircle,
 } from 'lucide-react';
 import { useCart, CartItem } from '@/context/CartContext';
 import { LanguageBadge } from './FlagIcon';
+import StorePausedBanner from './StorePausedBanner';
+import { useStoreStatus } from '@/hooks/useStoreStatus';
 
 interface SellerGroup {
   sellerId?: number;
@@ -334,6 +337,9 @@ export default function CartDrawer() {
     totalPrice,
   } = useCart();
 
+  // Global store pause state (set by admin Luca)
+  const { paused: storePaused, message: storeMessage, refresh: refreshStoreStatus } = useStoreStatus();
+
   // Current authenticated user
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -425,7 +431,17 @@ export default function CartDrawer() {
     }
 
     const finalBuyerName = buyerName.trim() || currentUser.username || 'Cliente';
+
+    if (storePaused) {
+      alert(storeMessage || 'La tienda está en pausa momentáneamente.');
+      return;
+    }
+
     setSubmittingSeller(group.sellerName);
+
+    // Open the tab synchronously inside the click handler; browsers (esp. iOS Safari)
+    // block window.open calls that happen after an await.
+    const waWindow = typeof window !== 'undefined' ? window.open('', '_blank') : null;
 
     try {
       // 1. Create order in Turso DB
@@ -444,6 +460,7 @@ export default function CartDrawer() {
 
       const data = await res.json();
       if (!res.ok || !data.success) {
+        if (data?.store_paused) refreshStoreStatus();
         throw new Error(data.error || 'Error al procesar el pedido');
       }
 
@@ -473,8 +490,12 @@ export default function CartDrawer() {
       const cleanPhone = (group.sellerPhone || '').replace(/[^\d]/g, '');
       const waUrl = `https://wa.me/${cleanPhone ? cleanPhone : ''}?text=${encodeURIComponent(text)}`;
 
-      // 3. Open WhatsApp in new tab
-      window.open(waUrl, '_blank');
+      // 3. Point the pre-opened tab to WhatsApp (fallback: open directly)
+      if (waWindow && !waWindow.closed) {
+        waWindow.location.href = waUrl;
+      } else {
+        window.open(waUrl, '_blank');
+      }
 
       // 4. Remove this seller's items from the cart (MercadoLibre style)
       removeSellerItems(group.sellerName);
@@ -490,6 +511,7 @@ export default function CartDrawer() {
       });
     } catch (err: any) {
       console.error(err);
+      if (waWindow && !waWindow.closed) waWindow.close();
       alert(err.message || 'Ocurrió un error al generar el pedido.');
     } finally {
       setSubmittingSeller(null);
@@ -597,6 +619,7 @@ export default function CartDrawer() {
 
             {/* MercadoLibre-style Packages List */}
             <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
+              {items.length > 0 && <StorePausedBanner />}
               {items.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3">
                   <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-500">
@@ -684,10 +707,11 @@ export default function CartDrawer() {
                                     </h4>
                                     <button
                                       onClick={() => removeFromCart(item.id)}
-                                      className="text-slate-500 hover:text-rose-400 transition-colors p-1"
+                                      className="w-8 h-8 -mt-1 -mr-1 flex items-center justify-center rounded-md text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition-colors flex-shrink-0"
                                       title="Quitar carta"
+                                      aria-label="Quitar carta del carrito"
                                     >
-                                      <Trash2 className="w-3.5 h-3.5" />
+                                      <Trash2 className="w-4 h-4" />
                                     </button>
                                   </div>
 
@@ -716,28 +740,30 @@ export default function CartDrawer() {
 
                                 <div className="flex items-center justify-between pt-1.5">
                                   {/* Quantity Controls */}
-                                  <div className="flex items-center gap-2 bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-800">
+                                  <div className="flex items-center gap-1 bg-slate-900 px-1 py-0.5 rounded-lg border border-slate-800">
                                     <button
                                       onClick={() => updateQuantity(item.id, -1)}
-                                      className="text-slate-400 hover:text-white p-0.5"
+                                      className="w-8 h-8 flex items-center justify-center rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
                                       title="Restar"
+                                      aria-label="Restar una unidad"
                                     >
-                                      <Minus className="w-3 h-3" />
+                                      <Minus className="w-4 h-4" />
                                     </button>
-                                    <span className="text-xs font-bold text-white px-1">
+                                    <span className="text-sm font-bold text-white min-w-[1.5rem] text-center">
                                       {item.quantity}
                                     </span>
                                     <button
                                       onClick={() => updateQuantity(item.id, 1)}
                                       disabled={item.quantity >= item.stock}
-                                      className={`p-0.5 ${
+                                      className={`w-8 h-8 flex items-center justify-center rounded-md transition-colors ${
                                         item.quantity >= item.stock
                                           ? 'text-slate-600 cursor-not-allowed'
-                                          : 'text-slate-400 hover:text-white'
+                                          : 'text-slate-400 hover:text-white hover:bg-slate-800'
                                       }`}
                                       title={item.quantity >= item.stock ? 'Stock máximo' : 'Sumar'}
+                                      aria-label="Sumar una unidad"
                                     >
-                                      <Plus className="w-3 h-3" />
+                                      <Plus className="w-4 h-4" />
                                     </button>
                                   </div>
 
@@ -757,25 +783,32 @@ export default function CartDrawer() {
                         <div className="pt-2 border-t border-slate-800/80 space-y-1.5">
                           <button
                             onClick={() => handleConfirmOrderForGroup(group)}
-                            disabled={isSubmitting}
-                            className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl font-bold text-xs text-white shadow-lg transition-all duration-200 active:scale-[0.98] disabled:opacity-50 ${
-                              currentUser
+                            disabled={isSubmitting || storePaused}
+                            className={`w-full flex items-center justify-center gap-2 px-3 py-3 rounded-xl font-bold text-sm text-white shadow-lg transition-all duration-200 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
+                              storePaused
+                                ? 'bg-slate-700'
+                                : currentUser
                                 ? 'bg-[#25D366] hover:bg-[#20ba5a] shadow-emerald-950/40'
                                 : 'bg-blue-600 hover:bg-blue-500 shadow-blue-950/40'
                             }`}
                           >
-                            {currentUser ? (
+                            {storePaused ? (
                               <>
-                                <Send className="w-3.5 h-3.5" />
+                                <PauseCircle className="w-4 h-4" />
+                                <span>Tienda en pausa</span>
+                              </>
+                            ) : currentUser ? (
+                              <>
+                                <Send className="w-4 h-4" />
                                 <span>
                                   {isSubmitting
                                     ? 'Generando pedido...'
-                                    : `Confirmar Pedido #${group.sellerName} (${formatPrice(group.subtotal)})`}
+                                    : `Confirmar pedido a ${group.sellerName} (${formatPrice(group.subtotal)})`}
                                 </span>
                               </>
                             ) : (
                               <>
-                                <Lock className="w-3.5 h-3.5" />
+                                <Lock className="w-4 h-4" />
                                 <span>Iniciar Sesión para Pedir</span>
                               </>
                             )}

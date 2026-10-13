@@ -29,6 +29,7 @@ import { useCart } from '@/context/CartContext';
 import { useTheme } from '@/context/ThemeContext';
 import { getRoleBadge, canAccessAdmin } from '@/lib/roles';
 import { getDefaultAvatar } from '@/lib/avatars';
+import { useStoreStatus } from '@/hooks/useStoreStatus';
 
 interface NavbarProps {
   totalCards?: number;
@@ -47,6 +48,7 @@ interface UserSession {
 export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) {
   const { totalCount, openCart } = useCart();
   const { theme, toggleTheme } = useTheme();
+  const { status: storeStatus } = useStoreStatus();
   const [user, setUser] = useState<UserSession | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const pathname = usePathname() || '/';
@@ -290,14 +292,34 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
             >
               <ShoppingBag className="w-3.5 h-3.5 text-amber-400" />
               <span>Tienda</span>
+              {storeStatus.paused && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40 animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                  Pausa
+                </span>
+              )}
               <ChevronDown className={`w-3 h-3 text-slate-400 transition-transform ${tiendaOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {tiendaOpen && (
               <div className="absolute top-full left-0 mt-2 w-64 rounded-2xl bg-[#090e1c] border border-amber-500/20 shadow-2xl p-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-                <div className="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-800/80 mb-1">
-                  Catálogo & Compras
+                <div className="px-3 py-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-800/80 mb-1 flex items-center justify-between">
+                  <span>Catálogo & Compras</span>
+                  {storeStatus.paused && (
+                    <span className="text-[9px] font-bold text-amber-400">En Pausa</span>
+                  )}
                 </div>
+                {storeStatus.paused && (
+                  <div className="mx-1 mb-2 p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] leading-tight">
+                    <p className="font-bold flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping inline-block"></span>
+                      Tienda pausada
+                    </p>
+                    <p className="text-[10px] text-amber-300/80 mt-0.5">
+                      {storeStatus.message || 'No se reciben pedidos por el momento.'}
+                    </p>
+                  </div>
+                )}
                 <Link
                   href="/tienda"
                   className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-slate-200 hover:text-white hover:bg-amber-950/40 transition-colors group"
@@ -576,9 +598,17 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
 
           {/* BLOQUE 2: TIENDA */}
           <div className="bg-slate-900/60 border border-amber-500/20 rounded-2xl p-3 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider">
-              <ShoppingBag className="w-3.5 h-3.5" />
-              <span>Bloque 2: Tienda</span>
+            <div className="flex items-center justify-between text-xs font-bold text-amber-400 uppercase tracking-wider">
+              <div className="flex items-center gap-2">
+                <ShoppingBag className="w-3.5 h-3.5" />
+                <span>Bloque 2: Tienda</span>
+              </div>
+              {storeStatus.paused && (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                  Pausa
+                </span>
+              )}
             </div>
             <div className="grid grid-cols-1 gap-1.5 text-xs">
               <Link

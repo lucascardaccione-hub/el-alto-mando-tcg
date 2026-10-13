@@ -8,6 +8,7 @@ import FiltersBar from '@/components/FiltersBar';
 import CardItem, { CardData } from '@/components/CardItem';
 import CartDrawer from '@/components/CartDrawer';
 import CardDetailModal from '@/components/CardDetailModal';
+import StorePausedBanner from '@/components/StorePausedBanner';
 import {
   Sparkles,
   RefreshCw,
@@ -130,6 +131,7 @@ export default function TiendaPage() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <StorePausedBanner />
         {/* Tienda Header & Tracking Bar */}
         <section className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#0a1024]/90 via-[#0d152c]/80 to-[#080d1e]/90 border border-blue-500/20 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-blue-600/10 blur-3xl pointer-events-none" />

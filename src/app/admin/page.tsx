@@ -15,6 +15,7 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { CardData } from '@/components/CardItem';
+import StorePauseControl from '@/components/StorePauseControl';
 
 export default function AdminDashboardPage() {
   const [cards, setCards] = useState<CardData[]>([]);
@@ -80,6 +81,9 @@ export default function AdminDashboardPage() {
           <span>Cargar Nueva Carta</span>
         </Link>
       </div>
+
+      {/* Store pause control — master admin only */}
+      {currentUser?.username?.toLowerCase() === 'luca' && <StorePauseControl />}
 
       {/* Metrics Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

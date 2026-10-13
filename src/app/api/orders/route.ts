@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { getStoreStatus, DEFAULT_PAUSE_MESSAGE } from '@/lib/storeSettings';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,6 +98,15 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Para hacer un pedido debes estar registrado e iniciar sesión.' },
         { status: 401 }
+      );
+    }
+
+    // Store pause: block new orders server-side (frontend also disables the buttons)
+    const storeStatus = await getStoreStatus();
+    if (storeStatus.paused) {
+      return NextResponse.json(
+        { error: storeStatus.message || DEFAULT_PAUSE_MESSAGE, store_paused: true },
+        { status: 423 }
       );
     }
 

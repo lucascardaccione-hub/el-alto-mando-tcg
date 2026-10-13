@@ -125,6 +125,7 @@ html.light [class*="bg-[#090e1c]"],
 html.light [class*="bg-[#0a1024]"],
 html.light [class*="bg-[#0d152c]"],
 html.light [class*="bg-[#131e36]"],
+html.light [class*="bg-[#0f172a]"],
 html.light [class*="bg-slate-950"] {
   background-color: #ffffff !important;
 }
@@ -135,6 +136,33 @@ html.light [class*="bg-slate-900"] {
 
 html.light [class*="bg-slate-800"] {
   background-color: #e2e8f0 !important;
+}
+
+/* Status cards & badge pastel backgrounds */
+html.light [class*="bg-blue-950"] {
+  background-color: #eff6ff !important;
+}
+html.light [class*="bg-amber-950"] {
+  background-color: #fefce8 !important;
+}
+html.light [class*="bg-emerald-950"] {
+  background-color: #f0fdf4 !important;
+}
+html.light [class*="bg-purple-950"],
+html.light [class*="bg-violet-950"] {
+  background-color: #faf5ff !important;
+}
+html.light [class*="bg-indigo-950"] {
+  background-color: #eef2ff !important;
+}
+html.light [class*="bg-rose-950"],
+html.light [class*="bg-red-950"] {
+  background-color: #fff1f2 !important;
+}
+
+/* Metallic gradient headings in light mode */
+html.light [class*="from-white via-slate-200 to-slate-400"] {
+  background-image: linear-gradient(to bottom, #0f172a, #334155, #64748b) !important;
 }
 
 /* Borders */
@@ -185,7 +213,7 @@ html.light .glass-panel {
   border: 1px solid rgba(0, 0, 0, 0.08) !important;
 }
 
-/* Preserve bright buttons text color */
+/* Preserve bright buttons & badges text color */
 html.light button.bg-blue-600,
 html.light a.bg-blue-600,
 html.light button.bg-indigo-600,
@@ -195,6 +223,11 @@ html.light a.bg-emerald-600,
 html.light button.bg-purple-600,
 html.light a.bg-purple-600,
 html.light button.bg-rose-600,
-html.light a.bg-rose-600 {
+html.light a.bg-rose-600,
+html.light [class*="bg-blue-600"],
+html.light [class*="bg-emerald-600"],
+html.light [class*="bg-rose-600"],
+html.light [class*="bg-indigo-600"],
+html.light [class*="bg-purple-600"] {
   color: #ffffff !important;
 }

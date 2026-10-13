@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
 import CartDrawer from '@/components/CartDrawer';
 import CardDetailModal from '@/components/CardDetailModal';
+import StorePausedBanner from '@/components/StorePausedBanner';
 import { WhatsAppHeroButton, WhatsAppFloatingButton, WHATSAPP_GROUP_URL, WhatsAppSvgIcon } from '@/components/WhatsAppButton';
 import { CardData } from '@/components/CardItem';
 import {
@@ -427,6 +428,8 @@ export default function HomePage() {
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
+
+          <StorePausedBanner className="mb-6" />
 
           {loadingCards ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
