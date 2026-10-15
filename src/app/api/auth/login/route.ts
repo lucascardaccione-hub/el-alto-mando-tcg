@@ -35,7 +35,6 @@ export async function POST(request: Request) {
           error: 'Debes verificar tu correo electrónico antes de iniciar sesión.',
           requires_verification: true,
           email: user.email,
-          verification_code: process.env.NODE_ENV !== 'production' ? user.verification_code : undefined,
         },
         { status: 403 }
       );

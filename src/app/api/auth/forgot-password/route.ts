@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { generateResetCode, generateResetToken } from '@/lib/auth';
+import { sendPasswordResetEmail, maskEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,13 +42,19 @@ export async function POST(request: Request) {
       [code, token, expires, user.id]
     );
 
-    return NextResponse.json({
-      success: true,
-      message: 'Se ha generado la solicitud de restablecimiento de contraseña.',
-      email: user.email,
+    // Send email with recovery code
+    await sendPasswordResetEmail({
+      to: user.email,
       username: user.username,
       code,
       token,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Hemos enviado un código de 6 dígitos a tu correo electrónico para restablecer tu contraseña.',
+      email: user.email,
+      maskedEmail: maskEmail(user.email),
     });
   } catch (error: any) {
     console.error('Forgot password error:', error);

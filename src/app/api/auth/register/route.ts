@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { hashPassword, createToken, COOKIE_NAME } from '@/lib/auth';
+import { sendVerificationEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -106,12 +107,19 @@ export async function POST(request: Request) {
       return response;
     }
 
+    // Send verification email to user
+    await sendVerificationEmail({
+      to: cleanEmail,
+      username: cleanUsername,
+      code,
+      token,
+    }).catch((e) => console.error('Failed to send verification email:', e));
+
     return NextResponse.json({
       success: true,
       requiresVerification: true,
       email: cleanEmail,
-      demoCode: code,
-      message: 'Cuenta creada. Por favor confirma tu correo electrónico con el código de 6 dígitos.',
+      message: 'Cuenta creada. Hemos enviado un código de 6 dígitos a tu correo electrónico para verificar tu cuenta.',
     });
   } catch (error: any) {
     console.error('Registration error:', error);

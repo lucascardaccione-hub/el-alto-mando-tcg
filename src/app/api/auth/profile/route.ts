@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getCurrentUser, comparePassword, hashPassword, createToken, COOKIE_NAME } from '@/lib/auth';
+import { sendPasswordChangedNotificationEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -35,6 +36,13 @@ export async function PUT(request: Request) {
 
       const newHash = hashPassword(newPassword);
       await db.run('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, user.id]);
+
+      if (user.email) {
+        await sendPasswordChangedNotificationEmail({
+          to: user.email,
+          username: user.username,
+        }).catch((e) => console.error('Failed to send password changed email:', e));
+      }
     }
 
     // 2. Avatar update

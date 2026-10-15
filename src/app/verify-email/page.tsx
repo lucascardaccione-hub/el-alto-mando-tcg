@@ -12,10 +12,9 @@ function VerifyEmailForm() {
 
   const emailParam = searchParams.get('email') || '';
   const tokenParam = searchParams.get('token') || '';
-  const demoCode = searchParams.get('demoCode') || '';
 
   const [email, setEmail] = useState(emailParam);
-  const [code, setCode] = useState(demoCode);
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [error, setError] = useState('');
@@ -82,8 +81,7 @@ function VerifyEmailForm() {
       if (!res.ok) {
         setError(data.error || 'Error al reenviar código.');
       } else {
-        if (data.code) setCode(data.code);
-        setInfoMessage('¡Nuevo código enviado con éxito!');
+        setInfoMessage('¡Nuevo código enviado con éxito! Revisa tu bandeja de entrada o spam.');
       }
     } catch {
       setError('Error al reenviar el código.');
@@ -149,18 +147,18 @@ function VerifyEmailForm() {
                 </div>
               )}
 
-              {demoCode && (
-                <div className="p-3.5 rounded-2xl bg-blue-950/50 border border-blue-800/60 text-xs text-blue-300 space-y-1">
-                  <div className="flex items-center gap-1.5 font-bold text-white">
-                    <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Código de verificación generado:</span>
-                  </div>
-                  <p className="text-xl font-mono font-black tracking-widest text-blue-300">{demoCode}</p>
-                  <p className="text-[10px] text-slate-400">
-                    (En entorno de desarrollo puedes hacer clic en verificar directamente).
-                  </p>
+              <div className="p-3.5 rounded-2xl bg-blue-950/40 border border-blue-800/40 text-xs text-blue-200 space-y-1">
+                <div className="flex items-center gap-1.5 font-bold text-white">
+                  <Mail className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Código enviado a tu correo</span>
                 </div>
-              )}
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Hemos enviado un código numérico de 6 dígitos a tu casilla de correo. Ingrésalo a continuación para activar tu cuenta de entrenador.
+                </p>
+                <p className="text-[10px] text-slate-400">
+                  (Si no lo ves en unos segundos, revisa tu carpeta de correo no deseado o spam).
+                </p>
+              </div>
 
               <form onSubmit={handleCodeSubmit} className="space-y-4">
                 {!emailParam && (

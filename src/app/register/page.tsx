@@ -55,7 +55,7 @@ export default function RegisterPage() {
       setSuccess(true);
       setTimeout(() => {
         if (data.requiresVerification) {
-          router.push(`/verify-email?email=${encodeURIComponent(email)}&demoCode=${data.demoCode || ''}`);
+          router.push(`/verify-email?email=${encodeURIComponent(email)}`);
         } else {
           router.push('/decks');
         }

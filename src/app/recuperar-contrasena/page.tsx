@@ -20,7 +20,6 @@ function ForgotPasswordContent() {
   const [token, setToken] = useState(tokenParam);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [demoCode, setDemoCode] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -62,13 +61,6 @@ function ForgotPasswordContent() {
       }
 
       setEmail(data.email || identifier.trim());
-      if (data.code) {
-        setDemoCode(data.code);
-        setCode(data.code);
-      }
-      if (data.token) {
-        setToken(data.token);
-      }
       setStep(2);
     } catch {
       setError('Error de conexión. Inténtalo nuevamente.');
@@ -173,15 +165,17 @@ function ForgotPasswordContent() {
                 </div>
               )}
 
-              {demoCode && step === 2 && (
-                <div className="p-3.5 rounded-2xl bg-purple-950/50 border border-purple-800/60 text-xs text-purple-300 space-y-1 animate-in fade-in">
+              {step === 2 && (
+                <div className="p-3.5 rounded-2xl bg-amber-950/40 border border-amber-800/50 text-xs text-amber-200 space-y-1 animate-in fade-in">
                   <div className="flex items-center gap-1.5 font-bold text-white">
-                    <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                    <span>Código de recuperación generado:</span>
+                    <Mail className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Código enviado a tu correo</span>
                   </div>
-                  <p className="text-2xl font-mono font-black tracking-widest text-purple-200">{demoCode}</p>
+                  <p className="text-[11px] text-slate-300 leading-relaxed">
+                    Hemos enviado un código de 6 dígitos a <strong className="text-white">{email}</strong>. Ingrésalo a continuación para definir tu nueva contraseña.
+                  </p>
                   <p className="text-[10px] text-slate-400">
-                    Válido por 1 hora.
+                    (Válido por 1 hora. Revisa también tu carpeta de correo no deseado o spam).
                   </p>
                 </div>
               )}
@@ -213,11 +207,11 @@ function ForgotPasswordContent() {
                     {loading ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Generando código...</span>
+                        <span>Enviando código por correo...</span>
                       </>
                     ) : (
                       <>
-                        <span>Continuar</span>
+                        <span>Enviar Código de Recuperación</span>
                         <ArrowRight className="w-4 h-4" />
                       </>
                     )}

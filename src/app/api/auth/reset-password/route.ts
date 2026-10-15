@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { hashPassword } from '@/lib/auth';
+import { sendPasswordChangedNotificationEmail } from '@/lib/email';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,6 +61,12 @@ export async function POST(request: Request) {
        WHERE id = ?`,
       [hashed, user.id]
     );
+
+    // Notify user of password change
+    await sendPasswordChangedNotificationEmail({
+      to: user.email,
+      username: user.username,
+    }).catch((e) => console.error('Failed to send password changed email:', e));
 
     return NextResponse.json({
       success: true,
