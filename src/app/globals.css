@@ -127,6 +127,7 @@ html.light [class*="bg-[#0a1024]"],
 html.light [class*="bg-[#0a1020]"],
 html.light [class*="bg-[#0d152c]"],
 html.light [class*="bg-[#0d1528]"],
+html.light [class*="bg-[#0d1527]"],
 html.light [class*="bg-[#0d1629]"],
 html.light [class*="bg-[#070b15]"],
 html.light [class*="bg-[#131e36]"],
@@ -141,6 +142,20 @@ html.light [class*="bg-slate-900"] {
 
 html.light [class*="bg-slate-800"] {
   background-color: #e2e8f0 !important;
+}
+
+/* Dark gradients reset in light mode */
+html.light [class*="from-[#0a1024]"],
+html.light [class*="from-[#0d1630]"],
+html.light [class*="from-[#1c160c]"],
+html.light [class*="from-[#180f2c]"],
+html.light [class*="from-[#090e1c]"],
+html.light [class*="from-[#080d1e]"],
+html.light [class*="from-[#070b14]"],
+html.light [class*="from-[#060913]"] {
+  background-image: none !important;
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
 }
 
 /* Status cards & badge pastel backgrounds */
@@ -163,6 +178,14 @@ html.light [class*="bg-indigo-950"] {
 html.light [class*="bg-rose-950"],
 html.light [class*="bg-red-950"] {
   background-color: #fff1f2 !important;
+}
+
+/* Headings in light mode */
+html.light h1:not([class*="bg-"]):not(button *):not(a *),
+html.light h2:not([class*="bg-"]):not(button *):not(a *),
+html.light h3:not([class*="bg-"]):not(button *):not(a *),
+html.light h4:not([class*="bg-"]):not(button *):not(a *) {
+  color: #0f172a !important;
 }
 
 /* Metallic gradient headings in light mode */
@@ -196,6 +219,17 @@ html.light [class*="text-slate-400"] {
 
 html.light [class*="text-slate-500"] {
   color: #64748b !important;
+}
+
+/* Fix faint pastel text on light backgrounds */
+html.light [class*="text-amber-200"]:not(.bg-amber-500):not(.bg-amber-600) {
+  color: #92400e !important;
+}
+html.light [class*="text-emerald-200"]:not(.bg-emerald-500):not(.bg-emerald-600) {
+  color: #065f46 !important;
+}
+html.light [class*="text-blue-200"]:not(.bg-blue-500):not(.bg-blue-600) {
+  color: #1e40af !important;
 }
 
 /* Inputs, selects, and textareas */

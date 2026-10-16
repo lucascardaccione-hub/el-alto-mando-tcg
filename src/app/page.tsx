@@ -112,7 +112,7 @@ export default function HomePage() {
               {/* Tienda CTA — Alakazam */}
               <Link
                 href="/tienda"
-                className="flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-amber-200 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-600/40 hover:border-amber-500 shadow-lg shadow-amber-950/30 transition-all hover:scale-105 active:scale-95"
+                className="flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-amber-800 dark:text-amber-200 hover:text-amber-950 dark:hover:text-white bg-amber-500/15 dark:bg-amber-950/40 hover:bg-amber-500/25 dark:hover:bg-amber-900/50 border border-amber-300 dark:border-amber-600/40 hover:border-amber-400 dark:hover:border-amber-500 shadow-md dark:shadow-lg shadow-amber-950/10 dark:shadow-amber-950/30 transition-all hover:scale-105 active:scale-95"
               >
                 <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/65.png" alt="Alakazam" className="w-6 h-6 object-contain drop-shadow-md" />
                 <span>Tienda</span>
@@ -121,7 +121,7 @@ export default function HomePage() {
               {/* Mi Cuenta CTA — Lucario */}
               <Link
                 href="/perfil"
-                className="flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-200 hover:text-white bg-slate-900/90 hover:bg-slate-800 border border-slate-700/80 hover:border-slate-600 transition-all hover:scale-105 active:scale-95"
+                className="flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-slate-800 dark:text-slate-200 hover:text-slate-950 dark:hover:text-white bg-slate-100 dark:bg-slate-900/90 hover:bg-slate-200 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700/80 hover:border-slate-400 dark:hover:border-slate-600 shadow-sm dark:shadow-none transition-all hover:scale-105 active:scale-95"
               >
                 <img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/448.png" alt="Lucario" className="w-6 h-6 object-contain drop-shadow-md" />
                 <span>Mi Cuenta</span>

@@ -127,7 +127,7 @@ export default function TiendaPage() {
   );
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#070b14] text-slate-100">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#070b14] text-slate-900 dark:text-slate-100">
       {/* Top Navbar */}
       <Navbar
         totalCards={metadata.stats?.totalCards || cards.length}
@@ -138,27 +138,27 @@ export default function TiendaPage() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <StorePausedBanner />
         {/* Tienda Header & Tracking Bar */}
-        <section className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#0a1024]/90 via-[#0d152c]/80 to-[#080d1e]/90 border border-blue-500/20 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+        <section className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-white via-blue-50/40 to-slate-50 dark:from-[#0a1024]/90 dark:via-[#0d152c]/80 dark:to-[#080d1e]/90 border border-slate-200 dark:border-blue-500/20 p-6 sm:p-8 shadow-xl dark:shadow-2xl backdrop-blur-xl">
           <div className="absolute top-0 right-0 -mr-20 -mt-20 w-80 h-80 rounded-full bg-blue-600/10 blur-3xl pointer-events-none" />
           <div className="absolute bottom-0 left-10 -mb-20 w-72 h-72 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
 
           <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
             <div className="space-y-2 max-w-2xl">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-600/20 text-blue-300 border border-blue-500/30">
-                  <ShoppingBag className="w-3.5 h-3.5 text-blue-400" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-600/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
+                  <ShoppingBag className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                   <span>Tienda Oficial de Singles</span>
                 </span>
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950/40 text-emerald-300 border border-emerald-700/40">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/40">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>Vendedores Verificados</span>
                 </span>
               </div>
 
-              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white">
+              <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
                 Catálogo de Cartas Sueltas & Stock en Vivo
               </h1>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                 Buscá tus cartas individuales por nombre, número o colección. Comprá directo a vendedores oficiales y completá tus mazos para jugar de inmediato.
               </p>
             </div>
@@ -167,19 +167,19 @@ export default function TiendaPage() {
             <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
               <Link
                 href="/pedidos"
-                className="flex-1 lg:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-amber-200 bg-amber-950/40 hover:bg-amber-900/50 border border-amber-600/40 hover:border-amber-500/60 shadow-lg shadow-amber-950/30 transition-all hover:scale-105 active:scale-95"
+                className="flex-1 lg:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-amber-800 dark:text-amber-200 bg-amber-500/15 dark:bg-amber-950/40 hover:bg-amber-500/25 dark:hover:bg-amber-900/50 border border-amber-300 dark:border-amber-600/40 hover:border-amber-400 dark:hover:border-amber-500/60 shadow-sm dark:shadow-lg dark:shadow-amber-950/30 transition-all hover:scale-105 active:scale-95"
                 title="Consultar estado de tus compras con tu código de pedido"
               >
-                <Clock className="w-4 h-4 text-amber-400" />
+                <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
                 <span>Seguimiento de Pedidos</span>
-                <ArrowRight className="w-3.5 h-3.5 text-amber-400" />
+                <ArrowRight className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
               </Link>
 
               <Link
                 href="/deck-builder"
-                className="flex-1 lg:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-blue-200 bg-blue-950/40 hover:bg-blue-900/50 border border-blue-600/40 hover:border-blue-500/60 transition-all hover:scale-105 active:scale-95"
+                className="flex-1 lg:flex-initial inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-blue-800 dark:text-blue-200 bg-blue-500/15 dark:bg-blue-950/40 hover:bg-blue-500/25 dark:hover:bg-blue-900/50 border border-blue-300 dark:border-blue-600/40 hover:border-blue-400 dark:hover:border-blue-500/60 transition-all hover:scale-105 active:scale-95"
               >
-                <Layers className="w-4 h-4 text-blue-400" />
+                <Layers className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                 <span>Deck Builder</span>
               </Link>
             </div>
@@ -205,7 +205,7 @@ export default function TiendaPage() {
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                   active
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40 border border-blue-400/40'
-                    : 'bg-[#0b1220] text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700'
+                    : 'bg-white dark:bg-[#0b1220] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'
                 }`}
               >
                 <span>{cat.emoji}</span>
@@ -241,16 +241,16 @@ export default function TiendaPage() {
         />
 
         {/* Active Filter Chips & Catalog Results Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm text-slate-400 px-1">
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm text-slate-600 dark:text-slate-400 px-1">
           <div className="flex flex-wrap items-center gap-2">
             <p>
-              Mostrando <strong className="text-white font-bold">{cards.length}</strong>{' '}
+              Mostrando <strong className="text-slate-900 dark:text-white font-bold">{cards.length}</strong>{' '}
               {cards.length === 1 ? 'carta disponible' : 'cartas encontradas'}
             </p>
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-950/60 text-blue-300 border border-blue-700/50 hover:bg-blue-900/60"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700/50 hover:bg-blue-100 dark:hover:bg-blue-900/60"
               >
                 <span>Búsqueda: &ldquo;{search}&rdquo;</span>
                 <span className="ml-1 font-bold">×</span>
@@ -259,7 +259,7 @@ export default function TiendaPage() {
             {selectedExpansion && (
               <button
                 onClick={() => setSelectedExpansion('')}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-indigo-950/60 text-indigo-300 border border-indigo-700/50 hover:bg-indigo-900/60"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700/50 hover:bg-indigo-100 dark:hover:bg-indigo-900/60"
               >
                 <span>Set: {selectedExpansion}</span>
                 <span className="ml-1 font-bold">×</span>
@@ -268,7 +268,7 @@ export default function TiendaPage() {
             {selectedVersion && (
               <button
                 onClick={() => setSelectedVersion('')}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-950/60 text-purple-300 border border-purple-700/50 hover:bg-purple-900/60"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-700/50 hover:bg-purple-100 dark:hover:bg-purple-900/60"
               >
                 <span>Rareza: {selectedVersion}</span>
                 <span className="ml-1 font-bold">×</span>
@@ -277,7 +277,7 @@ export default function TiendaPage() {
             {selectedLanguage && (
               <button
                 onClick={() => setSelectedLanguage('')}
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-950/60 text-emerald-300 border border-emerald-700/50 hover:bg-emerald-900/60"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60"
               >
                 <span>Idioma: {selectedLanguage}</span>
                 <span className="ml-1 font-bold">×</span>
@@ -290,10 +290,10 @@ export default function TiendaPage() {
               fetchCards();
               fetchMetadata();
             }}
-            className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors"
+            className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"
             title="Refrescar catálogo"
           >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-blue-400' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-blue-600 dark:text-blue-400' : ''}`} />
             <span className="hidden sm:inline">Actualizar</span>
           </button>
         </div>
@@ -315,12 +315,12 @@ export default function TiendaPage() {
             ))}
           </div>
         ) : cards.length === 0 ? (
-          <div className="bg-[#0c1424] border border-slate-800/80 rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto my-8">
-            <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-500">
+          <div className="bg-white dark:bg-[#0c1424] border border-slate-200 dark:border-slate-800/80 rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto my-8 shadow-sm">
+            <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center mx-auto text-slate-500">
               <AlertCircle className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-bold text-white">No se encontraron cartas</h3>
-            <p className="text-xs sm:text-sm text-slate-400">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">No se encontraron cartas</h3>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
               No hay cartas que coincidan con los filtros seleccionados o el stock se encuentra agotado.
             </p>
             {hasActiveFilters && (
@@ -346,7 +346,7 @@ export default function TiendaPage() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t border-slate-800/80 bg-[#050811] py-8 text-center text-xs text-slate-500 mt-16">
+      <footer className="w-full border-t border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#050811] py-8 text-center text-xs text-slate-500 mt-16">
         <div className="max-w-7xl mx-auto px-4 space-y-2">
           <p className="font-semibold text-slate-400">
             El Alto Mando TCG © {new Date().getFullYear()} — Coleccionismo & Juego Competitivo

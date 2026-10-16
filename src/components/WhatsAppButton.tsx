@@ -29,7 +29,7 @@ export function WhatsAppHeroButton({ className = '' }: WhatsAppHeroButtonProps) 
       href={WHATSAPP_GROUP_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className={`group flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-emerald-200 hover:text-white bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-600/40 hover:border-emerald-500 shadow-lg shadow-emerald-950/30 transition-all hover:scale-105 active:scale-95 ${className}`}
+      className={`group flex items-center gap-2.5 px-5 py-3 rounded-2xl text-xs sm:text-sm font-bold text-emerald-800 dark:text-emerald-200 hover:text-emerald-950 dark:hover:text-white bg-emerald-500/15 dark:bg-emerald-950/40 hover:bg-emerald-500/25 dark:hover:bg-emerald-900/50 border border-emerald-300 dark:border-emerald-600/40 hover:border-emerald-400 dark:hover:border-emerald-500 shadow-md dark:shadow-lg shadow-emerald-950/10 dark:shadow-emerald-950/30 transition-all hover:scale-105 active:scale-95 ${className}`}
       title="Unirse al grupo oficial de WhatsApp de El Alto Mando TCG"
     >
       <div className="relative flex items-center justify-center">
@@ -43,7 +43,7 @@ export function WhatsAppHeroButton({ className = '' }: WhatsAppHeroButtonProps) 
         </span>
       </div>
       <span>WhatsApp</span>
-      <WhatsAppSvgIcon className="w-3.5 h-3.5 text-emerald-400 fill-emerald-400 group-hover:text-[#25D366] group-hover:fill-[#25D366] transition-all duration-300 group-hover:rotate-12 group-hover:scale-110" />
+      <WhatsAppSvgIcon className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 fill-emerald-600 dark:fill-emerald-400 group-hover:text-[#25D366] group-hover:fill-[#25D366] transition-all duration-300 group-hover:rotate-12 group-hover:scale-110" />
     </a>
   );
 }
