@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { createToken, COOKIE_NAME } from '@/lib/auth';
+import { createToken, COOKIE_NAME, PENDING_VERIFY_COOKIE, safeCompareCode } from '@/lib/auth';
+import { checkRateLimit, recordFailedAttempt, clearFailedAttempts, getClientIp } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
     const { email, code, token } = await request.json();
 
     const cleanEmail = (email || '').trim().toLowerCase();
@@ -13,18 +15,47 @@ export async function POST(request: Request) {
     const cleanToken = (token || '').trim();
 
     if (!cleanEmail && !cleanToken) {
-      return NextResponse.json({ error: 'Email o token de verificación requerido' }, { status: 400 });
+      return NextResponse.json({ error: 'Email o token de verificación requerido.' }, { status: 400 });
+    }
+
+    const rateKey = `verify:${cleanEmail || ip}`;
+    const rate = checkRateLimit(rateKey, 5, 15 * 60 * 1000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        {
+          error: 'Demasiados intentos fallidos. Por seguridad, solicita un nuevo código con el botón "Reenviar".',
+        },
+        { status: 429 }
+      );
     }
 
     let user: any = null;
 
     if (cleanToken) {
       user = await db.get('SELECT * FROM users WHERE verification_token = ?', [cleanToken]);
-    } else if (cleanEmail && cleanCode) {
-      user = await db.get('SELECT * FROM users WHERE email = ? COLLATE NOCASE AND verification_code = ?', [cleanEmail, cleanCode]);
+    } else if (cleanEmail) {
+      user = await db.get('SELECT * FROM users WHERE email = ? COLLATE NOCASE', [cleanEmail]);
+      if (user && !safeCompareCode(cleanCode, user.verification_code)) {
+        const fails = recordFailedAttempt(rateKey);
+        if (fails >= 5) {
+          // Invalidate code in DB after 5 failed attempts to block brute force
+          await db.run('UPDATE users SET verification_code = NULL WHERE id = ?', [user.id]);
+          return NextResponse.json(
+            {
+              error: 'Código bloqueado por seguridad tras 5 intentos fallidos. Haz clic en "Reenviar código" para recibir uno nuevo.',
+            },
+            { status: 429 }
+          );
+        }
+        return NextResponse.json(
+          { error: `Código de verificación incorrecto. Te quedan ${5 - fails} intentos.` },
+          { status: 400 }
+        );
+      }
     }
 
     if (!user) {
+      recordFailedAttempt(rateKey);
       return NextResponse.json(
         { error: 'El código o enlace de verificación es inválido o ha expirado.' },
         { status: 400 }
@@ -42,12 +73,17 @@ export async function POST(request: Request) {
       }
     }
 
+    clearFailedAttempts(rateKey);
+
     // Mark as verified and clear temporary token/code
-    await db.run(`
+    await db.run(
+      `
       UPDATE users
       SET is_verified = 1, verification_token = NULL, verification_code = NULL, verification_expires = NULL
       WHERE id = ?
-    `, [user.id]);
+    `,
+      [user.id]
+    );
 
     // Auto-login the user
     const sessionToken = createToken({
@@ -79,6 +115,8 @@ export async function POST(request: Request) {
       maxAge: 60 * 60 * 24 * 7,
       path: '/',
     });
+
+    response.cookies.delete(PENDING_VERIFY_COOKIE);
 
     return response;
   } catch (error: any) {

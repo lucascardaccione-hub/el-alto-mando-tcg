@@ -25,7 +25,7 @@ export function comparePassword(password: string, hash: string): boolean {
 }
 
 export function generateVerificationCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 export function generateVerificationToken(): string {
@@ -33,11 +33,45 @@ export function generateVerificationToken(): string {
 }
 
 export function generateResetCode(): string {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 export function generateResetToken(): string {
   return crypto.randomBytes(32).toString('hex');
+}
+
+export function safeCompareCode(input: string, stored: string | null | undefined): boolean {
+  if (!input || !stored) return false;
+  const a = Buffer.from(String(input).trim());
+  const b = Buffer.from(String(stored).trim());
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
+
+export const PENDING_VERIFY_COOKIE = 'altomando_pending_verify';
+
+export interface PendingVerifyPayload {
+  userId: number;
+  username: string;
+  email: string;
+  purpose: 'pending_verify';
+}
+
+export function createPendingVerifyToken(payload: { userId: number; username: string; email: string }): string {
+  return jwt.sign({ ...payload, purpose: 'pending_verify' }, JWT_SECRET, { expiresIn: '2h' });
+}
+
+export function getPendingVerifySession(): PendingVerifyPayload | null {
+  try {
+    const cookieStore = cookies();
+    const token = cookieStore.get(PENDING_VERIFY_COOKIE)?.value;
+    if (!token) return null;
+    const decoded = jwt.verify(token, JWT_SECRET) as PendingVerifyPayload;
+    if (!decoded || decoded.purpose !== 'pending_verify') return null;
+    return decoded;
+  } catch {
+    return null;
+  }
 }
 
 export function createToken(payload: UserSession): string {

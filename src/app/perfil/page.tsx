@@ -20,11 +20,14 @@ import {
   Plus,
   ArrowRight,
   Award,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { AVATAR_PRESETS, getDefaultAvatar } from '@/lib/avatars';
 import { getRoleBadge } from '@/lib/roles';
 import { RewardsOverview } from '@/components/RewardsOverview';
 import { TrainerCard } from '@/components/TrainerCard';
+import { PasswordStrengthMeter } from '@/components/PasswordStrengthMeter';
 
 interface UserData {
   id: number;
@@ -58,6 +61,7 @@ export default function ProfilePage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPasswords, setShowPasswords] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
 
   // Decks state
@@ -528,14 +532,24 @@ export default function ProfilePage() {
       {activeTab === 'security' && (
         <div className="max-w-md">
           <div className="bg-[#0b1220]/90 border border-slate-800/80 rounded-3xl p-6 sm:p-8 space-y-5 shadow-xl">
-            <div>
-              <h3 className="text-base font-extrabold text-white flex items-center gap-2">
-                <KeyRound className="w-4 h-4 text-blue-400" />
-                <span>Modificar Contraseña</span>
-              </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Ingresa tu clave actual y define una nueva contraseña segura.
-              </p>
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <h3 className="text-base font-extrabold text-white flex items-center gap-2">
+                  <KeyRound className="w-4 h-4 text-blue-400" />
+                  <span>Modificar Contraseña</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Ingresa tu clave actual y define una nueva contraseña segura.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPasswords((prev) => !prev)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700/80 text-[11px] font-semibold text-slate-300 hover:text-white hover:border-slate-600 transition-colors"
+              >
+                {showPasswords ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                <span>{showPasswords ? 'Ocultar' : 'Mostrar'}</span>
+              </button>
             </div>
 
             <form onSubmit={handleChangePassword} className="space-y-4">
@@ -544,12 +558,12 @@ export default function ProfilePage() {
                   Contraseña Actual
                 </label>
                 <input
-                  type="password"
+                  type={showPasswords ? 'text' : 'password'}
                   required
                   value={currentPassword}
                   onChange={(e) => setCurrentPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
                 />
               </div>
 
@@ -558,28 +572,44 @@ export default function ProfilePage() {
                   Nueva Contraseña
                 </label>
                 <input
-                  type="password"
+                  type={showPasswords ? 'text' : 'password'}
                   required
                   minLength={6}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="Mínimo 6 caracteres"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-blue-500"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
                 />
+                <PasswordStrengthMeter password={newPassword} />
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
-                  Confirmar Nueva Contraseña
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                    Confirmar Nueva Contraseña
+                  </label>
+                  {confirmPassword.length > 0 && (
+                    <span
+                      className={`text-[10px] font-bold ${
+                        confirmPassword === newPassword ? 'text-emerald-400' : 'text-rose-400'
+                      }`}
+                    >
+                      {confirmPassword === newPassword ? '✓ Coinciden' : '✕ No coinciden'}
+                    </span>
+                  )}
+                </div>
                 <input
-                  type="password"
+                  type={showPasswords ? 'text' : 'password'}
                   required
                   minLength={6}
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Repite la nueva contraseña"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-white focus:outline-none focus:border-blue-500"
+                  className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border text-sm text-white focus:outline-none transition-colors ${
+                    confirmPassword.length > 0 && confirmPassword !== newPassword
+                      ? 'border-rose-500/70 focus:border-rose-400'
+                      : 'border-slate-700 focus:border-blue-500'
+                  }`}
                 />
               </div>
 

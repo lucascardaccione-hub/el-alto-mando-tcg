@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
-import { hashPassword } from '@/lib/auth';
+import { hashPassword, safeCompareCode } from '@/lib/auth';
 import { sendPasswordChangedNotificationEmail } from '@/lib/email';
+import { checkRateLimit, recordFailedAttempt, clearFailedAttempts, getClientIp } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
     const { email, code, token, newPassword } = await request.json();
 
     const cleanEmail = (email || '').trim().toLowerCase();
@@ -25,18 +27,45 @@ export async function POST(request: Request) {
       );
     }
 
+    const rateKey = `reset:${cleanEmail || ip}`;
+    const rate = checkRateLimit(rateKey, 5, 15 * 60 * 1000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: 'Demasiados intentos fallidos. Por seguridad, solicita un nuevo código de recuperación.' },
+        { status: 429 }
+      );
+    }
+
     let user: any = null;
 
     if (cleanToken) {
       user = await db.get('SELECT * FROM users WHERE reset_token = ?', [cleanToken]);
-    } else if (cleanEmail && cleanCode) {
+    } else if (cleanEmail) {
       user = await db.get(
-        'SELECT * FROM users WHERE email = ? COLLATE NOCASE AND reset_code = ?',
-        [cleanEmail, cleanCode]
+        'SELECT * FROM users WHERE (email = ? COLLATE NOCASE OR username = ? COLLATE NOCASE)',
+        [cleanEmail, cleanEmail]
       );
+
+      if (user && !safeCompareCode(cleanCode, user.reset_code)) {
+        const fails = recordFailedAttempt(rateKey);
+        if (fails >= 5) {
+          await db.run('UPDATE users SET reset_code = NULL, reset_token = NULL WHERE id = ?', [user.id]);
+          return NextResponse.json(
+            {
+              error: 'Código bloqueado tras 5 intentos fallidos. Vuelve al paso anterior para recibir un nuevo código.',
+            },
+            { status: 429 }
+          );
+        }
+        return NextResponse.json(
+          { error: `Código de recuperación incorrecto. Te quedan ${5 - fails} intentos.` },
+          { status: 400 }
+        );
+      }
     }
 
     if (!user) {
+      recordFailedAttempt(rateKey);
       return NextResponse.json(
         { error: 'El código o enlace de recuperación es inválido o ha expirado.' },
         { status: 400 }
@@ -52,6 +81,8 @@ export async function POST(request: Request) {
         );
       }
     }
+
+    clearFailedAttempts(rateKey);
 
     const hashed = hashPassword(cleanPassword);
 
