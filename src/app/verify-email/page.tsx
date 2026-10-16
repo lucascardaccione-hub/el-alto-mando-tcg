@@ -21,6 +21,11 @@ function VerifyEmailForm() {
   const [infoMessage, setInfoMessage] = useState('');
   const [success, setSuccess] = useState(false);
 
+  // Correction of mistyped email
+  const [showChangeEmail, setShowChangeEmail] = useState(false);
+  const [newEmailInput, setNewEmailInput] = useState('');
+  const [changingEmail, setChangingEmail] = useState(false);
+
   // Auto-verify if token is present in URL
   useEffect(() => {
     if (tokenParam) {
@@ -90,6 +95,47 @@ function VerifyEmailForm() {
     }
   };
 
+  const handleChangeEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmailInput.trim()) {
+      setError('Ingresa tu nuevo correo electrónico.');
+      return;
+    }
+    setError('');
+    setInfoMessage('');
+    setChangingEmail(true);
+
+    try {
+      const res = await fetch('/api/auth/change-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentEmail: email.trim(),
+          newEmail: newEmailInput.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Error al cambiar el correo.');
+      } else {
+        setEmail(data.newEmail);
+        setShowChangeEmail(false);
+        setNewEmailInput('');
+        setInfoMessage('¡Correo actualizado! Te enviamos un nuevo código a ' + data.newEmail);
+        if (typeof window !== 'undefined') {
+          const url = new URL(window.location.href);
+          url.searchParams.set('email', data.newEmail);
+          window.history.replaceState({}, '', url.toString());
+        }
+      }
+    } catch {
+      setError('Error al conectar con el servidor.');
+    } finally {
+      setChangingEmail(false);
+    }
+  };
+
   const handleCodeSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!code || code.length < 4) {
@@ -114,6 +160,18 @@ function VerifyEmailForm() {
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
               Ingresa el código enviado a <strong className="text-white">{email || 'tu correo'}</strong> para activar tu cuenta.
             </p>
+            <div className="pt-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowChangeEmail(!showChangeEmail);
+                  setError('');
+                }}
+                className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold underline underline-offset-2 inline-flex items-center gap-1 transition-colors"
+              >
+                <span>¿Te equivocaste de correo? Haz clic aquí para corregirlo</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -145,6 +203,48 @@ function VerifyEmailForm() {
                   <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-400" />
                   <span>{infoMessage}</span>
                 </div>
+              )}
+
+              {showChangeEmail && (
+                <form
+                  onSubmit={handleChangeEmail}
+                  className="p-4 rounded-2xl bg-amber-950/40 border border-amber-500/40 space-y-3 text-left animate-in fade-in"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>Corregir Correo Electrónico</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowChangeEmail(false)}
+                      className="text-xs text-slate-400 hover:text-white px-1.5 py-0.5 rounded-md hover:bg-slate-800"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-300">
+                    Ingresa tu correo correcto para transferir tu código de activación:
+                  </p>
+                  <div className="space-y-2">
+                    <input
+                      type="email"
+                      required
+                      value={newEmailInput}
+                      onChange={(e) => setNewEmailInput(e.target.value)}
+                      placeholder="nuevo.correo@gmail.com"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border border-amber-500/40 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-400"
+                    />
+                    <button
+                      type="submit"
+                      disabled={changingEmail}
+                      className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-amber-900/30 disabled:opacity-50"
+                    >
+                      {changingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                      <span>Guardar Correo y Reenviar Código</span>
+                    </button>
+                  </div>
+                </form>
               )}
 
               <div className="p-3.5 rounded-2xl bg-blue-950/40 border border-blue-800/40 text-xs text-blue-200 space-y-1">

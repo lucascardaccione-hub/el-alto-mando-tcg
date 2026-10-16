@@ -43,21 +43,90 @@ export async function POST(request: Request) {
     }
 
     // Check if username already exists
-    const existingUser = await db.get('SELECT id FROM users WHERE username = ? COLLATE NOCASE', [cleanUsername]);
+    const existingUser = await db.get('SELECT id, is_verified FROM users WHERE username = ? COLLATE NOCASE', [cleanUsername]);
     if (existingUser) {
-      return NextResponse.json(
-        { error: 'Este nombre de usuario ya está registrado. Por favor elige otro.' },
-        { status: 409 }
+      if (existingUser.is_verified === 1) {
+        return NextResponse.json(
+          { error: 'Este nombre de usuario ya está registrado. Por favor elige otro.' },
+          { status: 409 }
+        );
+      }
+
+      // If the account was never verified, allow updating with new email and password
+      const emailTaken = await db.get(
+        'SELECT id FROM users WHERE email = ? COLLATE NOCASE AND id != ?',
+        [cleanEmail, existingUser.id]
       );
+      if (emailTaken) {
+        return NextResponse.json(
+          { error: 'Este correo electrónico ya está registrado con otra cuenta. Puedes iniciar sesión.' },
+          { status: 409 }
+        );
+      }
+
+      const passwordHash = hashPassword(cleanPassword);
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+      await db.run(
+        `UPDATE users 
+         SET email = ?, password_hash = ?, verification_code = ?, verification_token = ?, verification_expires = ? 
+         WHERE id = ?`,
+        [cleanEmail, passwordHash, code, token, expires, existingUser.id]
+      );
+
+      await sendVerificationEmail({
+        to: cleanEmail,
+        username: cleanUsername,
+        code,
+        token,
+      }).catch((e) => console.error('Failed to send verification email:', e));
+
+      return NextResponse.json({
+        success: true,
+        requiresVerification: true,
+        email: cleanEmail,
+        message: 'Hemos actualizado tu registro y enviado un nuevo código de 6 dígitos a tu correo.',
+      });
     }
 
     // Check if email already exists
-    const existingEmail = await db.get('SELECT id FROM users WHERE email = ? COLLATE NOCASE', [cleanEmail]);
+    const existingEmail = await db.get('SELECT id, is_verified FROM users WHERE email = ? COLLATE NOCASE', [cleanEmail]);
     if (existingEmail) {
-      return NextResponse.json(
-        { error: 'Este correo electrónico ya está registrado. Puedes iniciar sesión.' },
-        { status: 409 }
+      if (existingEmail.is_verified === 1) {
+        return NextResponse.json(
+          { error: 'Este correo electrónico ya está registrado. Puedes iniciar sesión.' },
+          { status: 409 }
+        );
+      }
+
+      // Email was registered but never verified - update username and password
+      const passwordHash = hashPassword(cleanPassword);
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      const token = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+      await db.run(
+        `UPDATE users 
+         SET username = ?, password_hash = ?, verification_code = ?, verification_token = ?, verification_expires = ? 
+         WHERE id = ?`,
+        [cleanUsername, passwordHash, code, token, expires, existingEmail.id]
       );
+
+      await sendVerificationEmail({
+        to: cleanEmail,
+        username: cleanUsername,
+        code,
+        token,
+      }).catch((e) => console.error('Failed to send verification email:', e));
+
+      return NextResponse.json({
+        success: true,
+        requiresVerification: true,
+        email: cleanEmail,
+        message: 'Hemos actualizado tu registro y enviado un código de 6 dígitos a tu correo.',
+      });
     }
 
     const passwordHash = hashPassword(cleanPassword);
