@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
+import { getCurrentUser } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,23 @@ export async function GET(
 ) {
   try {
     const deckId = parseInt(params.id, 10);
+    if (!deckId) {
+      return NextResponse.json({ error: 'ID de mazo inválido' }, { status: 400 });
+    }
+
+    const deck = await db.get('SELECT id, user_id, is_public FROM decks WHERE id = ?', [deckId]) as any;
+    if (!deck) {
+      return NextResponse.json({ error: 'Mazo no encontrado' }, { status: 404 });
+    }
+
+    if (deck.is_public === 0) {
+      const user = getCurrentUser();
+      const isLuca = user && (user.username?.toLowerCase() === 'luca' || user.role === 'admin');
+      if (!user || (deck.user_id !== user.id && !isLuca)) {
+        return NextResponse.json({ error: 'No autorizado para acceder a este mazo privado' }, { status: 403 });
+      }
+    }
+
     const cards = await db.all('SELECT * FROM deck_cards WHERE deck_id = ?', [deckId]) as any[];
 
     const itemsToAdd: any[] = [];

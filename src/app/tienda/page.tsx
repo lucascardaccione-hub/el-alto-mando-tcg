@@ -53,6 +53,11 @@ export default function TiendaPage() {
 
   useEffect(() => {
     document.title = 'Tienda Oficial de Singles — El Alto Mando TCG';
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const qParam = params.get('q');
+      if (qParam) setSearch(qParam);
+    }
   }, []);
 
   // Fetch filter metadata (expansions, versions)
@@ -130,7 +135,7 @@ export default function TiendaPage() {
       />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <StorePausedBanner />
         {/* Tienda Header & Tracking Bar */}
         <section className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-[#0a1024]/90 via-[#0d152c]/80 to-[#080d1e]/90 border border-blue-500/20 p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
@@ -181,6 +186,35 @@ export default function TiendaPage() {
           </div>
         </section>
 
+        {/* Quick Category Filter Pills */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1">
+          {[
+            { id: '', label: 'Todas las Cartas', emoji: '🃏' },
+            { id: 'Pokemon', label: 'Pokémon', emoji: '⚡' },
+            { id: 'Trainer', label: 'Entrenadores', emoji: '🎒' },
+            { id: 'Energy', label: 'Energías', emoji: '🔥' },
+          ].map((cat) => {
+            const active = selectedCategory.toLowerCase() === cat.id.toLowerCase();
+            return (
+              <button
+                key={cat.id || 'all'}
+                onClick={() => {
+                  setSelectedCategory(cat.id);
+                  if (cat.id !== 'Trainer') setSelectedTrainerType('');
+                }}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                  active
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40 border border-blue-400/40'
+                    : 'bg-[#0b1220] text-slate-300 hover:text-white border border-slate-800 hover:border-slate-700'
+                }`}
+              >
+                <span>{cat.emoji}</span>
+                <span>{cat.label}</span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Filters Toolbar */}
         <FiltersBar
           search={search}
@@ -206,12 +240,50 @@ export default function TiendaPage() {
           hasActiveFilters={hasActiveFilters}
         />
 
-        {/* Catalog Results Header */}
-        <div className="flex items-center justify-between text-xs sm:text-sm text-slate-400 px-1">
-          <p>
-            Mostrando <strong className="text-white font-bold">{cards.length}</strong>{' '}
-            {cards.length === 1 ? 'carta disponible' : 'cartas encontradas'}
-          </p>
+        {/* Active Filter Chips & Catalog Results Header */}
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm text-slate-400 px-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p>
+              Mostrando <strong className="text-white font-bold">{cards.length}</strong>{' '}
+              {cards.length === 1 ? 'carta disponible' : 'cartas encontradas'}
+            </p>
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-950/60 text-blue-300 border border-blue-700/50 hover:bg-blue-900/60"
+              >
+                <span>Búsqueda: &ldquo;{search}&rdquo;</span>
+                <span className="ml-1 font-bold">×</span>
+              </button>
+            )}
+            {selectedExpansion && (
+              <button
+                onClick={() => setSelectedExpansion('')}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-indigo-950/60 text-indigo-300 border border-indigo-700/50 hover:bg-indigo-900/60"
+              >
+                <span>Set: {selectedExpansion}</span>
+                <span className="ml-1 font-bold">×</span>
+              </button>
+            )}
+            {selectedVersion && (
+              <button
+                onClick={() => setSelectedVersion('')}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-purple-950/60 text-purple-300 border border-purple-700/50 hover:bg-purple-900/60"
+              >
+                <span>Rareza: {selectedVersion}</span>
+                <span className="ml-1 font-bold">×</span>
+              </button>
+            )}
+            {selectedLanguage && (
+              <button
+                onClick={() => setSelectedLanguage('')}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-950/60 text-emerald-300 border border-emerald-700/50 hover:bg-emerald-900/60"
+              >
+                <span>Idioma: {selectedLanguage}</span>
+                <span className="ml-1 font-bold">×</span>
+              </button>
+            )}
+          </div>
 
           <button
             onClick={() => {

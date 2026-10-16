@@ -23,8 +23,10 @@ import {
   Bell,
   Sun,
   Moon,
+  Search,
 } from 'lucide-react';
 import NotificationDropdown from '@/components/NotificationDropdown';
+import GlobalSearchModal from '@/components/GlobalSearchModal';
 import { useCart } from '@/context/CartContext';
 import { useTheme } from '@/context/ThemeContext';
 import { getRoleBadge, canAccessAdmin } from '@/lib/roles';
@@ -58,10 +60,23 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
   const [tiendaOpen, setTiendaOpen] = useState(false);
   const [cuentaOpen, setCuentaOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
 
   const mazosRef = useRef<HTMLDivElement>(null);
   const tiendaRef = useRef<HTMLDivElement>(null);
   const cuentaRef = useRef<HTMLDivElement>(null);
+
+  // Global Ctrl+K / Cmd+K shortcut to open search modal
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setSearchModalOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -86,6 +101,7 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
     setTiendaOpen(false);
     setCuentaOpen(false);
     setMobileMenuOpen(false);
+    setSearchModalOpen(false);
   }, [pathname]);
 
   const getSectionBadge = () => {
@@ -349,8 +365,22 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
           </div>
         </nav>
 
-        {/* Right Side: BLOQUE 3 (MI CUENTA) + CARRITO + MOBILE BUTTON */}
-        <div className="flex items-center gap-2.5">
+        {/* Right Side: BUSCADOR RÁPIDO + BLOQUE 3 (MI CUENTA) + CARRITO + MOBILE BUTTON */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Quick Global Search Button (Ctrl+K) */}
+          <button
+            onClick={() => setSearchModalOpen(true)}
+            className="flex items-center gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-slate-900/90 hover:bg-slate-800 border border-white/[0.08] hover:border-blue-500/40 transition-all shadow-sm"
+            title="Búsqueda rápida de cartas, mazos o pedidos (Ctrl+K)"
+            aria-label="Abrir búsqueda rápida"
+          >
+            <Search className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden xl:inline text-slate-400">Buscar...</span>
+            <kbd className="hidden xl:inline-block px-1.5 py-0.5 text-[9px] font-bold bg-slate-800 text-slate-400 rounded border border-slate-700">
+              Ctrl K
+            </kbd>
+          </button>
+
           {/* Admin Order Alerts */}
           {user && canAccessAdmin(user) && unreadCount > 0 && (
             <Link
@@ -703,6 +733,12 @@ export default function Navbar({ totalCards = 0, totalStock = 0 }: NavbarProps) 
           </div>
         </div>
       )}
+
+      {/* Global Search & Command Modal (Ctrl+K) */}
+      <GlobalSearchModal
+        isOpen={searchModalOpen}
+        onClose={() => setSearchModalOpen(false)}
+      />
     </header>
   );
 }

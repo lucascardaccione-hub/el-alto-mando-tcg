@@ -54,8 +54,11 @@ interface CardItemProps {
 }
 
 export default function CardItem({ card, onOpenModal }: CardItemProps) {
-  const { addToCart } = useCart();
+  const { addToCart, items: cartItems } = useCart();
   const [justAdded, setJustAdded] = useState(false);
+
+  const quantityInCart = cartItems.find((item) => item.id === card.id)?.quantity || 0;
+  const isMaxStockInCart = card.stock > 0 && quantityInCart >= card.stock;
 
   const getInitialImg = () => {
     if (card.image_url && !card.image_url.includes('placeholder')) return card.image_url;
@@ -73,7 +76,7 @@ export default function CardItem({ card, onOpenModal }: CardItemProps) {
 
   const handleAdd = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (card.stock <= 0) return;
+    if (card.stock <= 0 || isMaxStockInCart) return;
     addToCart(card, 1);
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 1200);
@@ -113,7 +116,7 @@ export default function CardItem({ card, onOpenModal }: CardItemProps) {
   return (
     <div
       onClick={() => onOpenModal(card)}
-      className="group relative flex flex-col bg-[#0f172a]/80 hover:bg-[#131e36] border border-slate-800/80 hover:border-blue-500/40 rounded-2xl overflow-hidden transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-blue-900/20 cursor-pointer"
+      className="group relative flex flex-col bg-[#0f172a]/85 hover:bg-[#131e36] border border-slate-800/80 hover:border-blue-500/50 rounded-2xl overflow-hidden transition-all duration-300 shadow-lg hover:shadow-2xl hover:shadow-blue-900/25 hover:-translate-y-1 cursor-pointer"
     >
       {/* Card Image Container with Foil/Shine effect */}
       <div className="relative w-full aspect-[2.5/3.5] bg-slate-950/60 p-3.5 flex items-center justify-center overflow-hidden card-shine">
@@ -142,11 +145,16 @@ export default function CardItem({ card, onOpenModal }: CardItemProps) {
         {/* Stock status badge overlay */}
         <div className="absolute top-3 right-3 z-10">
           {isOutOfStock ? (
-            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-rose-950/80 text-rose-300 border border-rose-800/80 shadow backdrop-blur-sm">
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-rose-950/85 text-rose-300 border border-rose-800/80 shadow backdrop-blur-sm">
               Sin stock
             </span>
+          ) : card.stock === 1 ? (
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-amber-950/90 text-amber-300 border border-amber-500/60 shadow backdrop-blur-sm flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
+              <span>¡Última disp.!</span>
+            </span>
           ) : (
-            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 shadow backdrop-blur-sm flex items-center gap-1">
+            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase bg-emerald-950/85 text-emerald-300 border border-emerald-700/60 shadow backdrop-blur-sm flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
               <span>{card.stock} en stock</span>
             </span>
@@ -160,6 +168,14 @@ export default function CardItem({ card, onOpenModal }: CardItemProps) {
           </span>
           <LanguageBadge language={card.language} size="xs" />
         </div>
+
+        {/* In-Cart Quantity Badge Overlay (Bottom Left Corner) */}
+        {quantityInCart > 0 && (
+          <div className="absolute bottom-2.5 left-2.5 z-10 px-2 py-0.5 rounded-lg bg-blue-600/95 text-white text-[10px] font-extrabold shadow-lg border border-blue-400/50 backdrop-blur-sm flex items-center gap-1 animate-in fade-in">
+            <ShoppingBag className="w-3 h-3" />
+            <span>En carrito: {quantityInCart}</span>
+          </div>
+        )}
 
         {/* Prize Pack Stamp Overlay (Bottom Right Corner) */}
         {card.is_league === 1 && (
@@ -259,12 +275,12 @@ export default function CardItem({ card, onOpenModal }: CardItemProps) {
           ) : (
             <button
               onClick={handleAdd}
-              disabled={isOutOfStock}
+              disabled={isOutOfStock || (isMaxStockInCart && !justAdded)}
               className={`flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-200 ${
-                isOutOfStock
-                  ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700/50'
-                  : justAdded
+                justAdded
                   ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/30'
+                  : isOutOfStock || isMaxStockInCart
+                  ? 'bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-700/50'
                   : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-900/30 hover:scale-105 active:scale-95'
               }`}
             >
@@ -272,6 +288,11 @@ export default function CardItem({ card, onOpenModal }: CardItemProps) {
                 <>
                   <Check className="w-3.5 h-3.5" />
                   <span>Agregado</span>
+                </>
+              ) : isMaxStockInCart ? (
+                <>
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Máx. en carrito</span>
                 </>
               ) : (
                 <>

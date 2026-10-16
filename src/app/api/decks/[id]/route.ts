@@ -64,6 +64,14 @@ export async function GET(
       : false;
     const canEdit = isOwner || isLuca;
 
+    // Private deck protection: only owner or admin can view private draft decks
+    if (deck.is_public === 0 && !canEdit) {
+      return NextResponse.json(
+        { error: 'Este mazo es un borrador privado y solo puede ser visto por su creador.' },
+        { status: 403 }
+      );
+    }
+
     // Social metrics
     const likesCountResult = await db.get(`SELECT COUNT(*) as count FROM deck_likes WHERE deck_id = ?`, [deckId]) as any;
     const commentsStatsResult = await db.get(`

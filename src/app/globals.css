@@ -118,12 +118,17 @@ html.light [class*="bg-[#070b16]/90"] {
 
 /* Cards, modals, drawers & panels */
 html.light [class*="bg-[#0b1220]"],
+html.light [class*="bg-[#0b1124]"],
 html.light [class*="bg-[#0c1322]"],
 html.light [class*="bg-[#0c1424]"],
 html.light [class*="bg-[#0a0f1d]"],
 html.light [class*="bg-[#090e1c]"],
 html.light [class*="bg-[#0a1024]"],
+html.light [class*="bg-[#0a1020]"],
 html.light [class*="bg-[#0d152c]"],
+html.light [class*="bg-[#0d1528]"],
+html.light [class*="bg-[#0d1629]"],
+html.light [class*="bg-[#070b15]"],
 html.light [class*="bg-[#131e36]"],
 html.light [class*="bg-[#0f172a]"],
 html.light [class*="bg-slate-950"] {

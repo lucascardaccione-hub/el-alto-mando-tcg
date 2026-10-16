@@ -14,7 +14,10 @@ import {
   LogOut,
   ShieldCheck,
   Loader2,
+  Sun,
+  Moon,
 } from 'lucide-react';
+import { useTheme } from '@/context/ThemeContext';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -23,6 +26,7 @@ interface AdminLayoutProps {
 export default function AdminLayout({ children }: AdminLayoutProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { theme, toggleTheme } = useTheme();
   const [currentUser, setCurrentUser] = useState<{ id: number; username: string; role: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [unreadOrders, setUnreadOrders] = useState(0);
@@ -193,6 +197,19 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
                 </span>
               </div>
             )}
+
+            <button
+              onClick={toggleTheme}
+              className="p-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white transition-colors"
+              title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+              aria-label="Alternar modo oscuro o claro"
+            >
+              {theme === 'dark' ? (
+                <Sun className="w-3.5 h-3.5 text-amber-400" />
+              ) : (
+                <Moon className="w-3.5 h-3.5 text-indigo-400" />
+              )}
+            </button>
 
             <Link
               href="/tienda"

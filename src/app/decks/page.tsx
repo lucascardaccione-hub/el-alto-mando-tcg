@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import Navbar from '@/components/Navbar';
+import CartDrawer from '@/components/CartDrawer';
 import {
   Layers,
   Plus,
@@ -906,6 +907,7 @@ export default function DecksPage() {
           </div>
         </div>
       )}
+      <CartDrawer />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { checkRateLimit, recordFailedAttempt, getClientIp, sanitizeText } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,6 +62,16 @@ export async function POST(
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
+    const ip = getClientIp(request);
+    const rateKey = `deck-comment:${user.id}:${ip}`;
+    const rateStatus = checkRateLimit(rateKey, 10, 5 * 60 * 1000);
+    if (!rateStatus.allowed) {
+      return NextResponse.json(
+        { error: `Estás comentando demasiado rápido. Espera ${rateStatus.retryAfterSeconds}s.` },
+        { status: 429 }
+      );
+    }
+
     const deckId = parseInt(params.id, 10);
     if (!deckId) return NextResponse.json({ error: 'ID de mazo inválido' }, { status: 400 });
 
@@ -71,14 +82,16 @@ export async function POST(
       return NextResponse.json({ error: 'El contenido es requerido' }, { status: 400 });
     }
 
-    content = content.trim();
-    if (content.length === 0 || content.length > 2000) {
-      return NextResponse.json({ error: 'El contenido debe tener entre 1 y 2000 caracteres' }, { status: 400 });
-    }
-
+    content = sanitizeText(content, 2000);
     // Strip URLs
     content = content.replace(/(?:https?|ftp):\/\/[\n\S]+/g, '');
-    content = content.replace(/www\.[\n\S]+/g, '');
+    content = content.replace(/www\.[\n\S]+/g, '').trim();
+
+    if (content.length === 0 || content.length > 2000) {
+      return NextResponse.json({ error: 'El contenido debe tener entre 1 y 2000 caracteres (sin enlaces externos)' }, { status: 400 });
+    }
+
+    recordFailedAttempt(rateKey, 5 * 60 * 1000);
 
     if (rating !== undefined && rating !== null) {
       rating = parseInt(rating as string, 10);

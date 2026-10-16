@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getCurrentUser, comparePassword, hashPassword, createToken, COOKIE_NAME } from '@/lib/auth';
 import { sendPasswordChangedNotificationEmail } from '@/lib/email';
+import { isSafeImageUrl, checkRateLimit, recordFailedAttempt, clearFailedAttempts, getClientIp } from '@/lib/security';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,19 +22,31 @@ export async function PUT(request: Request) {
 
     // 1. Password change requested
     if (newPassword) {
+      const ip = getClientIp(request);
+      const rateKey = `profile-pwd:${user.id}:${ip}`;
+      const rateStatus = checkRateLimit(rateKey, 5, 15 * 60 * 1000);
+      if (!rateStatus.allowed) {
+        return NextResponse.json(
+          { error: `Demasiados intentos fallidos. Espera ${Math.ceil(rateStatus.retryAfterSeconds / 60)} min.` },
+          { status: 429 }
+        );
+      }
+
       if (!currentPassword) {
         return NextResponse.json({ error: 'Debes ingresar tu contraseña actual para cambiarla.' }, { status: 400 });
       }
 
       const isCurrentValid = comparePassword(currentPassword, user.password_hash);
       if (!isCurrentValid) {
+        recordFailedAttempt(rateKey, 15 * 60 * 1000);
         return NextResponse.json({ error: 'La contraseña actual ingresada es incorrecta.' }, { status: 400 });
       }
 
-      if (newPassword.length < 6) {
-        return NextResponse.json({ error: 'La nueva contraseña debe tener al menos 6 caracteres.' }, { status: 400 });
+      if (newPassword.length < 6 || newPassword.length > 128) {
+        return NextResponse.json({ error: 'La nueva contraseña debe tener entre 6 y 128 caracteres.' }, { status: 400 });
       }
 
+      clearFailedAttempts(rateKey);
       const newHash = hashPassword(newPassword);
       await db.run('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, user.id]);
 
@@ -48,12 +61,18 @@ export async function PUT(request: Request) {
     // 2. Avatar update
     if (avatar_url !== undefined) {
       const cleanAvatar = (avatar_url || '').trim();
+      if (cleanAvatar && !isSafeImageUrl(cleanAvatar)) {
+        return NextResponse.json(
+          { error: 'La URL del avatar no es válida o usa un protocolo no permitido.' },
+          { status: 400 }
+        );
+      }
       await db.run('UPDATE users SET avatar_url = ? WHERE id = ?', [cleanAvatar || null, user.id]);
     }
 
     // 3. Phone / WhatsApp update
     if (phone !== undefined) {
-      const cleanPhone = (phone || '').replace(/[^\d+]/g, '').trim();
+      const cleanPhone = (phone || '').replace(/[^\d+]/g, '').trim().slice(0, 25);
       await db.run('UPDATE users SET phone = ? WHERE id = ?', [cleanPhone, user.id]);
     }
 

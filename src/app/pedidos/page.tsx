@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
 import Navbar from '@/components/Navbar';
+import CartDrawer from '@/components/CartDrawer';
 import {
   Search,
   Clock,
@@ -19,6 +20,7 @@ import {
   Sparkles,
   AlertCircle,
   XCircle,
+  ShieldCheck,
 } from 'lucide-react';
 import { LanguageBadge } from '@/components/FlagIcon';
 
@@ -65,6 +67,7 @@ function TrackingContent() {
   const [order, setOrder] = useState<OrderData | null>(null);
   const [items, setItems] = useState<OrderItem[]>([]);
   const [userOrders, setUserOrders] = useState<OrderData[]>([]);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'entregado' | 'cancelado'>('all');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -148,17 +151,32 @@ function TrackingContent() {
 
   const currentStep = order ? getStepIndex(order.status) : 0;
 
+  const filteredUserOrders = userOrders.filter((uo) => {
+    if (statusFilter === 'all') return true;
+    if (statusFilter === 'active') {
+      return uo.status === 'solicitado' || uo.status === 'en_preparacion' || uo.status === 'preparado';
+    }
+    return uo.status === statusFilter;
+  });
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 space-y-8">
       {/* Header */}
       <div className="text-center space-y-3">
-        <Link
-          href="/tienda"
-          className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold mb-2"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Volver a la Tienda</span>
-        </Link>
+        <div className="flex items-center justify-center gap-3 flex-wrap">
+          <Link
+            href="/tienda"
+            className="inline-flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-semibold"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Volver a la Tienda</span>
+          </Link>
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-700/50">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Rastreo Oficial Protegido</span>
+          </span>
+        </div>
+
         <h1 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
           Seguimiento de tu Pedido
         </h1>
@@ -187,14 +205,46 @@ function TrackingContent() {
           </button>
         </form>
 
-        {/* Quick Recent Orders Chips for Logged-in Users */}
+        {/* Quick Recent Orders Filter & Chips for Logged-in Users */}
         {userOrders.length > 0 && (
-          <div className="pt-2 flex flex-col items-center gap-1.5">
-            <span className="text-[11px] font-semibold text-slate-400">
-              Tus pedidos recientes:
-            </span>
-            <div className="flex flex-wrap items-center justify-center gap-2 max-w-lg">
-              {userOrders.slice(0, 4).map((uo) => (
+          <div className="pt-4 space-y-3 max-w-2xl mx-auto">
+            <div className="flex items-center justify-center gap-1.5 flex-wrap">
+              {[
+                { id: 'all', label: `Todos (${userOrders.length})` },
+                {
+                  id: 'active',
+                  label: `En Curso (${
+                    userOrders.filter((o) =>
+                      ['solicitado', 'en_preparacion', 'preparado'].includes(o.status)
+                    ).length
+                  })`,
+                },
+                {
+                  id: 'entregado',
+                  label: `Entregados (${userOrders.filter((o) => o.status === 'entregado').length})`,
+                },
+                {
+                  id: 'cancelado',
+                  label: `Cancelados (${userOrders.filter((o) => o.status === 'cancelado').length})`,
+                },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setStatusFilter(tab.id as any)}
+                  className={`px-3 py-1 rounded-full text-[11px] font-bold transition-all ${
+                    statusFilter === tab.id
+                      ? 'bg-blue-600 text-white shadow-sm'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {filteredUserOrders.slice(0, 8).map((uo) => (
                 <button
                   key={uo.id}
                   type="button"
@@ -202,13 +252,23 @@ function TrackingContent() {
                     setInputNum(uo.order_number);
                     fetchOrder(uo.order_number);
                   }}
-                  className={`px-3 py-1 rounded-lg text-xs font-mono font-bold border transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold border transition-all ${
                     order?.order_number === uo.order_number
-                      ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                      ? 'bg-blue-600 text-white border-blue-500 shadow-md shadow-blue-900/30'
                       : 'bg-slate-900/80 text-blue-300 border-slate-700 hover:border-blue-500/50 hover:bg-slate-800'
                   }`}
                 >
-                  #{uo.order_number} ({uo.status === 'preparado' ? '📦 Preparado' : uo.status === 'en_preparacion' ? '⏳ En prep.' : uo.status === 'solicitado' ? '🕒 Solicitado' : uo.status === 'entregado' ? '✅ Entregado' : uo.status})
+                  #{uo.order_number} (
+                  {uo.status === 'preparado'
+                    ? '📦 Preparado'
+                    : uo.status === 'en_preparacion'
+                    ? '⏳ En prep.'
+                    : uo.status === 'solicitado'
+                    ? '🕒 Solicitado'
+                    : uo.status === 'entregado'
+                    ? '✅ Entregado'
+                    : '✕ Cancelado'}
+                  )
                 </button>
               ))}
             </div>
@@ -508,6 +568,7 @@ export default function PedidosPage() {
           <TrackingContent />
         </Suspense>
       </main>
+      <CartDrawer />
     </div>
   );
 }

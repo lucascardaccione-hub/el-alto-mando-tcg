@@ -266,3 +266,89 @@ export function checkActionCooldown(
   cooldownStore.set(key, now + cooldownSeconds * 1000);
   return { allowed: true, waitSeconds: 0 };
 }
+
+// ============================================================================
+// Site-Wide Input Sanitization, Safe URL & Anti-SSRF Guards
+// ============================================================================
+
+/**
+ * Sanitizes user-supplied text to prevent XSS injection while preserving
+ * legitimate Spanish characters, emojis, and punctuation.
+ */
+export function sanitizeText(input: unknown, maxLength: number = 1000): string {
+  if (typeof input !== 'string') return '';
+  return input
+    .replace(/\0/g, '')
+    .replace(/<\s*\/?\s*(script|iframe|object|embed|svg|link|style|meta)[^>]*>/gi, '')
+    .replace(/javascript\s*:/gi, '')
+    .replace(/vbscript\s*:/gi, '')
+    .replace(/data\s*:\s*text\/html/gi, '')
+    .replace(/on[a-z]+\s*=/gi, '')
+    .trim()
+    .slice(0, maxLength);
+}
+
+/**
+ * Validates that an image or avatar URL is safe to render in `<img src=...>`
+ * (Allows relative paths starting with `/` or valid `https://` / `http://` URLs).
+ */
+export function isSafeImageUrl(rawUrl: unknown): boolean {
+  if (typeof rawUrl !== 'string') return false;
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return true; // empty is allowed (falls back to default)
+
+  // Relative local asset path
+  if (trimmed.startsWith('/') && !trimmed.startsWith('//')) {
+    return !/[<>"'\s]/.test(trimmed);
+  }
+
+  try {
+    const parsed = new URL(trimmed);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Validates upstream URLs passed to `/api/proxy-image` to prevent SSRF
+ * (Server-Side Request Forgery) against internal networks or cloud metadata.
+ */
+export function validateExternalImageProxyUrl(rawUrl: string): {
+  valid: boolean;
+  url?: string;
+  reason?: string;
+} {
+  try {
+    const parsed = new URL(rawUrl.trim());
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return { valid: false, reason: 'Invalid protocol' };
+    }
+
+    const host = parsed.hostname.toLowerCase();
+
+    // Block localhost, loopback, link-local, and private network ranges
+    if (
+      host === 'localhost' ||
+      host === '0.0.0.0' ||
+      host === '[::1]' ||
+      host.endsWith('.local') ||
+      host.endsWith('.internal') ||
+      /^127\./.test(host) ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^169\.254\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host)
+    ) {
+      return { valid: false, reason: 'Blocked internal host' };
+    }
+
+    return { valid: true, url: parsed.toString() };
+  } catch {
+    return { valid: false, reason: 'Malformed URL' };
+  }
+}
+

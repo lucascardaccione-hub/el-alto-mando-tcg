@@ -28,6 +28,7 @@ import { getRoleBadge } from '@/lib/roles';
 import { RewardsOverview } from '@/components/RewardsOverview';
 import { TrainerCard } from '@/components/TrainerCard';
 import { PasswordStrengthMeter } from '@/components/PasswordStrengthMeter';
+import CartDrawer from '@/components/CartDrawer';
 
 interface UserData {
   id: number;
@@ -725,6 +726,7 @@ export default function ProfilePage() {
           )}
         </div>
       )}
+      <CartDrawer />
     </div>
   );
 }
