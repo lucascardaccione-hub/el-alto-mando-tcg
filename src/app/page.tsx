@@ -36,11 +36,30 @@ export default function HomePage() {
   const [featuredDecks, setFeaturedDecks] = useState<any[]>([]);
   const [loadingCards, setLoadingCards] = useState(true);
   const [loadingDecks, setLoadingDecks] = useState(true);
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [cardsError, setCardsError] = useState(false);
   const [stats, setStats] = useState({ totalCards: 0, totalStock: 0, totalExpansions: 0 });
   const [activeCardModal, setActiveCardModal] = useState<CardData | null>(null);
 
+  const loadFeaturedCards = () => {
+    setLoadingCards(true);
+    setCardsError(false);
+    fetch('/api/cards?limit=8&inStockOnly=true&group=true')
+      .then((res) => {
+        if (!res.ok) throw new Error('Error al cargar cartas');
+        return res.json();
+      })
+      .then((data) => {
+        if (data?.cards) setFeaturedCards(data.cards);
+      })
+      .catch(() => {
+        setCardsError(true);
+      })
+      .finally(() => setLoadingCards(false));
+  };
+
   useEffect(() => {
-    document.title = 'El Alto Mando TCG — Mazos, Tienda & Comunidad Pokémon';
+    document.title = 'El Alto Mando TCG — Mazos, Singles y Comunidad Pokémon TCG';
 
     // Fetch store stats & featured cards
     fetch('/api/expansions')
@@ -48,15 +67,10 @@ export default function HomePage() {
       .then((data) => {
         if (data?.stats) setStats(data.stats);
       })
-      .catch(() => {});
-
-    fetch('/api/cards?limit=8&inStockOnly=true&group=true')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data?.cards) setFeaturedCards(data.cards);
-      })
       .catch(() => {})
-      .finally(() => setLoadingCards(false));
+      .finally(() => setLoadingStats(false));
+
+    loadFeaturedCards();
 
     // Fetch featured community decks
     fetch('/api/decks?filter=public')
@@ -84,7 +98,7 @@ export default function HomePage() {
             {/* Community Badge */}
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-xs font-bold bg-blue-600/15 text-blue-400 border border-blue-500/30 shadow-sm backdrop-blur-md animate-in fade-in duration-500">
               <Sparkles className="w-3.5 h-3.5 text-blue-400 animate-pulse" />
-              <span>Plataforma Oficial Pokémon TCG Argentina & LATAM</span>
+              <span>Comunidad & Marketplace Pokémon TCG Argentina</span>
             </div>
 
             {/* Main Headline */}
@@ -135,13 +149,13 @@ export default function HomePage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-8 w-full max-w-3xl">
               <div className="bg-[#0b1124]/80 border border-white/[0.08] rounded-2xl p-3.5 text-center">
                 <span className="text-xl sm:text-2xl font-black text-white block">
-                  {stats.totalCards || '500+'}
+                  {loadingStats ? '...' : stats.totalCards.toLocaleString('es-AR')}
                 </span>
                 <span className="text-[11px] text-slate-400 font-medium">Cartas en Catálogo</span>
               </div>
               <div className="bg-[#0b1124]/80 border border-white/[0.08] rounded-2xl p-3.5 text-center">
                 <span className="text-xl sm:text-2xl font-black text-emerald-400 block">
-                  {stats.totalStock || '1,200+'}
+                  {loadingStats ? '...' : stats.totalStock.toLocaleString('es-AR')}
                 </span>
                 <span className="text-[11px] text-slate-400 font-medium">Stock en Vivo</span>
               </div>
@@ -410,7 +424,7 @@ export default function HomePage() {
             <div>
               <div className="flex items-center gap-2 text-xs font-bold text-amber-400 uppercase tracking-wider mb-1">
                 <ShoppingBag className="w-3.5 h-3.5" />
-                <span>Tienda Oficial</span>
+                <span>Catálogo de Singles</span>
               </div>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
                 Últimas Cartas Ingresadas en Stock
@@ -439,6 +453,19 @@ export default function HomePage() {
                   className="bg-slate-900/50 border border-slate-800 rounded-2xl p-4 aspect-[2.5/3.5] animate-pulse"
                 />
               ))}
+            </div>
+          ) : cardsError ? (
+            <div role="alert" className="text-center py-8 space-y-3 bg-rose-950/20 border border-rose-500/30 rounded-2xl p-6">
+              <p className="text-xs text-rose-300 font-semibold">
+                No se pudo cargar la vista previa del catálogo en este momento.
+              </p>
+              <button
+                type="button"
+                onClick={loadFeaturedCards}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+              >
+                Reintentar
+              </button>
             </div>
           ) : featuredCards.length === 0 ? (
             <div className="text-center py-8 text-xs text-slate-500">
@@ -625,7 +652,7 @@ export default function HomePage() {
               <ul className="space-y-1.5 text-[11px]">
                 <li>
                   <Link href="/deck-builder" className="hover:text-white transition-colors">
-                    Deck Builder Oficial
+                    Deck Builder Competitivo
                   </Link>
                 </li>
                 <li>

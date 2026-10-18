@@ -30,7 +30,6 @@ export async function POST(
     const isOwner = deck.user_id === user.id;
     const isLuca =
       user.username?.toLowerCase() === 'luca' ||
-      user.email?.toLowerCase().includes('luca') ||
       user.role === 'admin';
 
     // Must be a public deck or belong to user/admin

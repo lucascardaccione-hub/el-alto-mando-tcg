@@ -7,7 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "test": "node --test tests/qa-suite.test.mjs",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",

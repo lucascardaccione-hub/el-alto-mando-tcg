@@ -114,13 +114,26 @@ export async function GET(request: Request) {
     );
     const unreadCount = Number(unreadRow?.unread || 0);
 
-    // Fetch items for each order
-    const ordersWithItems = await Promise.all(
-      orders.map(async (ord: any) => {
-        const items = await db.all('SELECT * FROM order_items WHERE order_id = ?', [ord.id]);
-        return { ...ord, items };
-      })
-    );
+    // Fetch items for all orders in a single batch query (eliminates N+1 roundtrips)
+    let ordersWithItems = orders.map((ord: any) => ({ ...ord, items: [] as any[] }));
+    if (orders.length > 0) {
+      const orderIds = orders.map((o: any) => o.id);
+      const placeholders = orderIds.map(() => '?').join(',');
+      const allItems = await db.all(
+        `SELECT * FROM order_items WHERE order_id IN (${placeholders})`,
+        orderIds
+      );
+      const itemsByOrder = new Map<number, any[]>();
+      for (const item of allItems) {
+        const list = itemsByOrder.get(item.order_id) || [];
+        list.push(item);
+        itemsByOrder.set(item.order_id, list);
+      }
+      ordersWithItems = orders.map((ord: any) => ({
+        ...ord,
+        items: itemsByOrder.get(ord.id) || [],
+      }));
+    }
 
     return NextResponse.json({ orders: ordersWithItems, unreadCount });
   } catch (error: any) {
@@ -128,6 +141,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Error al obtener pedidos' }, { status: 500 });
   }
 }
+
+// In-memory idempotency cache for rapid duplicate submissions (key -> { orderId, expiresAt })
+const idempotencyCache = new Map<string, { orderId: number; expiresAt: number }>();
 
 export async function POST(request: Request) {
   try {
@@ -168,6 +184,7 @@ export async function POST(request: Request) {
       buyer_name,
       buyer_phone = '',
       items = [],
+      idempotency_key,
     } = body;
 
     if (!Array.isArray(items) || items.length === 0 || items.length > 100) {
@@ -176,6 +193,51 @@ export async function POST(request: Request) {
 
     if (!seller_name) {
       return NextResponse.json({ error: 'Falta especificar el vendedor del pedido' }, { status: 400 });
+    }
+
+    // Aggregate quantities by cardId to prevent duplicate item array bypasses
+    const aggregatedRequests = new Map<number, { rawItem: any; quantity: number }>();
+    for (const it of items) {
+      const cardId = Number(it.id || it.card_id || 0);
+      if (!Number.isInteger(cardId) || cardId <= 0) {
+        return NextResponse.json(
+          { error: 'Cada artículo del pedido debe corresponder a una carta válida del catálogo.' },
+          { status: 400 }
+        );
+      }
+      const requestedQty = Math.max(1, Math.min(99, parseInt(String(it.quantity), 10) || 1));
+      const existing = aggregatedRequests.get(cardId);
+      if (existing) {
+        existing.quantity = Math.min(99, existing.quantity + requestedQty);
+      } else {
+        aggregatedRequests.set(cardId, { rawItem: it, quantity: requestedQty });
+      }
+    }
+
+    // Idempotency protection (explicit key or deterministic 30-second payload fingerprint)
+    const headerIdemKey = request.headers.get('x-idempotency-key') || idempotency_key || '';
+    const sortedFingerprint = Array.from(aggregatedRequests.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([cid, val]) => `${cid}:${val.quantity}`)
+      .join('|');
+    const idemLookupKey = headerIdemKey
+      ? `idem:${user.id}:${String(headerIdemKey).slice(0, 100)}`
+      : `auto:${user.id}:${String(seller_name).toLowerCase().trim()}:${sortedFingerprint}`;
+
+    const nowMs = Date.now();
+    const cachedOrder = idempotencyCache.get(idemLookupKey);
+    if (cachedOrder && cachedOrder.expiresAt > nowMs) {
+      const existingOrder = await db.get('SELECT * FROM orders WHERE id = ?', [cachedOrder.orderId]);
+      if (existingOrder) {
+        const existingItems = await db.all('SELECT * FROM order_items WHERE order_id = ?', [cachedOrder.orderId]);
+        return NextResponse.json({
+          success: true,
+          duplicate: true,
+          order: existingOrder,
+          items: existingItems,
+          orderNumber: existingOrder.order_number,
+        });
+      }
     }
 
     // Authoritative Server-Side Stock & Price Verification
@@ -191,60 +253,75 @@ export async function POST(request: Request) {
       price: number;
       quantity: number;
       image_url: string;
+      seller_id: number | null;
+      seller_name: string;
+      seller_phone: string;
     }> = [];
 
-    for (const it of items) {
-      const cardId = Number(it.id || it.card_id || 0);
-      const requestedQty = Math.max(1, Math.min(99, parseInt(String(it.quantity), 10) || 1));
-
-      if (cardId > 0) {
-        const dbCard = await db.get('SELECT * FROM cards WHERE id = ?', [cardId]);
-        if (!dbCard) {
-          return NextResponse.json(
-            { error: `La carta "${sanitizeText(it.name, 80) || 'seleccionada'}" ya no existe en el catálogo.` },
-            { status: 404 }
-          );
-        }
-        if ((dbCard.stock || 0) < requestedQty) {
-          return NextResponse.json(
-            {
-              error:
-                dbCard.stock <= 0
-                  ? `La carta "${dbCard.name}" acaba de agotarse.`
-                  : `Solo quedan ${dbCard.stock} unidad(es) disponibles de "${dbCard.name}". Ajusta la cantidad en tu carrito.`,
-            },
-            { status: 409 }
-          );
-        }
-
-        verifiedItems.push({
-          cardId: dbCard.id,
-          name: dbCard.name,
-          expansion: dbCard.expansion || '',
-          number: dbCard.number || '',
-          version: dbCard.version || 'Common',
-          is_foil: dbCard.is_foil ? 1 : 0,
-          is_league: dbCard.is_league ? 1 : 0,
-          language: dbCard.language || 'Inglés',
-          price: Number(dbCard.price) || 0, // Authoritative DB price
-          quantity: requestedQty,
-          image_url: dbCard.image_url || '/placeholder-card.svg',
-        });
-      } else {
-        verifiedItems.push({
-          cardId: 0,
-          name: sanitizeText(it.name || 'Carta Pokémon', 120),
-          expansion: sanitizeText(it.expansion || '', 80),
-          number: sanitizeText(it.number || '', 30),
-          version: sanitizeText(it.version || 'Common', 50),
-          is_foil: it.is_foil ? 1 : 0,
-          is_league: it.is_league ? 1 : 0,
-          language: sanitizeText(it.language || 'Inglés', 30),
-          price: Math.max(0, Number(it.price) || 0),
-          quantity: requestedQty,
-          image_url: it.image_url || '/placeholder-card.svg',
-        });
+    for (const [cardId, { rawItem, quantity: requestedQty }] of Array.from(aggregatedRequests.entries())) {
+      const dbCard = await db.get('SELECT * FROM cards WHERE id = ?', [cardId]);
+      if (!dbCard) {
+        return NextResponse.json(
+          { error: `La carta "${sanitizeText(rawItem.name, 80) || 'seleccionada'}" ya no existe en el catálogo.` },
+          { status: 404 }
+        );
       }
+      if ((dbCard.stock || 0) < requestedQty) {
+        return NextResponse.json(
+          {
+            error:
+              dbCard.stock <= 0
+                ? `La carta "${dbCard.name}" acaba de agotarse.`
+                : `Solo quedan ${dbCard.stock} unidad(es) disponibles de "${dbCard.name}". Ajusta la cantidad en tu carrito.`,
+          },
+          { status: 409 }
+        );
+      }
+
+      verifiedItems.push({
+        cardId: dbCard.id,
+        name: dbCard.name,
+        expansion: dbCard.expansion || '',
+        number: dbCard.number || '',
+        version: dbCard.version || 'Common',
+        is_foil: dbCard.is_foil ? 1 : 0,
+        is_league: dbCard.is_league ? 1 : 0,
+        language: dbCard.language || 'Inglés',
+        price: Number(dbCard.price) || 0, // Authoritative DB price
+        quantity: requestedQty,
+        image_url: dbCard.image_url || '/placeholder-card.svg',
+        seller_id: dbCard.seller_id ? Number(dbCard.seller_id) : null,
+        seller_name: dbCard.seller_name || 'Luca',
+        seller_phone: dbCard.seller_phone || '',
+      });
+    }
+
+    const now = new Date().toISOString();
+
+    // Atomic concurrency-safe stock deduction:
+    // UPDATE ... WHERE id = ? AND stock >= ? guarantees two concurrent requests cannot oversell the last unit!
+    const deductedItems: Array<{ cardId: number; quantity: number }> = [];
+    for (const it of verifiedItems) {
+      const deductRes = await db.run(
+        'UPDATE cards SET stock = stock - ?, updated_at = ? WHERE id = ? AND stock >= ?',
+        [it.quantity, now, it.cardId, it.quantity]
+      );
+      if (deductRes.rowsAffected === 0) {
+        // Rollback any previously deducted items in this order
+        for (const prev of deductedItems) {
+          await db.run(
+            'UPDATE cards SET stock = stock + ?, updated_at = ? WHERE id = ?',
+            [prev.quantity, now, prev.cardId]
+          );
+        }
+        return NextResponse.json(
+          {
+            error: `La carta "${it.name}" acaba de agotarse o su stock cambió durante la compra. Por favor actualiza tu carrito.`,
+          },
+          { status: 409 }
+        );
+      }
+      deductedItems.push({ cardId: it.cardId, quantity: it.quantity });
     }
 
     recordFailedAttempt(rateKey, 10 * 60 * 1000);
@@ -252,8 +329,9 @@ export async function POST(request: Request) {
     // Use user.username if buyer_name not specified
     const finalBuyerName = sanitizeText(buyer_name, 60) || user.username;
     const cleanBuyerPhone = String(buyer_phone || '').replace(/[^\d+]/g, '').slice(0, 25);
-    const cleanSellerName = sanitizeText(seller_name, 60) || 'Luca';
-    const cleanSellerPhone = String(seller_phone || '').replace(/[^\d+]/g, '').slice(0, 25);
+    const authoritativeSellerId = verifiedItems[0]?.seller_id ?? (seller_id ? Number(seller_id) : null);
+    const cleanSellerName = verifiedItems[0]?.seller_name || sanitizeText(seller_name, 60) || 'Luca';
+    const cleanSellerPhone = verifiedItems[0]?.seller_phone || String(seller_phone || '').replace(/[^\d+]/g, '').slice(0, 25);
 
     // Generate cryptographically random unique official order number: EAM-XXXXX
     const randomSuffix = crypto.randomInt(10000, 100000);
@@ -268,57 +346,64 @@ export async function POST(request: Request) {
       0
     );
 
-    const now = new Date().toISOString();
-
-    const orderResult = await db.run(`
-      INSERT INTO orders (
-        order_number, seller_id, seller_name, seller_phone, buyer_name, buyer_phone, total_price, total_items, status, created_at, updated_at, buyer_user_id, wa_notified, cancel_reason, is_read, stock_deducted
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'solicitado', ?, ?, ?, 0, '', 0, 1)
-    `, [
-      orderNumber,
-      seller_id ? Number(seller_id) : null,
-      cleanSellerName,
-      cleanSellerPhone,
-      finalBuyerName,
-      cleanBuyerPhone,
-      totalPrice,
-      totalItems,
-      now,
-      now,
-      user.id,
-    ]);
-
-    const orderId = orderResult.lastInsertRowid;
-
-    // Insert verified order items AND immediately deduct stock from cards table
-    for (const it of verifiedItems) {
-      await db.run(`
-        INSERT INTO order_items (
-          order_id, card_id, name, expansion, number, version, is_foil, is_league, language, price, quantity, image_url
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    let orderId = 0;
+    try {
+      const orderResult = await db.run(`
+        INSERT INTO orders (
+          order_number, seller_id, seller_name, seller_phone, buyer_name, buyer_phone, total_price, total_items, status, created_at, updated_at, buyer_user_id, wa_notified, cancel_reason, is_read, stock_deducted
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'solicitado', ?, ?, ?, 0, '', 0, 1)
       `, [
-        orderId,
-        it.cardId,
-        it.name,
-        it.expansion,
-        it.number,
-        it.version,
-        it.is_foil,
-        it.is_league,
-        it.language,
-        it.price,
-        it.quantity,
-        it.image_url,
+        orderNumber,
+        authoritativeSellerId,
+        cleanSellerName,
+        cleanSellerPhone,
+        finalBuyerName,
+        cleanBuyerPhone,
+        totalPrice,
+        totalItems,
+        now,
+        now,
+        user.id,
       ]);
 
-      // Deduct committed stock immediately upon order creation
-      if (it.cardId > 0) {
+      orderId = orderResult.lastInsertRowid;
+
+      for (const it of verifiedItems) {
+        await db.run(`
+          INSERT INTO order_items (
+            order_id, card_id, name, expansion, number, version, is_foil, is_league, language, price, quantity, image_url
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          orderId,
+          it.cardId,
+          it.name,
+          it.expansion,
+          it.number,
+          it.version,
+          it.is_foil,
+          it.is_league,
+          it.language,
+          it.price,
+          it.quantity,
+          it.image_url,
+        ]);
+      }
+    } catch (insertErr) {
+      // Rollback stock deductions if order insertion fails
+      for (const prev of deductedItems) {
         await db.run(
-          'UPDATE cards SET stock = MAX(0, stock - ?), updated_at = ? WHERE id = ?',
-          [it.quantity, now, it.cardId]
+          'UPDATE cards SET stock = stock + ?, updated_at = ? WHERE id = ?',
+          [prev.quantity, now, prev.cardId]
         );
       }
+      throw insertErr;
     }
+
+    // Store idempotency record (valid for 60s for auto-fingerprint, 10min for explicit key)
+    idempotencyCache.set(idemLookupKey, {
+      orderId,
+      expiresAt: nowMs + (headerIdemKey ? 10 * 60 * 1000 : 30 * 1000),
+    });
 
     const createdOrder = await db.get('SELECT * FROM orders WHERE id = ?', [orderId]);
     const createdItems = await db.all('SELECT * FROM order_items WHERE order_id = ?', [orderId]);
@@ -336,9 +421,9 @@ export async function POST(request: Request) {
       });
 
       // Seller notification
-      if (seller_id) {
+      if (authoritativeSellerId) {
         await createNotification({
-          userId: Number(seller_id),
+          userId: Number(authoritativeSellerId),
           actorId: user.id,
           actorName: user.username,
           type: 'order_sale',

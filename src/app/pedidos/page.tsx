@@ -74,6 +74,7 @@ function TrackingContent() {
 
   // Fetch recent orders of logged-in user for quick access
   useEffect(() => {
+    document.title = 'Seguimiento de Pedidos — El Alto Mando TCG';
     fetch('/api/orders')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {

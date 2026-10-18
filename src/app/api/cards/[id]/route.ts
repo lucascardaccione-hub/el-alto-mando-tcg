@@ -22,18 +22,18 @@ export async function GET(
     // Find all offers from other sellers with matching card specs
     const matchingCards = await db.all(`
       SELECT * FROM cards
-      WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))
-        AND LOWER(TRIM(expansion)) = LOWER(TRIM(?))
-        AND LOWER(TRIM(number)) = LOWER(TRIM(?))
+      WHERE LOWER(TRIM(COALESCE(name, ''))) = LOWER(TRIM(?))
+        AND LOWER(TRIM(COALESCE(expansion, ''))) = LOWER(TRIM(?))
+        AND LOWER(TRIM(COALESCE(number, ''))) = LOWER(TRIM(?))
         AND LOWER(TRIM(COALESCE(version, ''))) = LOWER(TRIM(?))
         AND LOWER(TRIM(COALESCE(language, ''))) = LOWER(TRIM(?))
         AND COALESCE(is_foil, 0) = ?
         AND COALESCE(is_league, 0) = ?
       ORDER BY price ASC, id DESC
     `, [
-      card.name.trim(),
-      card.expansion.trim(),
-      card.number.trim(),
+      (card.name || '').trim(),
+      (card.expansion || '').trim(),
+      (card.number || '').trim(),
       (card.version || '').trim(),
       (card.language || '').trim(),
       card.is_foil ? 1 : 0,
@@ -87,7 +87,8 @@ export async function PUT(
 
     const isLuca = user.username?.toLowerCase() === 'luca';
     const role = (user.role || '').toLowerCase();
-    const canSell = isLuca || role === 'admin' || role === 'owner' || role === 'seller' || role === 'vendedor';
+    const isAdmin = isLuca || role === 'admin' || role === 'owner';
+    const canSell = isAdmin || role === 'seller' || role === 'vendedor';
 
     if (!canSell) {
       return NextResponse.json(
@@ -109,7 +110,7 @@ export async function PUT(
 
     // Ownership check: Luca and Admins can edit any card, regular sellers can only edit their own
     const isOwner = existing.seller_id === user.id || (existing.seller_name && existing.seller_name.toLowerCase() === user.username.toLowerCase());
-    if (!isLuca && role !== 'admin' && role !== 'owner' && !isOwner) {
+    if (!isAdmin && !isOwner) {
       return NextResponse.json(
         { error: 'No tienes permiso para editar publicaciones de otros vendedores.' },
         { status: 403 }
@@ -137,6 +138,10 @@ export async function PUT(
       is_league,
     } = body;
 
+    if (price !== undefined && (isNaN(Number(price)) || Number(price) < 0)) {
+      return NextResponse.json({ error: 'El precio debe ser un número válido mayor o igual a 0.' }, { status: 400 });
+    }
+
     const now = new Date().toISOString();
 
     await db.run(`
@@ -162,22 +167,22 @@ export async function PUT(
         updated_at = ?
       WHERE id = ?
     `, [
-      name !== undefined ? name.trim() : null,
-      expansion !== undefined ? expansion.trim() : null,
-      number !== undefined ? number.trim() : null,
-      version !== undefined ? version.trim() : null,
-      language !== undefined ? language.trim() : null,
-      artist !== undefined ? artist.trim() : null,
-      price !== undefined ? Number(price) : null,
-      stock !== undefined ? Math.max(0, parseInt(stock, 10)) : null,
-      image_url !== undefined ? image_url.trim() : null,
-      rarity !== undefined ? rarity.trim() : null,
-      notes !== undefined ? notes.trim() : null,
-      category !== undefined ? category.trim() : null,
-      trainer_type !== undefined ? trainer_type.trim() : null,
-      seller_id !== undefined ? Number(seller_id) : null,
-      seller_name !== undefined ? seller_name.trim() : null,
-      seller_phone !== undefined ? seller_phone.trim() : null,
+      name !== undefined ? String(name).trim() : null,
+      expansion !== undefined ? String(expansion).trim() : null,
+      number !== undefined ? String(number).trim() : null,
+      version !== undefined ? String(version).trim() : null,
+      language !== undefined ? String(language).trim() : null,
+      artist !== undefined ? String(artist).trim() : null,
+      price !== undefined ? Math.max(0, Number(price)) : null,
+      stock !== undefined ? Math.max(0, parseInt(String(stock), 10) || 0) : null,
+      image_url !== undefined ? String(image_url).trim() : null,
+      rarity !== undefined ? String(rarity).trim() : null,
+      notes !== undefined ? String(notes).trim() : null,
+      category !== undefined ? String(category).trim() : null,
+      trainer_type !== undefined ? String(trainer_type).trim() : null,
+      isAdmin && seller_id !== undefined ? Number(seller_id) : null,
+      isAdmin && seller_name !== undefined ? String(seller_name).trim() : null,
+      isAdmin && seller_phone !== undefined ? String(seller_phone).trim() : null,
       is_foil !== undefined ? (is_foil ? 1 : 0) : null,
       is_league !== undefined ? (is_league ? 1 : 0) : null,
       now,

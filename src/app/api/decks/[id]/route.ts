@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { validateDeckLegality } from '@/lib/deckParser';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,42 +26,10 @@ export async function GET(
       return NextResponse.json({ error: 'Mazo no encontrado' }, { status: 404 });
     }
 
-    const cards = await db.all(`
-      SELECT * FROM deck_cards WHERE deck_id = ? ORDER BY id ASC
-    `, [deckId]) as any[];
-
-    // CROSS-REFERENCE WITH STORE INVENTORY IN REAL TIME:
-    // For every card, check if it's available in El Alto Mando store inventory!
-    const cardsWithStoreStatus = await Promise.all(cards.map(async (c) => {
-      const missingCount = Math.max(0, c.count - (c.owned_count || 0));
-
-      // Query store cards matching by name
-      const storeCard = await db.get(`
-        SELECT id, name, expansion, number, version, language, price, stock, image_url
-        FROM cards
-        WHERE name LIKE ? AND stock > 0
-        ORDER BY price ASC
-        LIMIT 1
-      `, [`%${c.card_name}%`]) as any;
-
-      return {
-        ...c,
-        missing_count: missingCount,
-        store_available: Boolean(storeCard && storeCard.stock > 0),
-        store_card: storeCard || null,
-      };
-    }));
-
-    const totalCards = cards.reduce((acc, c) => acc + c.count, 0);
-    const ownedCards = cards.reduce((acc, c) => acc + Math.min(c.count, c.owned_count || 0), 0);
-    const missingCards = Math.max(0, totalCards - ownedCards);
-
     const user = getCurrentUser();
     const isOwner = user ? deck.user_id === user.id : false;
     const isLuca = user
-      ? user.username?.toLowerCase() === 'luca' ||
-        user.email?.toLowerCase().includes('luca') ||
-        user.role === 'admin'
+      ? user.username?.toLowerCase() === 'luca' || user.role === 'admin'
       : false;
     const canEdit = isOwner || isLuca;
 
@@ -71,6 +40,43 @@ export async function GET(
         { status: 403 }
       );
     }
+
+    const cards = await db.all(`
+      SELECT * FROM deck_cards WHERE deck_id = ? ORDER BY id ASC
+    `, [deckId]) as any[];
+
+    // CROSS-REFERENCE WITH STORE INVENTORY IN A SINGLE QUERY (eliminates N+1 queries):
+    const allInStockCards = cards.length > 0
+      ? (await db.all(`
+          SELECT id, name, expansion, number, version, language, price, stock, image_url
+          FROM cards
+          WHERE stock > 0
+          ORDER BY price ASC
+        `) as any[])
+      : [];
+
+    const cardsWithStoreStatus = cards.map((c) => {
+      const missingCount = Math.max(0, c.count - (c.owned_count || 0));
+      const targetName = (c.card_name || '').trim().toLowerCase();
+
+      const storeCard = targetName
+        ? allInStockCards.find((sc) => {
+            const scName = (sc.name || '').trim().toLowerCase();
+            return scName === targetName || scName.includes(targetName) || targetName.includes(scName);
+          })
+        : null;
+
+      return {
+        ...c,
+        missing_count: missingCount,
+        store_available: Boolean(storeCard && storeCard.stock > 0),
+        store_card: storeCard || null,
+      };
+    });
+
+    const totalCards = cards.reduce((acc, c) => acc + c.count, 0);
+    const ownedCards = cards.reduce((acc, c) => acc + Math.min(c.count, c.owned_count || 0), 0);
+    const missingCards = Math.max(0, totalCards - ownedCards);
 
     // Social metrics
     const likesCountResult = await db.get(`SELECT COUNT(*) as count FROM deck_likes WHERE deck_id = ?`, [deckId]) as any;
@@ -120,6 +126,10 @@ export async function PUT(
     }
 
     const deckId = parseInt(params.id, 10);
+    if (isNaN(deckId) || deckId <= 0) {
+      return NextResponse.json({ error: 'ID de mazo inválido' }, { status: 400 });
+    }
+
     const deck = await db.get('SELECT * FROM decks WHERE id = ?', [deckId]) as any;
 
     if (!deck) {
@@ -129,14 +139,13 @@ export async function PUT(
     const isOwner = deck.user_id === user.id;
     const isLuca =
       user.username?.toLowerCase() === 'luca' ||
-      user.email?.toLowerCase().includes('luca') ||
       user.role === 'admin';
 
     if (!isOwner && !isLuca) {
       return NextResponse.json(
         {
           error:
-            'No tienes permiso para modificar este mazo. Solo el creador original o el Admin Master Luca pueden editarlo. Puedes crear una copia en tus mazos.',
+            'No tienes permiso para modificar este mazo. Solo el creador original o un administrador pueden editarlo. Puedes crear una copia en tus mazos.',
         },
         { status: 403 }
       );
@@ -146,7 +155,14 @@ export async function PUT(
 
     let totalCards = 0;
     if (Array.isArray(cards)) {
-      totalCards = cards.reduce((sum: number, c: any) => sum + (Math.max(1, parseInt(c.count, 10) || 1)), 0);
+      const legality = validateDeckLegality(cards);
+      totalCards = legality.totalCards;
+      if (legality.errors.length > 0) {
+        return NextResponse.json({
+          error: legality.errors[0],
+          errors: legality.errors,
+        }, { status: 400 });
+      }
     } else {
       const row = await db.get(`SELECT SUM(count) as total FROM deck_cards WHERE deck_id = ?`, [deckId]) as any;
       totalCards = Number(row?.total || 0);
@@ -155,20 +171,21 @@ export async function PUT(
     let finalIsPublic: number | null = null;
     if (is_public !== undefined) {
       const requestedPublic = is_public ? 1 : 0;
-      if (requestedPublic === 1 && totalCards < 60) {
+      if (requestedPublic === 1 && totalCards !== 60) {
         return NextResponse.json({
-          error: `No se puede publicar un mazo con menos de 60 cartas reglamentarias en la comunidad (actualmente tiene ${totalCards}/60). Debe guardarse como borrador privado hasta completarlo.`,
+          error: `No se puede publicar un mazo con ${totalCards}/60 cartas reglamentarias en la comunidad (debe tener exactamente 60 cartas). Debe guardarse como borrador privado hasta completarlo.`,
         }, { status: 400 });
       }
-      finalIsPublic = totalCards >= 60 ? requestedPublic : 0;
+      finalIsPublic = totalCards === 60 ? requestedPublic : 0;
     } else {
-      // If cards are reduced below 60 and deck was public, auto-demote to private draft
-      if (totalCards < 60 && deck.is_public === 1) {
+      // If cards are not 60 and deck was public, auto-demote to private draft
+      if (totalCards !== 60 && deck.is_public === 1) {
         finalIsPublic = 0;
       }
     }
 
     const now = new Date().toISOString();
+    const cleanName = typeof name === 'string' ? name.trim() : null;
 
     await db.run(`
       UPDATE decks
@@ -179,30 +196,32 @@ export async function PUT(
           cover_card_image = COALESCE(?, cover_card_image),
           updated_at = ?
       WHERE id = ?
-    `, [name, format, description, finalIsPublic, cover_card_image, now, deckId]);
+    `, [cleanName || null, format ?? null, description ?? null, finalIsPublic, cover_card_image ?? null, now, deckId]);
 
     // If new cards list provided, replace deck cards
     if (Array.isArray(cards)) {
       await db.run('DELETE FROM deck_cards WHERE deck_id = ?', [deckId]);
 
-      const cardBatch = cards.map((c: any) => ({
-        sql: `INSERT INTO deck_cards (deck_id, card_name, expansion, number, category, trainer_type, count, owned_count, image_url, tcg_id)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        args: [
-          deckId,
-          c.card_name || c.name,
-          c.expansion || c.set || 'PROMO',
-          c.number || '1',
-          c.category || 'pokemon',
-          c.trainer_type || '',
-          Math.max(1, parseInt(c.count, 10) || 1),
-          Math.max(0, parseInt(c.owned_count, 10) || 0),
-          c.image_url || c.image || '/placeholder-card.svg',
-          c.tcg_id || ''
-        ],
-      }));
+      if (cards.length > 0) {
+        const cardBatch = cards.map((c: any) => ({
+          sql: `INSERT INTO deck_cards (deck_id, card_name, expansion, number, category, trainer_type, count, owned_count, image_url, tcg_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          args: [
+            deckId,
+            String(c.card_name || c.name || 'Carta').trim(),
+            String(c.expansion || c.set || 'PROMO').trim(),
+            String(c.number || '1').trim(),
+            String(c.category || 'pokemon').trim(),
+            String(c.trainer_type || '').trim(),
+            Math.max(1, parseInt(c.count, 10) || 1),
+            Math.max(0, parseInt(c.owned_count, 10) || 0),
+            String(c.image_url || c.image || '/placeholder-card.svg').trim(),
+            String(c.tcg_id || '').trim()
+          ],
+        }));
 
-      await db.batch(cardBatch);
+        await db.batch(cardBatch);
+      }
     }
 
     return NextResponse.json({ success: true, message: 'Mazo actualizado correctamente.' });
@@ -230,6 +249,10 @@ export async function DELETE(
     }
 
     const deckId = parseInt(params.id, 10);
+    if (isNaN(deckId) || deckId <= 0) {
+      return NextResponse.json({ error: 'ID de mazo inválido' }, { status: 400 });
+    }
+
     const deck = await db.get('SELECT * FROM decks WHERE id = ?', [deckId]) as any;
 
     if (!deck) {
@@ -239,20 +262,21 @@ export async function DELETE(
     const isOwner = deck.user_id === user.id;
     const isLuca =
       user.username?.toLowerCase() === 'luca' ||
-      user.email?.toLowerCase().includes('luca') ||
       user.role === 'admin';
 
     if (!isOwner && !isLuca) {
       return NextResponse.json(
         {
           error:
-            'No tienes permiso para eliminar este mazo. Solo el creador original o el Admin Master Luca pueden eliminarlo.',
+            'No tienes permiso para eliminar este mazo. Solo el creador original o un administrador pueden eliminarlo.',
         },
         { status: 403 }
       );
     }
 
     await db.run('DELETE FROM deck_cards WHERE deck_id = ?', [deckId]);
+    await db.run('DELETE FROM deck_likes WHERE deck_id = ?', [deckId]);
+    await db.run('DELETE FROM deck_comments WHERE deck_id = ?', [deckId]);
     await db.run('DELETE FROM decks WHERE id = ?', [deckId]);
 
     return NextResponse.json({ success: true, message: 'Mazo eliminado.' });

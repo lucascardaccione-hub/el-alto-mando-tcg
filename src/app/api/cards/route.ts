@@ -160,19 +160,27 @@ export async function GET(request: Request) {
       orderBy = 'ORDER BY stock DESC, id DESC';
     }
 
-    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : null;
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!, 10) : null;
+    const page = searchParams.get('page') ? Math.max(1, parseInt(searchParams.get('page')!, 10) || 1) : null;
+    const pageSize = searchParams.get('pageSize') ? Math.max(1, Math.min(200, parseInt(searchParams.get('pageSize')!, 10) || 24)) : null;
+
     let query = `SELECT * FROM cards ${whereClause} ${orderBy}`;
-    // Only apply SQL limit if not grouping, or apply reasonable limit
-    if (!shouldGroup && limit && !isNaN(limit) && limit > 0) {
+    // Only apply SQL limit directly if not grouping and not paginating by page
+    if (!shouldGroup && !page && limit && !isNaN(limit) && limit > 0) {
       query += ` LIMIT ${limit}`;
     }
     const cards = await db.all(query, params);
 
     if (shouldGroup) {
-      // Group publications with matching canonical card specs
+      // Group publications with matching canonical card specs (null-safe)
       const groupMap = new Map<string, any[]>();
       for (const card of cards) {
-        const key = `${card.name.trim().toLowerCase()}###${card.expansion.trim().toLowerCase()}###${card.number.trim().toLowerCase()}###${(card.version || '').trim().toLowerCase()}###${(card.language || '').trim().toLowerCase()}###${card.is_foil ? 1 : 0}###${card.is_league ? 1 : 0}`;
+        const cName = String(card.name || '').trim().toLowerCase();
+        const cExp = String(card.expansion || '').trim().toLowerCase();
+        const cNum = String(card.number || '').trim().toLowerCase();
+        const cVer = String(card.version || '').trim().toLowerCase();
+        const cLang = String(card.language || '').trim().toLowerCase();
+        const key = `${cName}###${cExp}###${cNum}###${cVer}###${cLang}###${card.is_foil ? 1 : 0}###${card.is_league ? 1 : 0}`;
         if (!groupMap.has(key)) {
           groupMap.set(key, []);
         }
@@ -182,7 +190,7 @@ export async function GET(request: Request) {
       const groupedCards: any[] = [];
       groupMap.forEach((groupList) => {
         // Sort offers by price ascending (cheapest offer first)
-        groupList.sort((a, b) => a.price - b.price);
+        groupList.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
         const bestOffer = groupList[0];
         const minPrice = bestOffer.price;
         const maxPrice = groupList[groupList.length - 1].price;
@@ -216,26 +224,46 @@ export async function GET(request: Request) {
 
       // If sort requested after grouping
       if (sort === 'price_asc') {
-        groupedCards.sort((a, b) => a.price - b.price);
+        groupedCards.sort((a, b) => (Number(a.price) || 0) - (Number(b.price) || 0));
       } else if (sort === 'price_desc') {
-        groupedCards.sort((a, b) => b.price - a.price);
+        groupedCards.sort((a, b) => (Number(b.price) || 0) - (Number(a.price) || 0));
       } else if (sort === 'name_asc') {
-        groupedCards.sort((a, b) => a.name.localeCompare(b.name));
+        groupedCards.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
       } else if (sort === 'stock_desc') {
-        groupedCards.sort((a, b) => b.stock - a.stock);
+        groupedCards.sort((a, b) => (Number(b.stock) || 0) - (Number(a.stock) || 0));
       }
 
-      const finalCards = limit && limit > 0 ? groupedCards.slice(0, limit) : groupedCards;
+      const totalCount = groupedCards.length;
+      let finalCards = groupedCards;
+      if (page && pageSize) {
+        const start = (page - 1) * pageSize;
+        finalCards = groupedCards.slice(start, start + pageSize);
+      } else if (limit && limit > 0) {
+        finalCards = groupedCards.slice(0, limit);
+      }
 
       return NextResponse.json({
         cards: finalCards,
-        total: finalCards.length,
+        total: totalCount,
+        page: page || 1,
+        pageSize: pageSize || finalCards.length,
+        totalPages: pageSize ? Math.max(1, Math.ceil(totalCount / pageSize)) : 1,
       });
     }
 
+    const totalCount = cards.length;
+    let finalCards = cards;
+    if (page && pageSize) {
+      const start = (page - 1) * pageSize;
+      finalCards = cards.slice(start, start + pageSize);
+    }
+
     return NextResponse.json({
-      cards,
-      total: cards.length,
+      cards: finalCards,
+      total: totalCount,
+      page: page || 1,
+      pageSize: pageSize || finalCards.length,
+      totalPages: pageSize ? Math.max(1, Math.ceil(totalCount / pageSize)) : 1,
     });
   } catch (error: any) {
     console.error('Fetch cards error:', error);

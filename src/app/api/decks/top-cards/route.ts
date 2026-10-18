@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    const totalDecksRes = await db.get('SELECT COUNT(*) as total FROM decks');
+    const totalDecksRes = await db.get('SELECT COUNT(*) as total FROM decks WHERE is_public = 1');
     const totalDecks = Number(totalDecksRes?.total) || 0;
 
     if (totalDecks === 0) {
@@ -15,21 +15,23 @@ export async function GET(request: Request) {
       });
     }
 
-    // Query top 100 most frequent cards across all decks
+    // Query top 100 most frequent cards across public community decks only
     const rawCards = await db.all(`
       SELECT 
-        card_name,
-        MAX(image_url) as image_url,
-        MAX(category) as category,
-        MAX(trainer_type) as trainer_type,
-        MAX(expansion) as expansion,
-        MAX(number) as number,
-        COUNT(DISTINCT deck_id) as deck_appearances,
-        SUM(count) as total_copies,
-        ROUND(AVG(count), 1) as avg_copies
-      FROM deck_cards
-      GROUP BY card_name
-      ORDER BY deck_appearances DESC, total_copies DESC, card_name ASC
+        dc.card_name,
+        MAX(dc.image_url) as image_url,
+        MAX(dc.category) as category,
+        MAX(dc.trainer_type) as trainer_type,
+        MAX(dc.expansion) as expansion,
+        MAX(dc.number) as number,
+        COUNT(DISTINCT dc.deck_id) as deck_appearances,
+        SUM(dc.count) as total_copies,
+        ROUND(AVG(dc.count), 1) as avg_copies
+      FROM deck_cards dc
+      JOIN decks d ON dc.deck_id = d.id
+      WHERE d.is_public = 1
+      GROUP BY dc.card_name
+      ORDER BY deck_appearances DESC, total_copies DESC, dc.card_name ASC
       LIMIT 100
     `);
 

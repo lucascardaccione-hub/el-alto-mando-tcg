@@ -13,6 +13,19 @@ export async function GET(
     const deckId = parseInt(params.id, 10);
     if (!deckId) return NextResponse.json({ error: 'ID de mazo inválido' }, { status: 400 });
 
+    const deck = await db.get('SELECT id, user_id, is_public FROM decks WHERE id = ?', [deckId]) as any;
+    if (!deck) {
+      return NextResponse.json({ error: 'Mazo no encontrado' }, { status: 404 });
+    }
+
+    const user = getCurrentUser();
+    const isOwner = Boolean(user && deck.user_id === user.id);
+    const isAdmin = Boolean(user && (user.username?.toLowerCase() === 'luca' || user.role === 'admin'));
+
+    if (deck.is_public === 0 && !isOwner && !isAdmin) {
+      return NextResponse.json({ error: 'No tienes permiso para ver comentarios de un mazo privado' }, { status: 403 });
+    }
+
     const comments = await db.all(`
       SELECT c.*, u.username, u.avatar_url, u.role
       FROM deck_comments c
@@ -30,7 +43,6 @@ export async function GET(
     `, [deckId]) as any;
 
     let userRating = null;
-    const user = getCurrentUser();
     if (user) {
       const existingRating = await db.get(`
         SELECT rating FROM deck_comments 
@@ -74,6 +86,16 @@ export async function POST(
 
     const deckId = parseInt(params.id, 10);
     if (!deckId) return NextResponse.json({ error: 'ID de mazo inválido' }, { status: 400 });
+
+    const targetDeck = await db.get('SELECT id, user_id, name, is_public FROM decks WHERE id = ?', [deckId]) as any;
+    if (!targetDeck) {
+      return NextResponse.json({ error: 'Mazo no encontrado' }, { status: 404 });
+    }
+    const isOwner = targetDeck.user_id === user.id;
+    const isAdmin = user.username?.toLowerCase() === 'luca' || user.role === 'admin';
+    if (targetDeck.is_public === 0 && !isOwner && !isAdmin) {
+      return NextResponse.json({ error: 'No puedes comentar en un mazo privado ajeno' }, { status: 403 });
+    }
 
     const body = await request.json();
     let { content, rating, parent_id } = body;

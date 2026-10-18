@@ -12,6 +12,16 @@ export async function GET(
     const deckId = parseInt(params.id, 10);
     if (!deckId) return NextResponse.json({ error: 'ID de mazo inválido' }, { status: 400 });
 
+    const deck = await db.get('SELECT id, user_id, is_public FROM decks WHERE id = ?', [deckId]) as any;
+    if (!deck) return NextResponse.json({ error: 'Mazo no encontrado' }, { status: 404 });
+
+    const user = getCurrentUser();
+    const isOwner = Boolean(user && deck.user_id === user.id);
+    const isAdmin = Boolean(user && (user.username?.toLowerCase() === 'luca' || user.role === 'admin'));
+    if (deck.is_public === 0 && !isOwner && !isAdmin) {
+      return NextResponse.json({ error: 'No autorizado para acceder a este mazo privado' }, { status: 403 });
+    }
+
     const likesCountResult = await db.get(`
       SELECT COUNT(*) as likes_count
       FROM deck_likes
@@ -19,7 +29,6 @@ export async function GET(
     `, [deckId]) as any;
 
     let userLiked = false;
-    const user = getCurrentUser();
     if (user) {
       const userLikeResult = await db.get(`
         SELECT id FROM deck_likes WHERE deck_id = ? AND user_id = ?
@@ -51,6 +60,15 @@ export async function POST(
 
     const deckId = parseInt(params.id, 10);
     if (!deckId) return NextResponse.json({ error: 'ID de mazo inválido' }, { status: 400 });
+
+    const deck = await db.get('SELECT id, user_id, name, is_public FROM decks WHERE id = ?', [deckId]) as any;
+    if (!deck) return NextResponse.json({ error: 'Mazo no encontrado' }, { status: 404 });
+
+    const isOwner = deck.user_id === user.id;
+    const isAdmin = user.username?.toLowerCase() === 'luca' || user.role === 'admin';
+    if (deck.is_public === 0 && !isOwner && !isAdmin) {
+      return NextResponse.json({ error: 'No autorizado para interactuar con un mazo privado ajeno' }, { status: 403 });
+    }
 
     const existingLike = await db.get(`
       SELECT id FROM deck_likes WHERE deck_id = ? AND user_id = ?

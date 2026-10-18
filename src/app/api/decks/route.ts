@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import db from '@/lib/db';
 import { getCurrentUser } from '@/lib/auth';
+import { validateDeckLegality } from '@/lib/deckParser';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,20 +60,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'El nombre del mazo es obligatorio.' }, { status: 400 });
     }
 
-    const totalCards = Array.isArray(cards)
-      ? cards.reduce((sum: number, c: any) => sum + (Math.max(1, parseInt(c.count, 10) || 1)), 0)
-      : 0;
+    const legality = validateDeckLegality(Array.isArray(cards) ? cards : []);
+    const totalCards = legality.totalCards;
 
-    const requestedPublic = is_public !== undefined ? (is_public ? 1 : 0) : 0;
-
-    // A deck cannot be published publicly if it has less than 60 cards
-    if (requestedPublic === 1 && totalCards < 60) {
+    if (legality.errors.length > 0) {
       return NextResponse.json({
-        error: `No se puede publicar un mazo con menos de 60 cartas en la comunidad (actualmente tiene ${totalCards}/60). Puedes guardarlo en privado como borrador hasta completarlo.`,
+        error: legality.errors[0],
+        errors: legality.errors,
       }, { status: 400 });
     }
 
-    const finalIsPublic = totalCards >= 60 ? requestedPublic : 0;
+    const requestedPublic = is_public !== undefined ? (is_public ? 1 : 0) : 0;
+
+    // A deck cannot be published publicly unless it has exactly 60 cards
+    if (requestedPublic === 1 && totalCards !== 60) {
+      return NextResponse.json({
+        error: `No se puede publicar un mazo con ${totalCards}/60 cartas en la comunidad (debe tener exactamente 60 cartas). Puedes guardarlo en privado como borrador hasta completarlo.`,
+      }, { status: 400 });
+    }
+
+    const finalIsPublic = totalCards === 60 ? requestedPublic : 0;
 
     const now = new Date().toISOString();
 

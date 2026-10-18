@@ -27,7 +27,10 @@ export async function GET(
       }
     }
 
-    const cards = await db.all('SELECT * FROM deck_cards WHERE deck_id = ?', [deckId]) as any[];
+    const [cards, availableStoreCards] = await Promise.all([
+      db.all('SELECT * FROM deck_cards WHERE deck_id = ?', [deckId]) as Promise<any[]>,
+      db.all('SELECT * FROM cards WHERE stock > 0 ORDER BY price ASC') as Promise<any[]>,
+    ]);
 
     const itemsToAdd: any[] = [];
     let totalEstimated = 0;
@@ -36,13 +39,13 @@ export async function GET(
       const missingCount = Math.max(0, c.count - (c.owned_count || 0));
       if (missingCount <= 0) continue;
 
-      // Find best match in store cards with stock
-      const storeCard = await db.get(`
-        SELECT * FROM cards
-        WHERE name LIKE ? AND stock > 0
-        ORDER BY price ASC
-        LIMIT 1
-      `, [`%${c.card_name}%`]) as any;
+      const targetName = (c.card_name || '').toLowerCase().trim();
+      if (!targetName) continue;
+
+      const storeCard = availableStoreCards.find((sc) => {
+        const scName = (sc.name || '').toLowerCase().trim();
+        return scName === targetName || scName.includes(targetName);
+      });
 
       if (storeCard) {
         const qtyToAdd = Math.min(missingCount, storeCard.stock);

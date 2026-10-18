@@ -77,7 +77,10 @@ export default function ProfilePage() {
     setTimeout(() => setMessage(null), 4000);
   };
 
+  const [profileError, setProfileError] = useState<string | null>(null);
+
   useEffect(() => {
+    document.title = 'Mi Perfil de Entrenador — El Alto Mando TCG';
     fetchProfile();
     fetchUserDecks();
     fetchRewards();
@@ -100,6 +103,7 @@ export default function ProfilePage() {
 
   const fetchProfile = async () => {
     setLoading(true);
+    setProfileError(null);
     try {
       const res = await fetch('/api/auth/me');
       if (res.ok) {
@@ -112,11 +116,13 @@ export default function ProfilePage() {
         } else {
           router.push('/login');
         }
-      } else {
+      } else if (res.status === 401) {
         router.push('/login');
+      } else {
+        setProfileError('No se pudo cargar la información de tu perfil en este momento.');
       }
     } catch {
-      router.push('/login');
+      setProfileError('Error de conexión al cargar tu perfil.');
     } finally {
       setLoading(false);
     }
@@ -225,7 +231,30 @@ export default function ProfilePage() {
     );
   }
 
-  if (!user) return null;
+  if (profileError) {
+    return (
+      <div role="alert" className="min-h-[70vh] flex flex-col items-center justify-center space-y-4 px-4 text-center">
+        <AlertCircle className="w-10 h-10 text-rose-400" />
+        <p className="text-sm font-bold text-white">{profileError}</p>
+        <button
+          type="button"
+          onClick={fetchProfile}
+          className="px-5 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+        >
+          Reintentar
+        </button>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center space-y-3 px-4 text-center">
+        <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+        <p className="text-xs text-slate-400">Redirigiendo a inicio de sesión...</p>
+      </div>
+    );
+  }
 
   const roleInfo = getRoleBadge(user);
   const currentAvatarDisplay = customAvatarUrl.trim() || selectedAvatar || getDefaultAvatar(user.username);

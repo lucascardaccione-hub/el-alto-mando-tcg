@@ -444,10 +444,18 @@ export default function CartDrawer() {
     const waWindow = typeof window !== 'undefined' ? window.open('', '_blank') : null;
 
     try {
+      const idempotencyKey = `cart-${currentUser.id}-${group.sellerName}-${group.items
+        .map((it) => `${it.id}:${it.quantity}`)
+        .sort()
+        .join(',')}-${Math.floor(Date.now() / 30000)}`;
+
       // 1. Create order in Turso DB
       const res = await fetch('/api/orders', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': idempotencyKey,
+        },
         body: JSON.stringify({
           seller_id: group.sellerId,
           seller_name: group.sellerName,
@@ -455,6 +463,7 @@ export default function CartDrawer() {
           buyer_name: finalBuyerName,
           buyer_phone: buyerPhone.trim(),
           items: group.items,
+          idempotency_key: idempotencyKey,
         }),
       });
 

@@ -73,6 +73,7 @@ function DeckBuilderContent() {
   const [isPublic, setIsPublic] = useState(true);
   const [cards, setCards] = useState<DeckCardItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -381,6 +382,7 @@ function DeckBuilderContent() {
 
   const fetchDeck = async (id: number) => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await fetch(`/api/decks/${id}`);
       if (res.ok) {
@@ -411,12 +413,25 @@ function DeckBuilderContent() {
             return { ...c, category: cat, image_url: img };
           })
         );
+        isInitialLoadedRef.current = true;
+      } else {
+        const errData = await res.json().catch(() => ({}));
+        setCanEdit(false);
+        setLoadError(
+          errData?.error ||
+            (res.status === 403
+              ? 'Este mazo es privado y solo su propietario puede visualizarlo.'
+              : res.status === 404
+              ? 'El mazo solicitado no existe o fue eliminado.'
+              : 'No se pudo cargar el mazo.')
+        );
       }
     } catch (e) {
       console.error(e);
+      setCanEdit(false);
+      setLoadError('Error de conexión al intentar cargar el mazo.');
     } finally {
       setLoading(false);
-      isInitialLoadedRef.current = true;
     }
   };
 
@@ -955,7 +970,10 @@ function DeckBuilderContent() {
 
       setImportModalOpen(false);
       setImportInput('');
-      showNotification('success', `¡Mazo importado con éxito! ${parsed.totalCards} cartas reconocidas.`);
+      const skippedNotice = parsed.unrecognizedLines?.length
+        ? ` (Se omitieron ${parsed.unrecognizedLines.length} línea(s) con formato no reconocido)`
+        : '';
+      showNotification('success', `¡Mazo importado con éxito! ${parsed.totalCards} cartas reconocidas.${skippedNotice}`);
     } catch {
       setCards(
         parsed.cards.map((c: any) => ({
@@ -983,6 +1001,41 @@ function DeckBuilderContent() {
       maximumFractionDigits: 0,
     }).format(val);
   };
+
+  if (loadError) {
+    return (
+      <div className="min-h-screen flex flex-col bg-[#070b14] text-slate-100">
+        <Navbar />
+        <main className="flex-1 max-w-2xl w-full mx-auto px-4 py-16 flex items-center justify-center">
+          <div role="alert" className="w-full rounded-3xl bg-[#0b1220] border border-rose-500/40 p-8 text-center space-y-4 shadow-2xl">
+            <div className="w-14 h-14 rounded-2xl bg-rose-950/60 border border-rose-500/40 flex items-center justify-center mx-auto text-rose-400">
+              <AlertCircle className="w-7 h-7" />
+            </div>
+            <h1 className="text-xl font-black text-white">No se pudo abrir el mazo</h1>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">{loadError}</p>
+            <div className="pt-3 flex flex-wrap items-center justify-center gap-3">
+              <Link
+                href="/decks?tab=community"
+                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition-all"
+              >
+                Ver Decks de la Comunidad
+              </Link>
+              <Link
+                href="/deck-builder"
+                onClick={() => {
+                  setLoadError(null);
+                  setDeckId(null);
+                }}
+                className="px-5 py-2.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all"
+              >
+                Crear Nuevo Mazo
+              </Link>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-[#070b14] text-slate-100">

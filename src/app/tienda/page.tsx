@@ -24,6 +24,10 @@ import {
 export default function TiendaPage() {
   const [cards, setCards] = useState<CardData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 24;
+
   const [metadata, setMetadata] = useState<{
     expansions: string[];
     artists: string[];
@@ -52,10 +56,10 @@ export default function TiendaPage() {
   const [activeCardModal, setActiveCardModal] = useState<CardData | null>(null);
 
   useEffect(() => {
-    document.title = 'Tienda Oficial de Singles — El Alto Mando TCG';
+    document.title = 'Catálogo de Cartas Sueltas — El Alto Mando TCG';
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
-      const qParam = params.get('q');
+      const qParam = params.get('q') || params.get('search');
       if (qParam) setSearch(qParam);
     }
   }, []);
@@ -74,8 +78,9 @@ export default function TiendaPage() {
   };
 
   // Fetch cards with active filters
-  const fetchCards = async () => {
+  const fetchCards = async (signal?: AbortSignal) => {
     setLoading(true);
+    setFetchError(null);
     try {
       const params = new URLSearchParams();
       if (search.trim()) params.append('q', search.trim());
@@ -88,15 +93,21 @@ export default function TiendaPage() {
       if (sort) params.append('sort', sort);
       params.append('group', 'true');
 
-      const res = await fetch(`/api/cards?${params.toString()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setCards(data.cards || []);
+      const res = await fetch(`/api/cards?${params.toString()}`, { signal });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData?.error || 'No se pudo cargar el catálogo de cartas.');
       }
-    } catch (e) {
+      const data = await res.json();
+      setCards(data.cards || []);
+    } catch (e: any) {
+      if (e?.name === 'AbortError') return;
       console.error('Error fetching cards:', e);
+      setFetchError(e?.message || 'Error de conexión al cargar el catálogo.');
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) {
+        setLoading(false);
+      }
     }
   };
 
@@ -105,10 +116,16 @@ export default function TiendaPage() {
   }, []);
 
   useEffect(() => {
+    setCurrentPage(1);
+    const controller = new AbortController();
+    const delay = search.trim() ? 220 : 0;
     const timer = setTimeout(() => {
-      fetchCards();
-    }, 250);
-    return () => clearTimeout(timer);
+      fetchCards(controller.signal);
+    }, delay);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [search, selectedExpansion, selectedCategory, selectedTrainerType, selectedVersion, selectedLanguage, sort, inStockOnly]);
 
   const handleResetFilters = () => {
@@ -120,11 +137,15 @@ export default function TiendaPage() {
     setSelectedLanguage('');
     setSort('newest');
     setInStockOnly(false);
+    setCurrentPage(1);
   };
 
   const hasActiveFilters = Boolean(
     search || selectedExpansion || selectedCategory || selectedTrainerType || selectedVersion || selectedLanguage || inStockOnly || sort !== 'newest'
   );
+
+  const totalPages = Math.max(1, Math.ceil(cards.length / PAGE_SIZE));
+  const paginatedCards = cards.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#070b14] text-slate-900 dark:text-slate-100">
@@ -135,7 +156,7 @@ export default function TiendaPage() {
       />
 
       {/* Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main id="main-content" className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
         <StorePausedBanner />
         {/* Tienda Header & Tracking Bar */}
         <section className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-white via-blue-50/40 to-slate-50 dark:from-[#0a1024]/90 dark:via-[#0d152c]/80 dark:to-[#080d1e]/90 border border-slate-200 dark:border-blue-500/20 p-6 sm:p-8 shadow-xl dark:shadow-2xl backdrop-blur-xl">
@@ -147,7 +168,7 @@ export default function TiendaPage() {
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-blue-50 dark:bg-blue-600/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
                   <ShoppingBag className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>Tienda Oficial de Singles</span>
+                  <span>Catálogo de Cartas Sueltas</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-700/40">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
@@ -159,7 +180,7 @@ export default function TiendaPage() {
                 Catálogo de Cartas Sueltas & Stock en Vivo
               </h1>
               <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
-                Buscá tus cartas individuales por nombre, número o colección. Comprá directo a vendedores oficiales y completá tus mazos para jugar de inmediato.
+                Buscá tus cartas individuales por nombre, número o colección. Comprá directo a vendedores verificados de la comunidad y completá tus mazos.
               </p>
             </div>
 
@@ -243,10 +264,14 @@ export default function TiendaPage() {
         {/* Active Filter Chips & Catalog Results Header */}
         <div className="flex flex-wrap items-center justify-between gap-3 text-xs sm:text-sm text-slate-600 dark:text-slate-400 px-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p>
-              Mostrando <strong className="text-slate-900 dark:text-white font-bold">{cards.length}</strong>{' '}
-              {cards.length === 1 ? 'carta disponible' : 'cartas encontradas'}
-            </p>
+            {loading ? (
+              <p className="text-slate-500 dark:text-slate-400">Cargando catálogo...</p>
+            ) : (
+              <p>
+                Mostrando <strong className="text-slate-900 dark:text-white font-bold">{cards.length}</strong>{' '}
+                {cards.length === 1 ? 'carta disponible' : 'cartas encontradas'}
+              </p>
+            )}
             {search && (
               <button
                 onClick={() => setSearch('')}
@@ -314,6 +339,24 @@ export default function TiendaPage() {
               </div>
             ))}
           </div>
+        ) : fetchError ? (
+          <div role="alert" className="bg-white dark:bg-[#0c1424] border border-rose-300 dark:border-rose-800/80 rounded-3xl p-10 text-center space-y-4 max-w-xl mx-auto my-8 shadow-sm">
+            <div className="w-14 h-14 rounded-full bg-rose-100 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 flex items-center justify-center mx-auto text-rose-500">
+              <AlertCircle className="w-7 h-7" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Error al cargar el catálogo</h3>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400">
+              {fetchError}
+            </p>
+            <button
+              type="button"
+              onClick={() => fetchCards()}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white shadow-lg transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              <span>Reintentar</span>
+            </button>
+          </div>
         ) : cards.length === 0 ? (
           <div className="bg-white dark:bg-[#0c1424] border border-slate-200 dark:border-slate-800/80 rounded-3xl p-12 text-center space-y-4 max-w-xl mx-auto my-8 shadow-sm">
             <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center mx-auto text-slate-500">
@@ -333,14 +376,47 @@ export default function TiendaPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6">
-            {cards.map((card) => (
-              <CardItem
-                key={card.id}
-                card={card}
-                onOpenModal={(c) => setActiveCardModal(c)}
-              />
-            ))}
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-4 gap-4 sm:gap-6">
+              {paginatedCards.map((card) => (
+                <CardItem
+                  key={card.id}
+                  card={card}
+                  onOpenModal={(c) => setActiveCardModal(c)}
+                />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <nav aria-label="Paginación del catálogo" className="flex items-center justify-center gap-3 pt-4">
+                <button
+                  type="button"
+                  disabled={currentPage <= 1}
+                  onClick={() => {
+                    setCurrentPage((p) => Math.max(1, p - 1));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:border-blue-500 disabled:opacity-40 transition-all"
+                >
+                  Anterior
+                </button>
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400">
+                  Página <strong className="text-slate-900 dark:text-white">{currentPage}</strong> de{' '}
+                  <strong className="text-slate-900 dark:text-white">{totalPages}</strong>
+                </span>
+                <button
+                  type="button"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => {
+                    setCurrentPage((p) => Math.min(totalPages, p + 1));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 hover:border-blue-500 disabled:opacity-40 transition-all"
+                >
+                  Siguiente
+                </button>
+              </nav>
+            )}
           </div>
         )}
       </main>

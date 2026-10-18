@@ -8,12 +8,31 @@ export interface ParsedDeckCard {
   image?: string;
 }
 
+export interface UnrecognizedDeckLine {
+  lineNumber: number;
+  text: string;
+  reason: string;
+}
+
 export interface ParsedDeck {
   cards: ParsedDeckCard[];
   totalCards: number;
   pokemonCount: number;
   trainerCount: number;
   energyCount: number;
+  unrecognizedLines: UnrecognizedDeckLine[];
+  warnings: string[];
+}
+
+export interface DeckLegalityResult {
+  isValid: boolean;
+  canPublish: boolean;
+  totalCards: number;
+  pokemonCount: number;
+  trainerCount: number;
+  energyCount: number;
+  errors: string[];
+  warnings: string[];
 }
 
 export const PTCGL_SET_MAP: Record<string, { id: string; serie: string; name: string }> = {
@@ -331,13 +350,15 @@ export function getGenericEnergyImage(name: string): string | null {
  * Cartas totales: 60
  */
 export function parsePtcglDeck(text: string): ParsedDeck {
-  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const cards: ParsedDeckCard[] = [];
+  const rawLines = (text || '').split(/\r?\n/);
+  const mergedMap = new Map<string, ParsedDeckCard>();
+  const unrecognizedLines: UnrecognizedDeckLine[] = [];
 
   let currentCategory: 'pokemon' | 'trainer' | 'energy' = 'pokemon';
 
-  for (const rawLine of lines) {
-    const line = rawLine.trim();
+  for (let i = 0; i < rawLines.length; i++) {
+    const line = rawLines[i].trim();
+    if (!line) continue;
     const lower = line.toLowerCase();
 
     // Section headers (English & Spanish)
@@ -371,10 +392,17 @@ export function parsePtcglDeck(text: string): ParsedDeck {
     }
 
     // Standard PTCGL line: [count] [card name...] [set code] [card number] [optional tags]
-    // Greedy match on name: ^(\d+)\s+(.+)\s+([A-Za-z0-9.-]{2,8})\s+(\d+|[A-Za-z0-9-]+)(?:\s+[A-Za-z0-9]+)?$
-    const match = line.match(/^(\d+)\s+(.+)\s+([A-Za-z0-9.-]{2,8})\s+(\d+|[A-Za-z0-9-]+)(?:\s+[A-Za-z0-9]+)?$/);
+    const match = line.match(/^(?:\*\s*)?(\d+)\s+(.+)\s+([A-Za-z0-9.-]{2,8})\s+(\d+|[A-Za-z0-9-]+)(?:\s+[A-Za-z0-9]+)?$/);
     if (match) {
-      const count = parseInt(match[1], 10) || 1;
+      const count = parseInt(match[1], 10);
+      if (isNaN(count) || count <= 0) {
+        unrecognizedLines.push({
+          lineNumber: i + 1,
+          text: line,
+          reason: 'La cantidad de copias debe ser mayor a 0.',
+        });
+        continue;
+      }
       let name = match[2].trim();
       const set = match[3].trim().toUpperCase();
       const number = match[4].trim();
@@ -397,18 +425,33 @@ export function parsePtcglDeck(text: string): ParsedDeck {
         image = getGenericEnergyImage(name) || undefined;
       }
 
-      cards.push({
-        count,
-        name,
-        set,
-        number,
-        category,
-        image,
-      });
+      const mergeKey = `${name.toLowerCase()}###${set}###${number.toLowerCase()}`;
+      const existing = mergedMap.get(mergeKey);
+      if (existing) {
+        existing.count += count;
+      } else {
+        mergedMap.set(mergeKey, {
+          count,
+          name,
+          set,
+          number,
+          category,
+          image,
+        });
+      }
     } else {
       // Fallback: line without set/number, e.g. "4 Ultra Ball" or "10 Water Energy"
-      const simpleMatch = line.match(/^(\d+)\s+(.+)$/);
+      const simpleMatch = line.match(/^(?:\*\s*)?(\d+)\s+(.+)$/);
       if (simpleMatch) {
+        const count = parseInt(simpleMatch[1], 10);
+        if (isNaN(count) || count <= 0) {
+          unrecognizedLines.push({
+            lineNumber: i + 1,
+            text: line,
+            reason: 'La cantidad de copias debe ser mayor a 0.',
+          });
+          continue;
+        }
         let name = simpleMatch[2].trim();
         if (currentCategory === 'energy' || name.includes('{')) {
           name = normalizeEnergyName(name);
@@ -422,31 +465,141 @@ export function parsePtcglDeck(text: string): ParsedDeck {
           category = 'trainer';
         }
         let image: string | undefined = undefined;
+        const defaultSet = isBasicEnergy({ card_name: name }) ? 'SVE' : 'PROMO';
         if (isBasicEnergy({ card_name: name })) {
           image = getGenericEnergyImage(name) || undefined;
         }
-        cards.push({
-          count: parseInt(simpleMatch[1], 10) || 1,
-          name,
-          set: 'SVE',
-          number: '1',
-          category,
-          image,
+        const mergeKey = `${name.toLowerCase()}###${defaultSet}###1`;
+        const existing = mergedMap.get(mergeKey);
+        if (existing) {
+          existing.count += count;
+        } else {
+          mergedMap.set(mergeKey, {
+            count,
+            name,
+            set: defaultSet,
+            number: '1',
+            category,
+            image,
+          });
+        }
+      } else {
+        unrecognizedLines.push({
+          lineNumber: i + 1,
+          text: line,
+          reason: 'Formato no reconocido. Usa: "[cantidad] [nombre] [expansión] [número]" (ej: "4 Ultra Ball SVI 196").',
         });
       }
     }
   }
 
-  const pokemonCount = cards.filter((c) => c.category === 'pokemon').reduce((a, b) => a + b.count, 0);
-  const trainerCount = cards.filter((c) => c.category === 'trainer').reduce((a, b) => a + b.count, 0);
-  const energyCount = cards.filter((c) => c.category === 'energy').reduce((a, b) => a + b.count, 0);
+  const cards = Array.from(mergedMap.values());
+  const legality = validateDeckLegality(
+    cards.map((c) => ({
+      card_name: c.name,
+      expansion: c.set,
+      number: c.number,
+      category: c.category,
+      count: c.count,
+    }))
+  );
 
   return {
     cards,
-    totalCards: pokemonCount + trainerCount + energyCount,
+    totalCards: legality.totalCards,
+    pokemonCount: legality.pokemonCount,
+    trainerCount: legality.trainerCount,
+    energyCount: legality.energyCount,
+    unrecognizedLines,
+    warnings: [...legality.errors, ...legality.warnings],
+  };
+}
+
+/**
+ * Centralized Pokémon TCG deck legality and composition validator.
+ */
+export function validateDeckLegality(
+  cards: Array<{
+    card_name?: string;
+    name?: string;
+    expansion?: string;
+    set?: string;
+    number?: string;
+    category?: string;
+    count: number;
+  }>
+): DeckLegalityResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  let pokemonCount = 0;
+  let trainerCount = 0;
+  let energyCount = 0;
+
+  // Group counts by canonical card name to enforce the 4-copy limit across different sets/prints
+  const copiesByName = new Map<string, { displayName: string; count: number; isBasic: boolean }>();
+
+  for (const c of cards || []) {
+    const qty = Math.max(0, parseInt(String(c.count), 10) || 0);
+    if (qty <= 0) continue;
+
+    const rawName = (c.card_name || c.name || 'Carta').trim();
+    const setCode = (c.expansion || c.set || '').trim();
+    let cat = (c.category || 'pokemon').toLowerCase().trim();
+
+    if (isKnownEnergyTrainer(rawName)) {
+      cat = 'trainer';
+    } else if (isBasicEnergy({ card_name: rawName, expansion: setCode }) || isSpecialEnergy(rawName)) {
+      cat = 'energy';
+    }
+
+    if (cat === 'pokemon') pokemonCount += qty;
+    else if (cat === 'trainer') trainerCount += qty;
+    else energyCount += qty;
+
+    const isBasic = isBasicEnergy({ card_name: rawName, expansion: setCode, category: cat });
+    const nameKey = rawName.toLowerCase();
+    const prev = copiesByName.get(nameKey);
+    if (prev) {
+      prev.count += qty;
+    } else {
+      copiesByName.set(nameKey, { displayName: rawName, count: qty, isBasic });
+    }
+  }
+
+  const totalCards = pokemonCount + trainerCount + energyCount;
+
+  // Check 4-copy limit per card name (except Basic Energy)
+  copiesByName.forEach((info) => {
+    if (!info.isBasic && info.count > 4) {
+      errors.push(`"${info.displayName}" supera el límite de 4 copias reglamentarias (${info.count} copias).`);
+    }
+  });
+
+  if (totalCards > 0 && pokemonCount === 0) {
+    errors.push('El mazo debe incluir al menos 1 carta de Pokémon.');
+  }
+
+  if (totalCards !== 60) {
+    warnings.push(
+      totalCards < 60
+        ? `Faltan ${60 - totalCards} carta(s) para alcanzar las 60 cartas reglamentarias (${totalCards}/60).`
+        : `El mazo excede el límite reglamentario por ${totalCards - 60} carta(s) (${totalCards}/60).`
+    );
+  }
+
+  const canPublish = totalCards === 60 && pokemonCount > 0 && errors.length === 0;
+  const isValid = canPublish;
+
+  return {
+    isValid,
+    canPublish,
+    totalCards,
     pokemonCount,
     trainerCount,
     energyCount,
+    errors,
+    warnings,
   };
 }
 

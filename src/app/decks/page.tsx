@@ -40,8 +40,10 @@ export default function DecksPage() {
   const router = useRouter();
   const [myDecks, setMyDecks] = useState<any[]>([]);
   const [communityDecks, setCommunityDecks] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState<'my' | 'community' | 'frequent'>('my');
+  const [activeTab, setActiveTab] = useState<'my' | 'community' | 'frequent'>('community');
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<number | null>(null);
   const [cloningId, setCloningId] = useState<number | null>(null);
   const [importModalOpen, setImportModalOpen] = useState(false);
@@ -59,11 +61,20 @@ export default function DecksPage() {
 
   const fetchDecks = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
-      const [resMy, resPub] = await Promise.all([
+      const [resMe, resMy, resPub] = await Promise.all([
+        fetch('/api/auth/me'),
         fetch('/api/decks?filter=my'),
         fetch('/api/decks?filter=public'),
       ]);
+      const meData = resMe.ok ? await resMe.json().catch(() => null) : null;
+      const logged = Boolean(meData?.authenticated && meData?.user);
+      setIsLoggedIn(logged);
+
+      if (!resMy.ok && !resPub.ok) {
+        throw new Error('No se pudieron cargar los mazos.');
+      }
       if (resMy.ok) {
         const dataMy = await resMy.json();
         setMyDecks(dataMy.decks || []);
@@ -72,8 +83,17 @@ export default function DecksPage() {
         const dataPub = await resPub.json();
         setCommunityDecks(dataPub.decks || []);
       }
-    } catch (e) {
+
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        const tabParam = params.get('tab');
+        if (!tabParam) {
+          setActiveTab(logged ? 'my' : 'community');
+        }
+      }
+    } catch (e: any) {
       console.error(e);
+      setFetchError(e?.message || 'Error de conexión al cargar los mazos.');
     } finally {
       setLoading(false);
     }
@@ -111,8 +131,8 @@ export default function DecksPage() {
     const targetDeck = myDecks.find((d) => d.id === deckId);
     const nextPublic = currentPublic === 1 ? 0 : 1;
 
-    if (nextPublic === 1 && targetDeck && (targetDeck.total_cards || 0) < 60) {
-      alert(`No se puede publicar en la comunidad un mazo con menos de 60 cartas reglamentarias (actualmente tiene ${targetDeck.total_cards || 0}/60 cartas). Completa el mazo para poder compartirlo.`);
+    if (nextPublic === 1 && targetDeck && (targetDeck.total_cards || 0) !== 60) {
+      alert(`No se puede publicar en la comunidad un mazo con ${targetDeck.total_cards || 0}/60 cartas reglamentarias (debe tener exactamente 60 cartas). Completa el mazo para poder compartirlo.`);
       return;
     }
 
@@ -145,9 +165,6 @@ export default function DecksPage() {
   };
 
   useEffect(() => {
-    fetchDecks();
-    fetchFrequentCards();
-
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const tabParam = params.get('tab');
@@ -159,6 +176,9 @@ export default function DecksPage() {
         setActiveTab('frequent');
       }
     }
+
+    fetchDecks();
+    fetchFrequentCards();
   }, []);
 
   const handleCreateNew = () => {
@@ -349,6 +369,19 @@ export default function DecksPage() {
           </button>
         </div>
 
+        {fetchError && (
+          <div role="alert" className="p-4 rounded-2xl bg-rose-950/40 border border-rose-500/40 flex items-center justify-between gap-4 text-xs text-rose-200">
+            <span>{fetchError}</span>
+            <button
+              type="button"
+              onClick={fetchDecks}
+              className="px-3.5 py-1.5 rounded-xl font-bold bg-rose-600 hover:bg-rose-500 text-white transition-colors"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+
         {/* Tab 1: My Decks Section */}
         {activeTab === 'my' && (
         <section className="space-y-4">
@@ -367,6 +400,33 @@ export default function DecksPage() {
 
           {loading ? (
             <div className="py-16 text-center text-slate-500 text-xs">Cargando tus mazos...</div>
+          ) : !isLoggedIn ? (
+            <div className="p-8 rounded-3xl bg-[#0b1220]/60 border border-slate-800 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-blue-400">
+                <Lock className="w-6 h-6 opacity-70" />
+              </div>
+              <h3 className="font-bold text-white text-base">Inicia sesión para gestionar tus mazos</h3>
+              <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                Necesitas una cuenta de entrenador para guardar mazos personales o borradores privados. También puedes explorar los mazos públicos de la comunidad sin iniciar sesión.
+              </p>
+              <div className="pt-2 flex flex-wrap items-center justify-center gap-2.5">
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white transition-all"
+                >
+                  <User className="w-4 h-4" />
+                  <span>Iniciar Sesión</span>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('community')}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all"
+                >
+                  <Globe className="w-4 h-4 text-blue-400" />
+                  <span>Ver Decks de la Comunidad</span>
+                </button>
+              </div>
+            </div>
           ) : myDecks.length === 0 ? (
             <div className="p-8 rounded-3xl bg-[#0b1220]/60 border border-slate-800 text-center space-y-3">
               <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto text-slate-500">
@@ -812,7 +872,7 @@ export default function DecksPage() {
                           <div className="pt-1.5 flex items-center justify-between">
                             {card.in_store ? (
                               <Link
-                                href={`/?search=${encodeURIComponent(card.card_name)}`}
+                                href={`/tienda?q=${encodeURIComponent(card.card_name)}`}
                                 className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-800/50 transition-colors"
                               >
                                 <ShoppingBag className="w-3 h-3" />
@@ -820,7 +880,7 @@ export default function DecksPage() {
                               </Link>
                             ) : (
                               <Link
-                                href={`/?search=${encodeURIComponent(card.card_name)}`}
+                                href={`/tienda?q=${encodeURIComponent(card.card_name)}`}
                                 className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-white transition-colors"
                               >
                                 <Search className="w-3 h-3" />

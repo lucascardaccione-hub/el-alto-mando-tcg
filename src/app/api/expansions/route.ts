@@ -5,15 +5,15 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const expansions = await db.all("SELECT DISTINCT expansion FROM cards WHERE expansion IS NOT NULL AND expansion != '' ORDER BY expansion ASC") as { expansion: string }[];
-    const artists = await db.all("SELECT DISTINCT artist FROM cards WHERE artist IS NOT NULL AND artist != '' ORDER BY artist ASC") as { artist: string }[];
-    const versions = await db.all("SELECT DISTINCT version FROM cards WHERE version IS NOT NULL AND version != '' ORDER BY version ASC") as { version: string }[];
-    const dbLanguages = await db.all("SELECT DISTINCT language FROM cards WHERE language IS NOT NULL AND language != '' ORDER BY language ASC") as { language: string }[];
+    const expansions = await db.all("SELECT DISTINCT expansion FROM cards WHERE stock > 0 AND expansion IS NOT NULL AND expansion != '' ORDER BY expansion ASC") as { expansion: string }[];
+    const artists = await db.all("SELECT DISTINCT artist FROM cards WHERE stock > 0 AND artist IS NOT NULL AND artist != '' ORDER BY artist ASC") as { artist: string }[];
+    const versions = await db.all("SELECT DISTINCT version FROM cards WHERE stock > 0 AND version IS NOT NULL AND version != '' ORDER BY version ASC") as { version: string }[];
+    const dbLanguages = await db.all("SELECT DISTINCT language FROM cards WHERE stock > 0 AND language IS NOT NULL AND language != '' ORDER BY language ASC") as { language: string }[];
 
     // Default to at least Inglés and Español
     const langSet = new Set(['Inglés', 'Español', ...dbLanguages.map((l) => l.language)]);
 
-    const stats = await db.get('SELECT COUNT(*) as totalCards, COALESCE(SUM(stock), 0) as totalStock, COUNT(DISTINCT expansion) as totalExpansions FROM cards') as any;
+    const stats = await db.get('SELECT COUNT(*) as totalCards, COALESCE(SUM(stock), 0) as totalStock, COUNT(DISTINCT expansion) as totalExpansions FROM cards WHERE stock > 0') as any;
 
     return NextResponse.json({
       expansions: expansions.map((e) => e.expansion),
@@ -21,9 +21,9 @@ export async function GET() {
       versions: versions.map((v) => v.version),
       languages: Array.from(langSet),
       stats: {
-        totalCards: stats?.totalCards || 0,
-        totalStock: stats?.totalStock || 0,
-        totalExpansions: stats?.totalExpansions || 0,
+        totalCards: Number(stats?.totalCards || 0),
+        totalStock: Number(stats?.totalStock || 0),
+        totalExpansions: Number(stats?.totalExpansions || 0),
       },
     });
   } catch (error: any) {
