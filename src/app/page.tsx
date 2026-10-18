@@ -146,57 +146,45 @@ export default function HomePage() {
             </div>
 
             {/* Fast Stats Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-8 w-full max-w-4xl">
-              <Link
-                href="/tienda"
-                className="group bg-[#0b1124]/90 hover:bg-[#0f172a] border border-blue-500/20 hover:border-blue-500/50 rounded-2xl p-4 text-center shadow-lg transition-all hover:-translate-y-0.5"
-              >
-                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 mb-1.5 group-hover:scale-110 transition-transform">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-8 w-full max-w-4xl select-none">
+              <div className="bg-[#0b1124]/90 border border-blue-500/20 rounded-2xl p-4 text-center shadow-lg">
+                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 mb-1.5">
                   <Layers className="w-4 h-4" />
                 </div>
                 <span className="text-xl sm:text-2xl font-black text-white block tracking-tight">
                   {loadingStats ? '...' : stats.totalCards.toLocaleString('es-AR')}
                 </span>
                 <span className="text-[11px] text-slate-400 font-semibold">Cartas en Catálogo</span>
-              </Link>
+              </div>
 
-              <Link
-                href="/tienda"
-                className="group bg-[#0b1124]/90 hover:bg-[#0f172a] border border-emerald-500/20 hover:border-emerald-500/50 rounded-2xl p-4 text-center shadow-lg transition-all hover:-translate-y-0.5"
-              >
-                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 mb-1.5 group-hover:scale-110 transition-transform">
+              <div className="bg-[#0b1124]/90 border border-emerald-500/20 rounded-2xl p-4 text-center shadow-lg">
+                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 mb-1.5">
                   <ShoppingBag className="w-4 h-4" />
                 </div>
                 <span className="text-xl sm:text-2xl font-black text-emerald-400 flex items-center justify-center gap-1.5 tracking-tight">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                   <span>{loadingStats ? '...' : stats.totalStock.toLocaleString('es-AR')}</span>
                 </span>
                 <span className="text-[11px] text-slate-400 font-semibold">Unidades en Stock Vivo</span>
-              </Link>
+              </div>
 
-              <Link
-                href="/deck-builder"
-                className="group bg-[#0b1124]/90 hover:bg-[#0f172a] border border-indigo-500/20 hover:border-indigo-500/50 rounded-2xl p-4 text-center shadow-lg transition-all hover:-translate-y-0.5"
-              >
-                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-500/15 text-indigo-400 mb-1.5 group-hover:scale-110 transition-transform">
+              <div className="bg-[#0b1124]/90 border border-indigo-500/20 rounded-2xl p-4 text-center shadow-lg">
+                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-500/15 text-indigo-400 mb-1.5">
                   <Zap className="w-4 h-4" />
                 </div>
                 <span className="text-xl sm:text-2xl font-black text-blue-400 block tracking-tight">
                   {loadingStats || !stats.totalExpansions ? 'PTCGL' : `${stats.totalExpansions} Sets`}
                 </span>
                 <span className="text-[11px] text-slate-400 font-semibold">Expansiones & Estándar</span>
-              </Link>
+              </div>
 
-              <Link
-                href="/pedidos"
-                className="group bg-[#0b1124]/90 hover:bg-[#0f172a] border border-amber-500/20 hover:border-amber-500/50 rounded-2xl p-4 text-center shadow-lg transition-all hover:-translate-y-0.5"
-              >
-                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 mb-1.5 group-hover:scale-110 transition-transform">
+              <div className="bg-[#0b1124]/90 border border-amber-500/20 rounded-2xl p-4 text-center shadow-lg">
+                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 mb-1.5">
                   <ShieldCheck className="w-4 h-4" />
                 </div>
                 <span className="text-xl sm:text-2xl font-black text-amber-400 block tracking-tight">100%</span>
                 <span className="text-[11px] text-slate-400 font-semibold">Stock Verificado</span>
-              </Link>
+              </div>
             </div>
           </div>
         </div>
