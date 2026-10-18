@@ -102,18 +102,24 @@ html.light ::-webkit-scrollbar-thumb:hover {
 /* General containers & canvas */
 html.light [class*="bg-[#080c16]"],
 html.light [class*="bg-[#070b14]"],
+html.light [class*="bg-[#070b16]"],
 html.light [class*="bg-[#060913]"],
 html.light [class*="bg-[#050811]"],
-html.light [class*="bg-[#070c18]"] {
+html.light [class*="bg-[#070c18]"],
+html.light [class*="bg-[#04060d]"],
+html.light footer {
   background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
 }
 
 /* Navbar in light mode */
 html.light nav,
 html.light header,
+html.light [class*="bg-[#060913]/95"],
 html.light [class*="bg-[#070b16]/90"] {
-  background-color: rgba(255, 255, 255, 0.92) !important;
+  background-color: rgba(255, 255, 255, 0.94) !important;
   border-color: #e2e8f0 !important;
+  box-shadow: 0 4px 20px -4px rgba(15, 23, 42, 0.05) !important;
 }
 
 /* Cards, modals, drawers & panels */
@@ -122,6 +128,8 @@ html.light [class*="bg-[#0b1124]"],
 html.light [class*="bg-[#0c1322]"],
 html.light [class*="bg-[#0c1424]"],
 html.light [class*="bg-[#0a0f1d]"],
+html.light [class*="bg-[#0a0f20]"],
+html.light [class*="bg-[#080d19]"],
 html.light [class*="bg-[#090e1c]"],
 html.light [class*="bg-[#0a1024]"],
 html.light [class*="bg-[#0a1020]"],
@@ -134,6 +142,7 @@ html.light [class*="bg-[#131e36]"],
 html.light [class*="bg-[#0f172a]"],
 html.light [class*="bg-slate-950"] {
   background-color: #ffffff !important;
+  box-shadow: 0 4px 16px -4px rgba(15, 23, 42, 0.06);
 }
 
 html.light [class*="bg-slate-900"] {
@@ -153,9 +162,10 @@ html.light [class*="from-[#090e1c]"],
 html.light [class*="from-[#080d1e]"],
 html.light [class*="from-[#070b14]"],
 html.light [class*="from-[#060913]"] {
-  background-image: none !important;
+  background-image: linear-gradient(to bottom, #ffffff, #f8fafc) !important;
   background-color: #ffffff !important;
-  border-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.06) !important;
 }
 
 /* Status cards & badge pastel backgrounds */
@@ -181,21 +191,23 @@ html.light [class*="bg-red-950"] {
 }
 
 /* Headings in light mode */
-html.light h1:not([class*="bg-"]):not(button *):not(a *),
-html.light h2:not([class*="bg-"]):not(button *):not(a *),
-html.light h3:not([class*="bg-"]):not(button *):not(a *),
-html.light h4:not([class*="bg-"]):not(button *):not(a *) {
+html.light h1:not([class*="bg-"]):not(button *),
+html.light h2:not([class*="bg-"]):not(button *),
+html.light h3:not([class*="bg-"]):not(button *),
+html.light h4:not([class*="bg-"]):not(button *) {
   color: #0f172a !important;
 }
 
 /* Metallic gradient headings in light mode */
 html.light [class*="from-white via-slate-200 to-slate-400"] {
-  background-image: linear-gradient(to bottom, #0f172a, #334155, #64748b) !important;
+  background-image: linear-gradient(to bottom, #0f172a, #1e293b, #475569) !important;
+  filter: drop-shadow(0 2px 6px rgba(15, 23, 42, 0.12)) !important;
 }
 
 /* Borders */
 html.light [class*="border-slate-800"],
-html.light [class*="border-slate-700"] {
+html.light [class*="border-slate-700"],
+html.light [class*="border-slate-900"] {
   border-color: #e2e8f0 !important;
 }
 
@@ -204,6 +216,10 @@ html.light [class*="border-white/"] {
 }
 
 /* Text adjustments for light mode */
+html.light .text-white:not(button):not(a):not([class*="bg-blue-"]):not([class*="bg-indigo-"]):not([class*="bg-emerald-"]):not([class*="bg-amber-"]):not([class*="bg-violet-"]):not([class*="bg-purple-"]):not([class*="bg-rose-"]):not([class*="bg-red-"]):not([class*="bg-black"]):not([class*="from-blue-"]):not([class*="from-amber-"]):not([class*="from-emerald-"]):not([class*="from-indigo-"]) {
+  color: #0f172a !important;
+}
+
 html.light [class*="text-slate-100"] {
   color: #0f172a !important;
 }
@@ -217,19 +233,33 @@ html.light [class*="text-slate-400"] {
   color: #475569 !important;
 }
 
-html.light [class*="text-slate-500"] {
+html.light [class*="text-slate-500"],
+html.light [class*="text-slate-600"] {
   color: #64748b !important;
 }
 
 /* Fix faint pastel text on light backgrounds */
-html.light [class*="text-amber-200"]:not(.bg-amber-500):not(.bg-amber-600) {
-  color: #92400e !important;
+html.light [class*="text-amber-200"]:not(.bg-amber-500):not(.bg-amber-600),
+html.light [class*="text-amber-300"]:not([class*="bg-black"]):not(.bg-amber-600) {
+  color: #b45309 !important;
 }
-html.light [class*="text-emerald-200"]:not(.bg-emerald-500):not(.bg-emerald-600) {
-  color: #065f46 !important;
+html.light [class*="text-emerald-200"]:not(.bg-emerald-500):not(.bg-emerald-600),
+html.light [class*="text-emerald-300"]:not(.bg-emerald-600) {
+  color: #047857 !important;
 }
-html.light [class*="text-blue-200"]:not(.bg-blue-500):not(.bg-blue-600) {
-  color: #1e40af !important;
+html.light [class*="text-blue-200"]:not(.bg-blue-500):not(.bg-blue-600):not(button *):not(a *),
+html.light [class*="text-blue-300"]:not(.bg-blue-600):not([class*="bg-black"]) {
+  color: #1d4ed8 !important;
+}
+html.light [class*="text-indigo-300"]:not(.bg-indigo-600) {
+  color: #4338ca !important;
+}
+html.light [class*="text-purple-300"]:not(.bg-purple-600),
+html.light [class*="text-violet-300"]:not(.bg-violet-600) {
+  color: #6d28d9 !important;
+}
+html.light [class*="text-rose-300"]:not(.bg-rose-600) {
+  color: #be123c !important;
 }
 
 /* Inputs, selects, and textareas */
@@ -248,8 +278,8 @@ html.light textarea::placeholder {
 
 /* Glass panel light mode */
 html.light .glass-panel {
-  background: rgba(255, 255, 255, 0.9) !important;
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(15, 23, 42, 0.08) !important;
 }
 
 /* Preserve bright buttons & badges text color */
@@ -263,10 +293,34 @@ html.light button.bg-purple-600,
 html.light a.bg-purple-600,
 html.light button.bg-rose-600,
 html.light a.bg-rose-600,
+html.light button.bg-amber-600,
+html.light a.bg-amber-600,
+html.light button.bg-violet-600,
+html.light a.bg-violet-600,
 html.light [class*="bg-blue-600"],
 html.light [class*="bg-emerald-600"],
 html.light [class*="bg-rose-600"],
 html.light [class*="bg-indigo-600"],
-html.light [class*="bg-purple-600"] {
+html.light [class*="bg-purple-600"],
+html.light [class*="bg-amber-600"],
+html.light [class*="bg-violet-600"],
+html.light [class*="from-blue-600"],
+html.light [class*="from-blue-700"],
+html.light [class*="from-emerald-600"],
+html.light [class*="from-amber-600"] {
   color: #ffffff !important;
 }
+html.light [class*="bg-blue-600"] *,
+html.light [class*="bg-emerald-600"] *,
+html.light [class*="bg-rose-600"] *,
+html.light [class*="bg-indigo-600"] *,
+html.light [class*="bg-purple-600"] *,
+html.light [class*="bg-amber-600"] *,
+html.light [class*="bg-violet-600"] *,
+html.light [class*="from-blue-600"] *,
+html.light [class*="from-blue-700"] *,
+html.light [class*="from-emerald-600"] *,
+html.light [class*="from-amber-600"] * {
+  color: #ffffff !important;
+}
+

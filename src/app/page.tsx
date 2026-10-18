@@ -10,7 +10,7 @@ import CartDrawer from '@/components/CartDrawer';
 import CardDetailModal from '@/components/CardDetailModal';
 import StorePausedBanner from '@/components/StorePausedBanner';
 import { WhatsAppHeroButton, WhatsAppFloatingButton, WHATSAPP_GROUP_URL, WhatsAppSvgIcon } from '@/components/WhatsAppButton';
-import { CardData } from '@/components/CardItem';
+import CardItem, { CardData } from '@/components/CardItem';
 import {
   Sparkles,
   Layers,
@@ -146,27 +146,57 @@ export default function HomePage() {
             </div>
 
             {/* Fast Stats Bar */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-8 w-full max-w-3xl">
-              <div className="bg-[#0b1124]/80 border border-white/[0.08] rounded-2xl p-3.5 text-center">
-                <span className="text-xl sm:text-2xl font-black text-white block">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 pt-8 w-full max-w-4xl">
+              <Link
+                href="/tienda"
+                className="group bg-[#0b1124]/90 hover:bg-[#0f172a] border border-blue-500/20 hover:border-blue-500/50 rounded-2xl p-4 text-center shadow-lg transition-all hover:-translate-y-0.5"
+              >
+                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 mb-1.5 group-hover:scale-110 transition-transform">
+                  <Layers className="w-4 h-4" />
+                </div>
+                <span className="text-xl sm:text-2xl font-black text-white block tracking-tight">
                   {loadingStats ? '...' : stats.totalCards.toLocaleString('es-AR')}
                 </span>
-                <span className="text-[11px] text-slate-400 font-medium">Cartas en Catálogo</span>
-              </div>
-              <div className="bg-[#0b1124]/80 border border-white/[0.08] rounded-2xl p-3.5 text-center">
-                <span className="text-xl sm:text-2xl font-black text-emerald-400 block">
-                  {loadingStats ? '...' : stats.totalStock.toLocaleString('es-AR')}
+                <span className="text-[11px] text-slate-400 font-semibold">Cartas en Catálogo</span>
+              </Link>
+
+              <Link
+                href="/tienda"
+                className="group bg-[#0b1124]/90 hover:bg-[#0f172a] border border-emerald-500/20 hover:border-emerald-500/50 rounded-2xl p-4 text-center shadow-lg transition-all hover:-translate-y-0.5"
+              >
+                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 mb-1.5 group-hover:scale-110 transition-transform">
+                  <ShoppingBag className="w-4 h-4" />
+                </div>
+                <span className="text-xl sm:text-2xl font-black text-emerald-400 flex items-center justify-center gap-1.5 tracking-tight">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                  <span>{loadingStats ? '...' : stats.totalStock.toLocaleString('es-AR')}</span>
                 </span>
-                <span className="text-[11px] text-slate-400 font-medium">Stock en Vivo</span>
-              </div>
-              <div className="bg-[#0b1124]/80 border border-white/[0.08] rounded-2xl p-3.5 text-center">
-                <span className="text-xl sm:text-2xl font-black text-blue-400 block">PTCGL</span>
-                <span className="text-[11px] text-slate-400 font-medium">Formato Estándar</span>
-              </div>
-              <div className="bg-[#0b1124]/80 border border-white/[0.08] rounded-2xl p-3.5 text-center">
-                <span className="text-xl sm:text-2xl font-black text-amber-400 block">100%</span>
-                <span className="text-[11px] text-slate-400 font-medium">Vendedores Reales</span>
-              </div>
+                <span className="text-[11px] text-slate-400 font-semibold">Unidades en Stock Vivo</span>
+              </Link>
+
+              <Link
+                href="/deck-builder"
+                className="group bg-[#0b1124]/90 hover:bg-[#0f172a] border border-indigo-500/20 hover:border-indigo-500/50 rounded-2xl p-4 text-center shadow-lg transition-all hover:-translate-y-0.5"
+              >
+                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-indigo-500/15 text-indigo-400 mb-1.5 group-hover:scale-110 transition-transform">
+                  <Zap className="w-4 h-4" />
+                </div>
+                <span className="text-xl sm:text-2xl font-black text-blue-400 block tracking-tight">
+                  {loadingStats || !stats.totalExpansions ? 'PTCGL' : `${stats.totalExpansions} Sets`}
+                </span>
+                <span className="text-[11px] text-slate-400 font-semibold">Expansiones & Estándar</span>
+              </Link>
+
+              <Link
+                href="/pedidos"
+                className="group bg-[#0b1124]/90 hover:bg-[#0f172a] border border-amber-500/20 hover:border-amber-500/50 rounded-2xl p-4 text-center shadow-lg transition-all hover:-translate-y-0.5"
+              >
+                <div className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 mb-1.5 group-hover:scale-110 transition-transform">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <span className="text-xl sm:text-2xl font-black text-amber-400 block tracking-tight">100%</span>
+                <span className="text-[11px] text-slate-400 font-semibold">Stock Verificado</span>
+              </Link>
             </div>
           </div>
         </div>
@@ -472,37 +502,13 @@ export default function HomePage() {
               No hay cartas disponibles de momento.
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5 sm:gap-6">
               {featuredCards.map((card) => (
-                <div
+                <CardItem
                   key={card.id}
-                  onClick={() => setActiveCardModal(card)}
-                  className="group relative rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-blue-500/50 p-3 sm:p-4 flex flex-col justify-between cursor-pointer transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/20"
-                >
-                  <div className="relative aspect-[2.5/3.5] w-full rounded-xl overflow-hidden bg-slate-950 mb-3">
-                    <img
-                      src={card.image_url}
-                      alt={card.name}
-                      className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
-                      loading="lazy"
-                    />
-                    <div className="absolute top-2 right-2 px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md border border-white/10 text-[10px] font-bold text-amber-300">
-                      ${card.price.toLocaleString()}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <div className="font-bold text-xs sm:text-sm text-white truncate group-hover:text-blue-400 transition-colors">
-                      {card.name}
-                    </div>
-                    <div className="flex items-center justify-between text-[11px] text-slate-400">
-                      <span className="truncate">{card.expansion}</span>
-                      <span className="text-[10px] text-emerald-400 font-semibold">
-                        Stock: {card.stock}
-                      </span>
-                    </div>
-                  </div>
-                </div>
+                  card={card}
+                  onOpenModal={(selected) => setActiveCardModal(selected)}
+                />
               ))}
             </div>
           )}
@@ -541,21 +547,25 @@ export default function HomePage() {
                 <Link
                   key={deck.id}
                   href={`/deck-builder/${deck.id}`}
-                  className="group rounded-2xl bg-[#0a0f20]/80 border border-slate-800 hover:border-blue-500/50 p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-blue-900/20"
+                  className="group rounded-2xl bg-[#0b1220] hover:bg-[#0f172a] border border-slate-800/80 hover:border-blue-500/50 p-4 flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 shadow-lg hover:shadow-xl hover:shadow-blue-900/20"
                 >
-                  <div className="space-y-3">
-                    <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center border border-white/5">
+                  <div className="space-y-3.5">
+                    <div className="relative aspect-[16/10] w-full rounded-xl overflow-hidden bg-slate-950 flex items-center justify-center border border-slate-800/80 p-2">
                       {deck.cover_card_image ? (
                         <img
                           src={deck.cover_card_image}
                           alt={deck.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          className="w-full h-full object-contain drop-shadow-md group-hover:scale-105 transition-transform duration-300"
                         />
                       ) : (
                         <Layers className="w-8 h-8 text-slate-600" />
                       )}
-                      <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/80 backdrop-blur-md border border-white/10 text-[10px] font-bold text-blue-300">
-                        {deck.total_cards || 60} Cartas
+                      <div className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-blue-600/90 text-white text-[10px] font-extrabold shadow">
+                        {deck.format || 'Standard'}
+                      </div>
+                      <div className="absolute bottom-2 right-2 px-2 py-0.5 rounded-md bg-emerald-600/90 text-white text-[10px] font-extrabold shadow flex items-center gap-1">
+                        <CheckCircle2 className="w-2.5 h-2.5" />
+                        <span>{deck.total_cards || 60}/60</span>
                       </div>
                     </div>
 
@@ -563,23 +573,25 @@ export default function HomePage() {
                       <h4 className="font-bold text-sm text-white group-hover:text-blue-400 transition-colors truncate">
                         {deck.name}
                       </h4>
-                      <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
-                        <div className="w-4 h-4 rounded-full overflow-hidden bg-slate-800">
+                      <div className="flex items-center gap-2 mt-1.5 text-[11px] text-slate-400">
+                        <div className="w-4 h-4 rounded-full overflow-hidden bg-slate-800 border border-slate-700">
                           <img
                             src={deck.author_avatar || getDefaultAvatar(deck.author_name || 'User')}
                             alt={deck.author_name}
                             className="w-full h-full object-contain"
                           />
                         </div>
-                        <span className="truncate">{deck.author_name || 'Comunidad'}</span>
+                        <span className="truncate font-medium">@{deck.author_name || 'Comunidad'}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="pt-3 mt-3 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-                    <span className="text-emerald-400 font-semibold">Formato Estándar</span>
-                    <span className="group-hover:text-blue-400 transition-colors font-semibold flex items-center gap-1">
-                      Ver mazo <ChevronRight className="w-3.5 h-3.5" />
+                    <span className="text-emerald-400 font-bold flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3" /> Legal PTCGL
+                    </span>
+                    <span className="text-blue-400 font-bold flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                      Abrir mazo <ChevronRight className="w-3.5 h-3.5" />
                     </span>
                   </div>
                 </Link>

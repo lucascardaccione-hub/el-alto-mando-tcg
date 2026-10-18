@@ -38,7 +38,7 @@ import {
   ChevronRight,
   SlidersHorizontal,
 } from 'lucide-react';
-import { parsePtcglDeck, exportToPtcgl, isBasicEnergy, getBasicEnergyTypeNumber, getGenericEnergyImage, isKnownEnergyTrainer, isSpecialEnergy } from '@/lib/deckParser';
+import { parsePtcglDeck, exportToPtcgl, isBasicEnergy, getBasicEnergyTypeNumber, getGenericEnergyImage, isKnownEnergyTrainer, isSpecialEnergy, validateDeckLegality } from '@/lib/deckParser';
 import DeckImageModal from '@/components/DeckImageModal';
 import { DeckSocialSection } from '@/components/DeckSocialSection';
 import { OpeningHandSimulatorModal } from '@/components/OpeningHandSimulatorModal';
@@ -607,6 +607,7 @@ function DeckBuilderContent() {
 
   const totalOwned = useMemo(() => cards.reduce((acc, c) => acc + Math.min(c.count, c.owned_count || 0), 0), [cards]);
   const totalMissing = Math.max(0, totalCount - totalOwned);
+  const deckLegality = useMemo(() => validateDeckLegality(cards), [cards]);
 
   // Cross-reference deck missing cards with store inventory
   const missingCardsWithStock = useMemo(() => {
@@ -1427,9 +1428,9 @@ function DeckBuilderContent() {
               />
             </div>
 
-            {/* Badges breakdown */}
+            {/* Badges breakdown & Live Legality Checklist */}
             <div className="flex items-center justify-between text-xs text-slate-400 flex-wrap gap-2">
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <span className="flex items-center gap-1.5 font-medium text-slate-300">
                   <span className="w-2.5 h-2.5 rounded-full bg-blue-500 inline-block" />
                   <span>Pokémon: {pokemonCount}</span>
@@ -1441,6 +1442,44 @@ function DeckBuilderContent() {
                 <span className="flex items-center gap-1.5 font-medium text-slate-300">
                   <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
                   <span>Energías: {energyCount}</span>
+                </span>
+              </div>
+
+              {/* Reglas Oficiales PTCGL en vivo */}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                    totalCount === 60
+                      ? 'bg-emerald-950/60 text-emerald-300 border-emerald-700/50'
+                      : 'bg-slate-900 text-amber-300 border-amber-500/30'
+                  }`}
+                >
+                  {totalCount === 60 ? <Check className="w-2.5 h-2.5" /> : <Info className="w-2.5 h-2.5" />}
+                  <span>60 Cartas ({totalCount}/60)</span>
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                    pokemonCount >= 1
+                      ? 'bg-emerald-950/60 text-emerald-300 border-emerald-700/50'
+                      : 'bg-rose-950/60 text-rose-300 border-rose-700/50'
+                  }`}
+                >
+                  {pokemonCount >= 1 ? <Check className="w-2.5 h-2.5" /> : <AlertCircle className="w-2.5 h-2.5" />}
+                  <span>Mín. 1 Pokémon</span>
+                </span>
+                <span
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                    !deckLegality.errors.some((e) => e.includes('máximo de 4'))
+                      ? 'bg-emerald-950/60 text-emerald-300 border-emerald-700/50'
+                      : 'bg-rose-950/60 text-rose-300 border-rose-700/50'
+                  }`}
+                >
+                  {!deckLegality.errors.some((e) => e.includes('máximo de 4')) ? (
+                    <Check className="w-2.5 h-2.5" />
+                  ) : (
+                    <AlertCircle className="w-2.5 h-2.5" />
+                  )}
+                  <span>Máx. 4 copias</span>
                 </span>
               </div>
             </div>

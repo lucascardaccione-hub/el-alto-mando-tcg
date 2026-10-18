@@ -174,6 +174,12 @@ export default function TiendaPage() {
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                   <span>Vendedores Verificados</span>
                 </span>
+                {metadata.stats?.totalStock > 0 && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700/40">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+                    <span>{metadata.stats.totalStock.toLocaleString('es-AR')} u. en stock</span>
+                  </span>
+                )}
               </div>
 
               <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-slate-900 dark:text-white">
@@ -206,35 +212,6 @@ export default function TiendaPage() {
             </div>
           </div>
         </section>
-
-        {/* Quick Category Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {[
-            { id: '', label: 'Todas las Cartas', emoji: '🃏' },
-            { id: 'Pokemon', label: 'Pokémon', emoji: '⚡' },
-            { id: 'Trainer', label: 'Entrenadores', emoji: '🎒' },
-            { id: 'Energy', label: 'Energías', emoji: '🔥' },
-          ].map((cat) => {
-            const active = selectedCategory.toLowerCase() === cat.id.toLowerCase();
-            return (
-              <button
-                key={cat.id || 'all'}
-                onClick={() => {
-                  setSelectedCategory(cat.id);
-                  if (cat.id !== 'Trainer') setSelectedTrainerType('');
-                }}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  active
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-900/40 border border-blue-400/40'
-                    : 'bg-white dark:bg-[#0b1220] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm'
-                }`}
-              >
-                <span>{cat.emoji}</span>
-                <span>{cat.label}</span>
-              </button>
-            );
-          })}
-        </div>
 
         {/* Filters Toolbar */}
         <FiltersBar
