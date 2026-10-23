@@ -5,10 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/tienda', '/decks', '/deck-builder'],
-        disallow: ['/admin', '/api/', '/perfil', '/pedidos'],
+        disallow: '/',
       },
     ],
-    sitemap: 'https://elaltomandotcg.vercel.app/sitemap.xml',
   };
 }
